@@ -140,6 +140,23 @@ class PxarCoreCmd(cmd.Cmd):
             return
         self.window = PxarGui( ROOT.gClient.GetRoot(), 800, 800 )
 
+    def varyDelays(self,tindelay,toutdelay,verbose=False):
+        self.api.setTestboardDelays({"tindelay":tindelay})
+        self.api.setTestboardDelays({"toutdelay":toutdelay})
+        self.api.daqStart()
+        self.api.daqTrigger(1, 500)
+        rawEvent = self.api.daqGetRawEvent()
+        if verbose: print "raw Event:\t\t",rawEvent
+        nCount = 0
+        for i in rawEvent:
+            i = i & 0x0fff
+            if i & 0x0800:
+                i -= 4096
+            rawEvent[nCount] = i
+            nCount += 1
+        if verbose: print "converted Event:\t",rawEvent
+        self.api.daqStop()
+        return rawEvent
 
 #####################################################################################################
 
@@ -270,13 +287,31 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_analogLevelScan(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_analogLevelScan.__doc__, '']
+    @arity (0,0,[])
+    def do_enableAllPixel(self):
+        self.api.maskAllPixels(0)
+        self.api.testAllPixels(1)
+    def complete_enableAllPixel(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_enableAllPixel.__doc__, '']
 
     @arity(2,2,[int, int])
-    def do_enablePixel(self, row, column):
+    def do_enableFirstPixel(self, row, column):
         """enablePixel [row] [column] : enables the desired Pixel and masks and disables the rest"""
         self.api.maskAllPixels(1)
         self.api.testAllPixels(0)
         print "--> disable and mask all Pixels (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
+        self.api.testPixel(row,column,1)
+        self.api.maskPixel(row,column,0)
+        print "--> enable and unmask Pixel " + str(row) + "/" + str(column) + " (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
+
+    def complete_enableFirstPixel(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_enableFirstPixel.__doc__, '']
+
+    @arity(2,2,[int, int])
+    def do_enablePixel(self, row, column):
+        """enablePixel [row] [column] : enables the desired Pixel and masks and disables the rest"""
         self.api.testPixel(row,column,1)
         self.api.maskPixel(row,column,0)
         print "--> enable and unmask Pixel " + str(row) + "/" + str(column) + " (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
@@ -290,25 +325,12 @@ class PxarCoreCmd(cmd.Cmd):
         """varyAllDelays [filenumber] : writes rawEvent data for both delays varied between 0 and 20 to file (rawfile+filenumber)"""
         number = '{0:03d}'.format(filenumber)
         f = open('rawfile'+str(number),'w')
-        for ii in range(20):
-            for jj in range(20):
-                if (ii-jj<8):
-                    self.api.setTestboardDelays({"tindelay":ii})
-                    self.api.setTestboardDelays({"toutdelay":jj})
-                    self.api.daqStart()
-                    self.api.daqTrigger(1, 500)
-                    rawEvent = self.api.daqGetRawEvent()
-                    nCount = 0
-                    for i in rawEvent:
-                        i = i & 0x0fff
-                        if i & 0x0800:
-                            i -= 4096
-                        rawEvent[nCount] = i
-                        nCount += 1
-                    tin = '{0:02d}'.format(ii)
-                    tout = '{0:02d}'.format(jj)
+        for tin in range(20):
+            for tout in range(20):
+                if (tin-tout<8):
+                    rawEvent = self.varyDelays(tin, tout,verbose=False)
                     print tin,"; ",tout,"; " ,rawEvent
-                    self.api.daqStop()
+                    #self.api.daqStop()
                     f.write(str(tin)+';'+str(tout)+'; '+str(rawEvent)+'\n')
         f.close
 
@@ -319,21 +341,7 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(2,2,[int, int])
     def do_varyDelays(self, tindelay, toutdelay):
         """varDelays [value of tinelay] [value of toutdelay] : sets the two delays to the desired values and prints a histogram of the rawfile"""
-        self.api.setTestboardDelays({"tindelay":tindelay})
-        self.api.setTestboardDelays({"toutdelay":toutdelay})
-        self.api.daqStart()
-        self.api.daqTrigger(1, 500)
-        rawEvent = self.api.daqGetRawEvent()
-        print "raw Event:\t\t",rawEvent
-        nCount = 0
-        for i in rawEvent:
-            i = i & 0x0fff
-            if i & 0x0800:
-                i -= 4096
-            rawEvent[nCount] = i
-            nCount += 1
-        print "converted Event:\t",rawEvent
-        self.api.daqStop()
+        self.varyDelays(tindelay,toutdelay,verbose=True)
 #        self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
 #        rawEvent.append(0)
 #        x = len(rawEvent)-1
