@@ -10,7 +10,7 @@ namespace pxar {
     pos = 0;
     do {
       dtbState = tb->Daq_Read(buffer, DTB_SOURCE_BLOCK_SIZE, dtbRemainingSize, channel);
-    
+
       if (buffer.size() == 0) {
 	if (stopAtEmptyData) throw dsBufferEmpty();
 	if (dtbState) throw dsBufferOverflow();
@@ -151,7 +151,7 @@ namespace pxar {
 
     // Check if TBM event ID matches with expectation:
     if((v&0x00ff) != (eventID%256)) {
-      LOG(logERROR) << "   Event ID mismatch:  local ID (" << static_cast<int>(eventID) 
+      LOG(logERROR) << "   Event ID mismatch:  local ID (" << static_cast<int>(eventID)
 		    << ") !=  TBM ID (" << static_cast<int>(v&0x00ff) << ")";
       decodingStats.m_errors_tbm_eventid_mismatch++;
       // To continue readout, set event ID to the currently decoded one:
@@ -163,6 +163,7 @@ namespace pxar {
   }
 
   Event* dtbEventDecoder::DecodeDeser400() {
+
 
     roc_Event.Clear();
     rawEvent *sample = Get();
@@ -185,7 +186,7 @@ namespace pxar {
 
     // Check if ROC has inverted pixel address (ROC_PSI46DIG):
     bool invertedAddress = ( GetDeviceType() == ROC_PSI46DIG ? true : false );
-    
+
 
     // --- decode TBM header ---------------------------------
 
@@ -204,7 +205,7 @@ namespace pxar {
     CheckInvalidWord(v);
     if ((v & 0xe000) != 0x8000) tmpError = true;
     raw += v & 0x00ff;
-    LOG(logDEBUGPIPES) << "\t Data ID " << static_cast<int>(((v & 0x00c0) >> 6)) 
+    LOG(logDEBUGPIPES) << "\t Data ID " << static_cast<int>(((v & 0x00c0) >> 6))
 		       << " Value " << static_cast<int>((v & 0x003f));
 
     if(tmpError) { decodingStats.m_errors_tbm_header++; }
@@ -255,7 +256,7 @@ namespace pxar {
 	}
 
 	try {
-	  // Check if this is just fill bits of the TBM09 data stream 
+	  // Check if this is just fill bits of the TBM09 data stream
 	  // accounting for the other channel:
 	  if(GetTokenChainLength() == 4 && (raw&0xffffff) == 0xffffff) {
 	    LOG(logDEBUGPIPES) << "Empty hit detected (TBM09 data streams). Skipping.";
@@ -360,6 +361,16 @@ namespace pxar {
 
       if(black > 0xff) { black = (((*sample)[1] & 0x0800) ? static_cast<int>((*sample)[1] & 0x0fff) - 4096 : static_cast<int>((*sample)[1] & 0x0fff)); }
       else { black = (black + (((*sample)[1] & 0x0800) ? static_cast<int>((*sample)[1] & 0x0fff) - 4096 : static_cast<int>((*sample)[1] & 0x0fff)))/2; }
+    /** round Ultrablack and black to 5*/
+      black = 7*(black/7);
+
+       /**Test for Micha */
+    if (sample->GetSize() > 3)
+    {
+        std::stringstream ss;
+        ss << "\t" << ultrablack << "\t" << black ;
+        LOG(logDEBUGHAL) << ss.str();
+    }
 
       LOG(logDEBUGPIPES) << "ROC Header: "
 			 << (((*sample)[0] & 0x0800) ? static_cast<int>((*sample)[0] & 0x0fff) - 4096 : static_cast<int>((*sample)[0] & 0x0fff)) << " (avg. " << ultrablack << ") (UB) "
@@ -452,7 +463,7 @@ namespace pxar {
     // Count valid events
     else { decodingStats.m_info_events_valid++; }
 
-    LOG(logDEBUGPIPES) << roc_Event;
+    LOG(logDEBUGPIPES) << &roc_Event;
     return &roc_Event;
   }
 
@@ -499,7 +510,7 @@ namespace pxar {
     }
   }
 
-  statistics dtbEventDecoder::getStatistics() { 
+  statistics dtbEventDecoder::getStatistics() {
     // Automatically clear the statistics after it was read out:
     statistics tmp = decodingStats;
     decodingStats.clear();

@@ -98,14 +98,14 @@ cdef class RocConfig:
     def __dealloc__(self):
         del self.thisptr
     property column:
-        def __get__(self): 
+        def __get__(self):
             r = list()
             for p in self.thisptr.pixels:
                 P = PixelConfig()
                 P.c_clone(&p)
                 r.append(P)
             return r
-        def __set__(self, value): 
+        def __set__(self, value):
             cdef vector[pixelConfig] v
             cdef PixelConfig pc
             for pc in value:
@@ -157,14 +157,14 @@ cdef class PxEvent:
         for px in ev.pixels:
             self.thisptr.pixels.push_back(px)
     property pixels:
-        def __get__(self): 
+        def __get__(self):
             r = list()
             for p in self.thisptr.pixels:
                 P = Pixel()
                 P.fill(p)
                 r.append(P)
             return r
-        def __set__(self, value): 
+        def __set__(self, value):
             cdef vector[pixel] v
             cdef Pixel px
             for px in value:
@@ -282,7 +282,7 @@ cdef class PyPxarCore:
 
     def getTbmDACs(self, int tbmid):
         return self.thisptr._dut.getTbmDACs(tbmid)
-  
+
     def updateTrimBits(self, trimming, int rocid):
         cdef vector[pixelConfig] v
         cdef pixelConfig pc
@@ -291,7 +291,7 @@ cdef class PyPxarCore:
             pc = pixelConfig(trimming[line][0][0], trimming[line][1][0], trimming[line][2][0])
             v.push_back(pc)
         self.thisptr._dut.updateTrimBits(v, rocid)
-    
+
     def info(self):
         self.thisptr._dut.info()
 

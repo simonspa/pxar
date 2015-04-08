@@ -48,6 +48,7 @@ namespace pxar {
     }
 
     // Calculate the levels:
+    /** Changes by Micha*/
     int16_t level0 = black;
     int16_t level1 = (black - ultrablack)/4;
     int16_t levelS = level1/2;
@@ -68,7 +69,16 @@ namespace pxar {
     _row = 80 - r/2;
     _column = 2*c + (r&1);
 
-    // Perform range checks:
+    /**Output by Micha*/
+    std::stringstream ss;
+    ss << "AnalogLevels: ";
+    ss<<(int)_column<<" "<<(int)_row << "\t";
+    for (unsigned i(0); i<analog.size(); i++)
+        ss << analog[i] << " ";
+    ss << "\t" << c1 <<" "<<c0<<" "<<r2<<" "<<r1<<" "<< r0;
+    LOG(logDEBUGAPI)<<ss.str();
+
+    /** Perform range checks:*/
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {
       LOG(logDEBUGAPI) << "Invalid pixel from levels "<< listVector(analog) << ": " << *this;
       if(_row == ROC_NUMROWS) throw DataCorruptBufferError("Error decoding pixel raw value");
@@ -91,7 +101,7 @@ namespace pxar {
     raw |= ((dcol)/6 << 21);
     raw |= (((dcol%6)) << 18);
 
-    LOG(logDEBUGPIPES) << "Pix  " << static_cast<int>(_column) << "|" 
+    LOG(logDEBUGPIPES) << "Pix  " << static_cast<int>(_column) << "|"
 		       << static_cast<int>(_row) << " = "
 		       << dcol << "/" << r << " = "
 		       << dcol/6 << " " << dcol%6 << " "
