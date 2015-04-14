@@ -196,6 +196,13 @@ bool pxarCore::initDUT(uint8_t hubid,
       uint8_t tbmregister, value = dacIt->second;
       if(!verifyRegister(dacIt->first, tbmregister, value, TBM_REG)) continue;
 
+      // Check if this is a special setting:
+      if(tbmregister == 0xFF) { // Token Chain length
+	LOG(logDEBUGAPI) << "This TBM Core is configured to have a token chain of "
+			 << static_cast<int>(value) << " ROCs.";
+	continue;
+      }
+
       // Check if this is fore core alpha or beta:
       if((tbmIt - tbmDACs.begin())%2 == 0) { tbmregister = 0xE0 | tbmregister; } // alpha core
       else { tbmregister = 0xF0 | tbmregister; } // beta core
