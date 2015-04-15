@@ -37,7 +37,10 @@ namespace pxar {
   uint8_t pixel::translateLevel(uint16_t x, int16_t level0, int16_t level1, int16_t levelS) {
     int16_t y = expandSign(x) - level0;
     if (y >= 0) y += levelS; else y -= levelS;
-    return level1 ? y/level1 + 1: 0;
+    uint8_t retVal =  level1 ? y/level1 + 1: 0;
+    if (retVal > 5)
+        retVal =  5;
+    return retVal;
   }
 
   void pixel::decodeAnalog(std::vector<uint16_t> analog, int16_t ultrablack, int16_t black) {
@@ -76,7 +79,7 @@ namespace pxar {
     for (unsigned i(0); i<analog.size(); i++)
         ss << analog[i] << " ";
     ss << "\t" << c1 <<" "<<c0<<" "<<r2<<" "<<r1<<" "<< r0;
-    LOG(logDEBUGAPI)<<ss.str();
+    LOG(logDEBUGAPI)<<ss.str() << " ";
 
     /** Perform range checks:*/
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {

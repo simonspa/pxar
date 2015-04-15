@@ -1069,7 +1069,9 @@ std::vector<pixel> pxarCore::getEfficiencyMap(uint16_t flags, uint16_t nTriggers
   param.push_back(static_cast<int32_t>(nTriggers));
 
   // check if the flags indicate that the user explicitly asks for serial execution of test:
+
   std::vector<Event*> data = expandLoop(pixelfn, multipixelfn, rocfn, multirocfn, param, flags);
+
 
   // Repacking of all data segments into one long map vector:
   std::vector<pixel> result = repackMapData(data, nTriggers, flags, true);
@@ -1548,7 +1550,7 @@ std::vector<Event*> pxarCore::expandLoop(HalMemFnPixelSerial pixelfn, HalMemFnPi
 
 	// execute call to HAL layer routine and save returned data in buffer
 	std::vector<Event*> rocdata = CALL_MEMBER_FN(*_hal,rocfn)(rocit->i2c_address, param);
-	// append rocdata to main data storage vector
+
         if (data.empty()) data = rocdata;
 	else {
 	  data.reserve(data.size() + rocdata.size());
@@ -1557,7 +1559,6 @@ std::vector<Event*> pxarCore::expandLoop(HalMemFnPixelSerial pixelfn, HalMemFnPi
       } // roc loop
     }
     else if (pixelfn != NULL) {
-
       // -> we operate on single pixels
       // loop over all enabled ROCs
       std::vector<rocConfig> enabledRocs = _dut->getEnabledRocs();

@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 """
 Helper classes and functions useful when interfacing the pxar API with Python.
 """
@@ -48,7 +47,7 @@ def get_possible_filename_completions(text):
         head = "."
     files = os.listdir(head)
     return [ f for f in files if f.startswith(tail) ]
- 
+
 def extract_full_argument(line, endidx):
     newstart = line.rfind(" ", 0, endidx)
     return line[newstart:endidx]
@@ -65,6 +64,13 @@ class PxarConfigFile:
                     parts = shlex.split(line)
                     if len(parts) == 2:
                         self.config[parts[0].lower()] = parts[1]
+                    elif len(parts) == 4:
+                        parts = [parts[0],' '.join(parts[1:])]
+                        print parts
+                        if len(parts) == 2:
+                            self.config[parts[0].lower()] = parts[1]
+                            print parts[0].lower(), parts[1]
+
         finally:
             thisf.close()
     def show(self):
@@ -106,7 +112,7 @@ def PxarStartup(directory, verbosity):
     if not directory or not os.path.isdir(directory):
         print "Error: no or invalid configuration directory specified!"
         sys.exit(404)
-    
+
     config = PxarConfigFile('%sconfigParameters.dat'%(os.path.join(directory,"")))
     tbparameters = PxarParametersFile('%s%s'%(os.path.join(directory,""),config.get("tbParameters")))
 
@@ -133,14 +139,14 @@ def PxarStartup(directory, verbosity):
     # Start an API instance from the core pxar library
     api = PyPxarCore(usbId=config.get("testboardName"),logLevel=verbosity)
     print api.getVersion()
-    if not api.initTestboard(pg_setup = pg_setup, 
+    if not api.initTestboard(pg_setup = pg_setup,
                              power_settings = power_settings,
                              sig_delays = tbparameters.getAll()):
         print "WARNING: could not init DTB -- possible firmware mismatch."
         print "Please check if a new FW version is available"
         exit
 
-    
+
     tbmDACs = []
     for tbm in range(int(config.get("nTbms"))):
         for n in range(2):
@@ -163,12 +169,26 @@ def PxarStartup(directory, verbosity):
     rocDacs = []
     rocPixels = list()
     rocI2C = []
-    print config.get("nrocs")
-    for roc in xrange(int(config.get("nrocs"))):
+    config_nrocs = config.get("nrocs")
+    print config_nrocs
+    config_nrocs  = config_nrocs.split()
+    nrocs = int(config_nrocs[0])
+    i2cs = [0]
+    if len(config_nrocs) > 1:
+        print config_nrocs[1], config_nrocs[1].startswith('i2c')
+        if config_nrocs[1].startswith('i2c'):
+            print 'configure i2cs: ',
+            i2cs = ' '.join(config_nrocs[2:])
+            i2cs = [int(i) for i in i2cs.split(',')]
+            print i2cs
+    for roc in xrange(nrocs):
         dacconfig = PxarParametersFile('%s%s_C%i.dat'%(os.path.join(directory,""),config.get("dacParameters"),roc))
         rocDacs.append(dacconfig.getAll())
         rocPixels.append(pixels)
-        rocI2C.append(roc)
+        if len(i2cs)> roc:
+            rocI2C.append(i2cs[roc])
+        else:
+            rocI2C.append(roc)
 
     print "And we have just initialized " + str(len(pixels)) + " pixel configs to be used for every ROC!"
 

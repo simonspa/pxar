@@ -12,7 +12,7 @@ namespace pxar {
   public:
   dataPipeException(const char *message) : std::runtime_error(message) {}
   };
-    
+
   class dpNotConnected : public dataPipeException {
   public:
   dpNotConnected() : dataPipeException("Not connected") {}
@@ -20,7 +20,7 @@ namespace pxar {
 
   // Data pipe classes
 
-  template <class T> 
+  template <class T>
     class dataSource {
     // The inheritor must define ReadLast and Read:
     virtual T ReadLast() = 0;
@@ -33,7 +33,7 @@ namespace pxar {
     virtual ~dataSource() {}
     template <class S> friend class dataSink;
   };
-    
+
   // Null source for not connected sinks
   template <class T>
     class nullSource : public dataSource<T> {
@@ -53,12 +53,12 @@ namespace pxar {
   // Formward declaration of dataPipe class:
   template <class TI, class TO> class dataPipe;
 
-  template <class T> 
+  template <class T>
     class dataSink {
-  protected: 
+  protected:
     dataSource<T> *src;
     static nullSource<T> null;
-  public: 
+  public:
   dataSink() : src(&null) {}
     T GetLast() { return src->ReadLast(); }
     T Get() { return src->Read(); }
@@ -67,13 +67,13 @@ namespace pxar {
     uint8_t GetEnvelopeType() { return src->ReadEnvelopeType(); }
     uint8_t GetDeviceType() { return src->ReadDeviceType(); }
     void GetAll() { while (true) Get(); }
-    template <class TI, class TO> friend void operator >> (dataSource<TI> &, dataSink<TO> &); 
+    template <class TI, class TO> friend void operator >> (dataSource<TI> &, dataSink<TO> &);
     template  <class TI, class TO> friend dataSource<TO>& operator >> (dataSource<TI> &in, dataPipe<TI,TO> &out);
   };
 
   template <class T>
     nullSource<T> dataSink<T>::null;
-   
+
   // The data pipe:
   template <class TI, class TO=TI>
     class dataPipe : public dataSink<TI>, public dataSource<TO> {};
@@ -83,7 +83,7 @@ namespace pxar {
     void operator >> (dataSource<TI> &in, dataSink<TO> &out) {
     out.src = &in;
   }
-    
+
   // Operator to connect source -> datapipe -> datapipe -> sink
   template <class TI, class TO>
     dataSource<TO>& operator >> (dataSource<TI> &in, dataPipe<TI,TO> &out) {
@@ -124,7 +124,7 @@ namespace pxar {
     uint16_t FillBuffer();
 
     // --- virtual data access methods
-    uint16_t Read() { 
+    uint16_t Read() {
       if(!connected) throw dpNotConnected();
       return (pos < buffer.size()) ? lastSample = buffer[pos++] : FillBuffer();
     }
@@ -227,9 +227,15 @@ namespace pxar {
     void evalLastDAC(uint8_t roc, uint16_t val);
     int32_t ultrablack;
     int32_t black;
+    int32_t counter;
+    int64_t sumB;
+    int64_t sumUB;
+    float meanB;
+    float meanUB;
+
 
   public:
-  dtbEventDecoder() : decodingStats(), readback(), eventID(-1), ultrablack(0xfff), black(0xfff) {};
+  dtbEventDecoder() : decodingStats(), readback(), eventID(-1), ultrablack(0xfff), black(0xfff), counter(0), sumB(0), sumUB(0), meanB(0), meanUB(0) {};
     void Clear() { decodingStats.clear(); readback.clear(); count.clear(); shiftReg.clear(); eventID = -1; };
     statistics getStatistics();
     std::vector<std::vector<uint16_t> > getReadback();

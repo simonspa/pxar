@@ -836,6 +836,7 @@ std::vector<Event*> hal::SingleRocAllPixelsCalibrate(uint8_t roci2c, std::vector
   estimateDataVolume(expected, 1);
 
   // Prepare for data acquisition:
+
   daqStart(deser160phase);
   timer t;
 
@@ -1791,7 +1792,7 @@ std::vector<Event*> hal::daqAllEvents() {
     if (current_Event->header < 1000)
     {
         ss << *current_Event << "\t";
-        LOG(logDEBUGHAL) << ss.str();
+        LOG(logDEBUGHAL) << ss.str() << "\n";
     }
 
     if(src1.isConnected()) {
@@ -1832,9 +1833,7 @@ std::vector<Event*> hal::daqAllEvents() {
     else { evt.push_back(current_Event); }
   }
   if(evt.empty()) throw DataNoEvent("No event available");
-  std::stringstream ss;
-  ss << "This is the event: " << evt[0] << " " << *evt[0] << "\n" ;
-  LOG(logDEBUGHAL) << ss.str();
+
   return evt;
 }
 

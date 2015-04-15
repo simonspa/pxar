@@ -325,10 +325,43 @@ namespace pxar {
   }
 
   void dtbEventDecoder::AverageAnalogLevel(int32_t &variable, int16_t dataword) {
-    // Check if this is the initial measurement:
-    if(variable > 0xff) { variable = expandSign(dataword & 0x0fff); }
-    // Average the variable:
-    else { variable = (variable + expandSign(dataword & 0x0fff))/2; }
+
+    /**translate the measurement to a meaningful level*/
+    int16_t translateDataword = expandSign(dataword & 0x0fff);
+
+    /** take the mean for a given windowsize, initial measurement included */
+    int32_t windowSize = 1000;
+    if (counter<windowSize){
+        if (&variable == &ultrablack){
+            sumUB += translateDataword;
+            counter++;
+            meanUB = float(sumUB)/counter;
+        }
+        else if (&variable == &black){
+            sumB += translateDataword;
+//            meanB = float(sumB)/counter;
+            meanB = -2; /**@radical declaration... */
+        }
+        variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB);
+    }
+    /**sliding window*/
+    else {
+        if (&variable == &ultrablack){
+            meanUB = (float(windowSize)-1)/windowSize*meanUB + float(1)/windowSize*translateDataword ;
+        }
+        else if (&variable == &black){
+//            meanB = (float(windowSize)-1)/windowSize*meanB + float(1)/windowSize*translateDataword ;
+            meanB = -2; /**@radical declaration */
+        }
+        variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB);
+    }
+    /**output to check*/
+//    if (&variable == &black){
+//        if (bla < 200){
+//            cout << bla << "\t" << meanUB << "\t" << translateDataword  << " " << meanB << "\n" ;
+//            bla++;
+//        }
+//    }
   }
 
   Event* dtbEventDecoder::DecodeAnalog() {
@@ -346,6 +379,16 @@ namespace pxar {
     decodingStats.m_info_words_read += n;
 
     if (n >= 3) {
+
+    if (n>3){
+        std::stringstream ss;
+        for (uint16_t i(0); i<n; i++)
+            ss << expandSign((*sample)[i] & 0x0fff) << " ";
+        LOG(logDEBUGHAL) << ss.str();
+        LOG(logDEBUGHAL) << black << " " << ultrablack << " ";
+
+    }
+
 //      // FIXME do we need to reserve?
 //      if (n > 15) roc_Event.pixels.reserve((n-3)/6);
 //      // Save the lastDAC value:
@@ -390,6 +433,9 @@ namespace pxar {
 
       // Reserve expected number of pixels from data length (subtract ROC headers):
       if (n - 3*GetTokenChainLength() > 0) roc_Event.pixels.reserve((n - 3*GetTokenChainLength())/6);
+
+//      /** round Ultrablack and black to 5*/
+//      black = 7*(black/7);
 
       unsigned int pos = 0;
       while (pos+3 <= n) {
@@ -454,6 +500,7 @@ namespace pxar {
     LOG(logDEBUGPIPES) << roc_Event;
     return &roc_Event;
   }
+
   void dtbEventDecoder::CheckEventValidity(int16_t roc_n) {
 
     // Check that we found all expected ROC headers:

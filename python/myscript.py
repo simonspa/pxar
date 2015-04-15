@@ -28,9 +28,9 @@ import time
 dacdict = PyRegisterDictionary()
 probedict = PyProbeDictionary()
 
-
 class PxarCoreCmd(cmd.Cmd):
     """Simple command processor for the pxar core API."""
+    test = 0
 
     def __init__(self, api, gui):
         cmd.Cmd.__init__(self)
@@ -206,12 +206,13 @@ class PxarCoreCmd(cmd.Cmd):
                 pos = -3
                 dat = self.api.daqGetRawEvent()
                 for i in dat:
-
+                    #REMOVE HEADER
                     i = i & 0x0fff
                     # Remove PH from hits:
                     if pos == 5:
                         pos = 0
                         continue
+                    # convert negatives
                     if i & 0x0800:
                         i -= 4096
                     plotdata[500+i] += 1
@@ -595,9 +596,12 @@ class PxarCoreCmd(cmd.Cmd):
             if plotdata[i] !=0:
                 if i-x != 1:
                     print "\n"
-                print i," ", plotdata[i]
+                print i-500," ", plotdata[i]
                 x = i
-
+        print '[',
+        for i in range(1024):
+            print '%d,'%plotdata[i],
+        print ']'
         plot = Plotter.create_th1(plotdata, -512, +512, "Address Levels", "ADC", "#")
         self.window.histos.append(plot)
         self.window.update()
@@ -749,10 +753,10 @@ class PxarCoreCmd(cmd.Cmd):
                 break
 
         print ""
-        tout = bestTin+5
+        tout = 20
         print "scan toutdelay"
         print "tindelay\ttoutdelay\trawEvent[-1]"
-        for i in range (15):
+        for i in range (tout):
             rawEvent = self.varyDelays(bestTin, tout,verbose=False)
             print str(bestTin)+"\t\t"+str(tout)+"\t\t"+str(rawEvent[-1])
             if rawEvent[-1] > 20:   #triggers for PH, the last one should always be a pos PH
@@ -1029,6 +1033,7 @@ class PxarCoreCmd(cmd.Cmd):
 #            except RuntimeError:
 #                pass
 
+
     def complete_Test(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.Test.__doc__, '']
@@ -1112,46 +1117,177 @@ class PxarCoreCmd(cmd.Cmd):
             return [self.do_wbcScan1.__doc__, '']
 
 
-    @arity(0,2,[int, int])
-    def do_dacDacScan(self, minWBC = 90, nTrigger = 50):
+    @arity(0,3,[int,int,int])
+    def do_dacDacScan(self, nTrigger = 5, col = 25, row = 40):
         """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
 
-#        self.api.maskAllPixels(1)
-#        self.api.testPixel(25,40,1)
-#        self.api.maskPixel(25,40,0)
-#        self.api.daqStart()
-#        print "--> enable and unmask Pixel " + str(25) + "/" + str(40) + " (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
-#        for vthrcomp in range(0,256):
-#            self.api.setDAC("vthrcomp",vthrcomp)
-#            self.api.daqTrigger(1,500)
-#            data = self.convertedRaw()
-#            if len(data)>3:
-##                print vthrcomp, data
-#        for vthrcomp in range(0,256):
-#            print vthrcomp
-#            t = time.time()
-#            for caldel in range(0,255):
-#                self.api.setDAC("vthrcomp",vthrcomp)
-#                self.api.setDAC("caldel",caldel)
-#                self.api.daqTrigger(1,152)
-#            print "time elapsed: ", time.time()-t
-#        data = self.convertedRaw()
-#                if len(data)>3:
-#                    print vthrcomp, caldel, data
-#        self.api.daqTrigger(1,500)
-#        data = self.api.daqGetEvent()
-#        print data, data.pixels, len(data.pixels)
-#        self.api.daqStop()
-
-        self.api.daqTriggerSource("extern")
-        self.api.setDAC("wbc", 115)
-        self.api.setTestboardDelays({"tindelay":14,"toutdelay":2})
+        self.api.maskAllPixels(1)
+        self.api.testPixel(col,row,1)
+        self.api.maskPixel(col,row,0)
         self.api.daqStart()
+        print "--> enable and unmask Pixel " + str(col) + "/" + str(row) + " (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
+
+        vthrcompMin = 20
+        vthrcompMax = 155
+        caldelMax = 140
+
+        print "looking for vthrcomp min",
+        vthrcomp = 0
+        data = []
+        t = time.time()
+        for i in range(15):
+            print "\b.",
+            sys.stdout.flush()
+            for caldel in range(256):
+                self.api.setDAC("vthrcomp",vthrcomp)
+                self.api.setDAC("caldel",caldel)
+                self.api.daqTrigger(1,152)
+                data = self.convertedRaw()
+                if len(data)>3:
+                    vthrcompMin = vthrcomp - 10
+                    break
+            if len(data)>3:
+                break
+            vthrcomp += 10
+        print ""
+        print "test took: ", round(time.time()-t,2), "s"
+
+        print "\nlooking for vthrcomp max",
+        vthrcomp = 255
+        t = time.time()
+        for i in range(15):
+            print "\b.",
+            sys.stdout.flush()
+            for caldel in range(256):
+                self.api.setDAC("vthrcomp",vthrcomp)
+                self.api.setDAC("caldel",caldel)
+                self.api.daqTrigger(1,152)
+                data = self.convertedRaw()
+                if len(data)>3:
+                    vthrcompMax = vthrcomp + 10
+                    break
+            if len(data)>3:
+                break
+            vthrcomp -= 10
+        print ""
+        print "test took:", round(time.time()-t,2), "s"
+
+        t = time.time()
+        print "\nlooking for caldel max"
+        self.api.setDAC("vthrcomp",vthrcompMax-20)
+        caldel = 255
+        for i in range(256):
+            self.api.setDAC("caldel",caldel)
+            self.api.daqTrigger(1,152)
+            data = self.convertedRaw()
+            if len(data)>3:
+                caldelMax = caldel + 20
+                break
+            caldel -= 10
+        print "test took: ", round(time.time()-t,2), "s"
+
+        matrix = zeros((256,256))
+
+        t = time.time()
+        for vthrcomp in range(vthrcompMin,vthrcompMax):
+            for caldel in range(0,caldelMax):
+                print "",'{0:4.2f}%'.format(100*(float(vthrcomp-vthrcompMin)/(vthrcompMax-vthrcompMin)+float(1)/(vthrcompMax-vthrcompMin)*caldel/caldelMax)), "\r",
+                sys.stdout.flush()
+                self.api.setDAC("vthrcomp",vthrcomp)
+                self.api.setDAC("caldel",caldel)
+                self.api.daqTrigger(nTrigger,160)
+                for i in range(nTrigger):
+                    data = self.convertedRaw()
+                    if len(data)>3:
+                        matrix[caldel][vthrcomp] += 1
+        print "test took: ", round(time.time()-t,2), "s"
+
+        self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
+        plot = Plotter.create_th2(matrix, 0, 255, 0, 255, 'DacDacScan', 'caldel ', 'vthrcomp\n', '')
+        self.window.histos.append(plot)
+        self.window.update()
+
+        self.api.daqStop()
+#        self.api.daqTriggerSource("extern")
+#        self.api.setDAC("wbc", 115)
+#        self.api.setTestboardDelays({"tindelay":14,"toutdelay":2})
+#        self.api.daqStart()
 
 
     def complete_dacDacScan(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_dacDacScan.__doc__, '']
+
+
+    @arity(0,0,[])
+    def do_readMaskFile(self):
+        """ do_readMaskFile: reads in the defaultMaskFile and masks accordingly"""
+        maskfile  = test + 'defaultMaskFile.dat'
+        f = open(maskfile)
+        mask = []
+        for l in f.readlines():
+            if l[0] != '#':
+                mask.append(l.split())
+        f.close
+        for line in mask:
+            if      line[0] == 'roc':
+                nRoc = int(line[1])
+                print "masking ROC:", nRoc
+                self.api.maskAllPixels(1, nRoc)
+            elif    line[0] == 'pix':
+                nRoc = int(line[1])
+                nCol = int(line[2])
+                nRow = int(line[3])
+                print "masking Pixel:\t", '{0:02d}'.format(nCol), '{0:02d}'.format(nRow), "\tof ROC", nRoc
+                self.api.maskPixel(nCol, nRow, 1, nRoc)
+            elif    line[0] == 'col':
+                nRoc = int(line[1])
+                nMinCol = int(line[2])
+                if len(line) <= 3 :
+                    print "masking col:\t", nMinCol, "\tof ROC", nRoc
+                    for row in range(80):
+                        self.api.maskPixel(nMinCol, row, 1, nRoc)
+                if len(line) > 3 :
+                    nMaxCol = int(line[3])
+                    print "masking col:\t", str(nMinCol)+'-'+str(nMaxCol), "\tof ROC", nRoc
+                    for col in range(nMinCol, nMaxCol+1):
+                        for row in range(80):
+                            self.api.maskPixel(col, row, 1, nRoc)
+            elif    line[0] == 'row':
+                nRoc = int(line[1])
+                nMinRow = int(line[2])
+                if len(line) <= 3 :
+                    print "masking row:\t", nMinRow, "\tof ROC", nRoc
+                    for col in range(52):
+                        self.api.maskPixel(col, nMinRow, 1, nRoc)
+                if len(line) > 3 :
+                    nMaxRow = int(line[3])
+                    print "masking row:\t", str(nMinRow)+'-'+str(nMaxRow), "\tof ROC", nRoc
+                    for row in range(nMinRow, nMaxRow+1):
+                        for col in range(52):
+                            self.api.maskPixel(col, row, 1, nRoc)
+
+
+
+
+    def complete_readMaskFile(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_readMaskFile.__doc__, '']
+
+    @arity(0,1,[,int])
+    def do_averageLevel(self, test = 50):
+        """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
+        self.api.daqStart()
+        for i in range(test)
+            self.api.daqTrigger(1,500)
+            data
+
+
+
+    def complete_averageLevel(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_averageLevel.__doc__, '']
+
 
     def do_quit(self, arg):
         """quit: terminates the application"""
@@ -1192,9 +1328,14 @@ def main(argv=None):
     parser.add_argument('--verbosity', '-v', metavar="LEVEL", default="INFO", help="The output verbosity set in the pxar API.")
     args = parser.parse_args(argv)
 
+
+    global test
+    test = args.dir
+
     api = PxarStartup(args.dir,args.verbosity)
 
-    print '\n###########################Test program for AddressLevelTest#############################\n'
+
+    print '\n###########################Michas Test Program#############################\n'
 
     #start command line
     prompt = PxarCoreCmd(api,args.gui)
