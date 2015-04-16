@@ -389,53 +389,8 @@ namespace pxar {
 
     }
 
-//      // FIXME do we need to reserve?
-//      if (n > 15) roc_Event.pixels.reserve((n-3)/6);
-//      // Save the lastDAC value:
-//      roc_Event.header = (*sample)[2];
-//
-//      // Iterate to improve ultrablack and black measurement:
-//      if(ultrablack > 0xff) { ultrablack = (((*sample)[0] & 0x0800) ? static_cast<int>((*sample)[0] & 0x0fff) - 4096 : static_cast<int>((*sample)[0] & 0x0fff)); }
-//      else { ultrablack = (ultrablack + (((*sample)[0] & 0x0800) ? static_cast<int>((*sample)[0] & 0x0fff) - 4096 : static_cast<int>((*sample)[0] & 0x0fff)))/2; }
-//
-//      if(black > 0xff) { black = (((*sample)[1] & 0x0800) ? static_cast<int>((*sample)[1] & 0x0fff) - 4096 : static_cast<int>((*sample)[1] & 0x0fff)); }
-//      else { black = (black + (((*sample)[1] & 0x0800) ? static_cast<int>((*sample)[1] & 0x0fff) - 4096 : static_cast<int>((*sample)[1] & 0x0fff)))/2; }
-//    /** round Ultrablack and black to 5*/
-//      black = 7*(black/7);
-//
-//       /**Test for Micha */
-//    if (sample->GetSize() > 3)
-//    {
-//        std::stringstream ss;
-//        ss << "\t" << ultrablack << "\t" << black ;
-//        LOG(logDEBUGHAL) << ss.str();
-//    }
-//
-//      LOG(logDEBUGPIPES) << "ROC Header: "
-//			 << (((*sample)[0] & 0x0800) ? static_cast<int>((*sample)[0] & 0x0fff) - 4096 : static_cast<int>((*sample)[0] & 0x0fff)) << " (avg. " << ultrablack << ") (UB) "
-//			 << (((*sample)[1] & 0x0800) ? static_cast<int>((*sample)[1] & 0x0fff) - 4096 : static_cast<int>((*sample)[1] & 0x0fff)) << " (avg. " << black << ") (B) "
-//			 << (((*sample)[2] & 0x0800) ? static_cast<int>((*sample)[2] & 0x0fff) - 4096 : static_cast<int>((*sample)[2] & 0x0fff)) << " (lastDAC) ";
-//
-//      unsigned int pos = 3;
-//      while (pos+6 <= n) {
-//	std::vector<uint16_t> data;
-//	data.push_back((*sample)[pos]);
-//	data.push_back((*sample)[pos+1]);
-//	data.push_back((*sample)[pos+2]);
-//	data.push_back((*sample)[pos+3]);
-//	data.push_back((*sample)[pos+4]);
-//	data.push_back((*sample)[pos+5]);
-//
-//	try{
-//	  pixel pix(data,0,ultrablack,black);
-//	  roc_Event.pixels.push_back(pix);
-//	  decodingStats.m_info_pixels_valid++;
-
       // Reserve expected number of pixels from data length (subtract ROC headers):
       if (n - 3*GetTokenChainLength() > 0) roc_Event.pixels.reserve((n - 3*GetTokenChainLength())/6);
-
-//      /** round Ultrablack and black to 5*/
-//      black = 7*(black/7);
 
       unsigned int pos = 0;
       while (pos+3 <= n) {
@@ -443,6 +398,7 @@ namespace pxar {
 	// Here we have to assume the first two words are a ROC header because we rely on
 	// its Ultrablack and Black level as initial values for auto-calibration:
 	int16_t levelS = (black - ultrablack)/8;
+
 
 	if(roc_n < 0 ||
 	   // Ultrablack level:
@@ -499,6 +455,23 @@ namespace pxar {
 
     LOG(logDEBUGPIPES) << roc_Event;
     return &roc_Event;
+  }
+  void dtbEventDecoder::CheckEventValidity(int16_t roc_n) {
+
+    // Check that we found all expected ROC headers:
+    // If the number of ROCs does not correspond to what we expect
+    // clear the event and return:
+    if(roc_n+1 != GetTokenChainLength()) {
+      LOG(logERROR) << "Number of ROCs (" << static_cast<int>(roc_n+1)
+		    << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
+      decodingStats.m_errors_roc_missing++;
+      // Clearing event content:
+      roc_Event.Clear();
+    }
+    // Count empty events
+    else if(roc_Event.pixels.empty()) { decodingStats.m_info_events_empty++; }
+    // Count valid events
+    else { decodingStats.m_info_events_valid++; }
   }
 
   void dtbEventDecoder::CheckEventValidity(int16_t roc_n) {

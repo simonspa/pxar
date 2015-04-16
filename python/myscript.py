@@ -1274,13 +1274,13 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_readMaskFile.__doc__, '']
 
-    @arity(0,1,[,int])
+    @arity(0,1,[int])
     def do_averageLevel(self, test = 50):
         """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
         self.api.daqStart()
-        for i in range(test)
+        for i in range(test):
             self.api.daqTrigger(1,500)
-            data
+
 
 
 
