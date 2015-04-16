@@ -474,23 +474,6 @@ namespace pxar {
     else { decodingStats.m_info_events_valid++; }
   }
 
-  void dtbEventDecoder::CheckEventValidity(int16_t roc_n) {
-
-    // Check that we found all expected ROC headers:
-    // If the number of ROCs does not correspond to what we expect
-    // clear the event and return:
-    if(roc_n+1 != GetTokenChainLength()) {
-      LOG(logERROR) << "Number of ROCs (" << static_cast<int>(roc_n+1)
-		    << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
-      decodingStats.m_errors_roc_missing++;
-      // Clearing event content:
-      roc_Event.Clear();
-    }
-    // Count empty events
-    else if(roc_Event.pixels.empty()) { decodingStats.m_info_events_empty++; }
-    // Count valid events
-    else { decodingStats.m_info_events_valid++; }
-  }
 
   Event* dtbEventDecoder::DecodeDeser160() {
 
