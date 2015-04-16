@@ -1317,7 +1317,6 @@ int CmdProc::setTestboardPower(string name, uint16_t value){
 }
 
 int CmdProc::setTestboardDelay(string name, uint8_t value){
-
     if (fSigdelays.size()==0){
 		// maybe never initialized
 		ConfigParameters *p = fPixSetup->getConfigParameters();
@@ -1326,7 +1325,6 @@ int CmdProc::setTestboardDelay(string name, uint8_t value){
    }else{
         // FIXME check whether gui values have changed ?????
    }
-
 
     for(size_t i=0; i<fSigdelays.size(); i++){
         if (fSigdelays[i].first==name){
@@ -1365,7 +1363,6 @@ int CmdProc::bursttest(int ntrig, int trigsep, int nburst){
 int CmdProc::adctest(const string signalName){
 
     // part 1 , acquire data : delay scan
-
     uint8_t gain = GAIN_1;
     uint8_t source = 1; // pg_sync
     uint8_t start  = 1;  // wait
@@ -1407,7 +1404,6 @@ int CmdProc::adctest(const string signalName){
     vector<int> yhist(2048);
 
     for(unsigned int dly=0; dly<nDly; dly++){
-
         //sigdelays.clear();
         if(source==1){
             setTestboardDelay("clk", dly);
@@ -1417,7 +1413,6 @@ int CmdProc::adctest(const string signalName){
         }else if(source==2){
             setTestboardDelay("sda", dly);
         }
-
         vector<uint16_t> data = fApi->daqADC(signalName, gain, nSample, source, start);
 
         if (data.size()<nSample) {
@@ -1438,7 +1433,6 @@ int CmdProc::adctest(const string signalName){
     // restore delays, signals (modified by daqADC) and pg
     setTestboardDelay("all");
 	pg_restore();
-
     if (ymin<ymax){
         int ylo=ymin/2;  for(; yhist[ylo+1024]<yhist[ylo+1+1024]; ylo++){}
         int yhi=ymax/2;  for(; yhist[yhi+1024]<yhist[yhi-1+1024]; yhi--){}
@@ -1491,8 +1485,8 @@ int CmdProc::tbmread(uint8_t regId){
 			   S |= (b[istart+7])<<2;
 			   S |= (b[istart+8])<<1;
 			   S |= (b[istart+9]); // called RW  in the tbm doc
-			   bool compRW = (b[istart+9] == b[istart+10]);
 
+			   bool compRW = (b[istart+9] == b[istart+10]);
 			   uint8_t D=0;  // readback data
 			   D  = (b[istart+11])<<7;
 			   D |= (b[istart+12])<<6;
@@ -1506,14 +1500,12 @@ int CmdProc::tbmread(uint8_t regId){
 			   D |= (b[istart+19]);
 			   //bool compD0 = (b[istart+19] == b[istart+20]);
 			   bool compD0 = (b[istart+20]==1);
-
 			   uint8_t H=0;  // hubId
 			   H  = b[istart+22] << 4;
 			   H |= b[istart+23] << 3;
 			   H |= b[istart+24] << 2;
 			   H |= b[istart+25] << 1;
 			   H |= b[istart+26];
-
 			   uint8_t P=0; // port, =4 for tbm readback
 			   P  = b[istart+27] <<2;
 			   P |= b[istart+28] <<1;
@@ -1771,7 +1763,6 @@ int CmdProc::runDaq(vector<uint16_t> & buf, int ntrig, int ftrigkhz, int verbosi
     /* run ntrig sequences and get the raw data from the DTB */
 
     if(setup) setupDaq(ntrig, ftrigkhz, verbosity);
-
 	if(ntrig>0){
 		fApi->daqTrigger(ntrig, fPeriod);
 	}
@@ -1916,7 +1907,6 @@ int CmdProc::getData(vector<uint16_t> & buf, vector<DRecord > & data, int verbos
         }
         bool tbmHeaderSeen=false;
         unsigned int nevent=0;
-
 
         unsigned int nloop=0;
         int fffCounter=0;
@@ -2331,6 +2321,7 @@ int CmdProc::pg_loop(int value){
         uint16_t retval = fApi->daqTriggerLoop( value );
         if(verbose) cout << "return value " << retval << endl;
     }
+
     fPgRunning = true;
     return 0;
 }
@@ -2486,8 +2477,6 @@ int CmdProc::tb(Keyword kw){
         fPixelConfigNeeded = false;
         return 0;
     }
-
-
     if( kw.match("tbmtest","rda")){
 		uint8_t value;
 		for(int core=0; core<2; core++){
@@ -2511,7 +2500,6 @@ int CmdProc::tb(Keyword kw){
 		}
 		return 0;
 	}
-
     if( kw.match("tbmtest","trigger") ){
 		// inject a tbm generated trigger and read out the data
 		// inject the trigger, both cores
@@ -2544,7 +2532,6 @@ int CmdProc::tb(Keyword kw){
 		fApi->daqStop(false);
         return 0;
     }
-
     if( kw.match("raw") ){
         int stat = runDaq( fBuf, 1,0, 0 );
         if(stat==0){
@@ -2852,7 +2839,6 @@ bool CmdProc::process(Keyword keyword, Target target, bool forceTarget){
     string message;
     if ( keyword.match("echo","on")){ fEchoExecs = true; return true;}
     if ( keyword.match("echo","off")){ fEchoExecs = false; return true;}
-
     if ( keyword.match("echo","roc")){ out << "roc " << target.value() << "\n"; return true;}
     if ( keyword.match("echo","%")){ out << "%" << target.value() << "\n"; return true;}
     if ( keyword.greedy_match("echo", message) || keyword.greedy_match("log",message) ){

@@ -388,7 +388,6 @@ namespace pxar {
         LOG(logDEBUGHAL) << black << " " << ultrablack << " ";
 
     }
-
       // Reserve expected number of pixels from data length (subtract ROC headers):
       if (n - 3*GetTokenChainLength() > 0) roc_Event.pixels.reserve((n - 3*GetTokenChainLength())/6);
 
@@ -398,7 +397,6 @@ namespace pxar {
 	// Here we have to assume the first two words are a ROC header because we rely on
 	// its Ultrablack and Black level as initial values for auto-calibration:
 	int16_t levelS = (black - ultrablack)/8;
-
 
 	if(roc_n < 0 ||
 	   // Ultrablack level:
@@ -473,7 +471,6 @@ namespace pxar {
     // Count valid events
     else { decodingStats.m_info_events_valid++; }
   }
-
 
   Event* dtbEventDecoder::DecodeDeser160() {
 
