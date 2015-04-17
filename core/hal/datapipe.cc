@@ -339,10 +339,10 @@ namespace pxar {
         }
         else if (&variable == &black){
             sumB += translateDataword;
-//            meanB = float(sumB)/counter;
-            meanB = -2; /**@radical declaration... */
+            meanB = float(sumB)/counter;
+       //     meanB = -2; /**@radical declaration... */
         }
-        variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB);
+        variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB)+8;
     }
     /**sliding window*/
     else {
@@ -350,14 +350,14 @@ namespace pxar {
             meanUB = (float(windowSize)-1)/windowSize*meanUB + float(1)/windowSize*translateDataword ;
         }
         else if (&variable == &black){
-//            meanB = (float(windowSize)-1)/windowSize*meanB + float(1)/windowSize*translateDataword ;
-            meanB = -2; /**@radical declaration */
+           meanB = (float(windowSize)-1)/windowSize*meanB + float(1)/windowSize*translateDataword ;
+         //   meanB = -2; /**@radical declaration */
         }
-        variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB);
+        variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB)+8;
     }
     /**output to check*/
 //    if (&variable == &black){
-//        if (bla < 200){
+//        if (bla < 1000){
 //            cout << bla << "\t" << meanUB << "\t" << translateDataword  << " " << meanB << "\n" ;
 //            bla++;
 //        }

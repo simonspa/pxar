@@ -73,7 +73,7 @@ class PxarCoreCmd(cmd.Cmd):
                 module = True
                 break
         # Prepare new numpy matrix:
-        d = zeros((416 if module else 52,160 if module else 80))
+        d = zeros((417 if module else 53,161 if module else 81))
         for px in data:
             xoffset = 52*(px.roc%8) if module else 0
             yoffset = 80*int(px.roc/8) if module else 0
@@ -81,9 +81,9 @@ class PxarCoreCmd(cmd.Cmd):
             y = (px.row + yoffset) if (px.roc < 8) else (2*yoffset - px.row - 1)
             # Reverse order of the upper ROC row:
             x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
-            d[x][y] += 1 if count else px.value
+            d[x+1][y+1] += 1 if count else px.value
 
-        plot = Plotter.create_th2(d, 0, 415 if module else 51, 0, 159 if module else 79, name, 'pixels x', 'pixels y', name)
+        plot = Plotter.create_th2(d, 0, 417 if module else 53, 0, 161 if module else 81, name, 'pixels x', 'pixels y', name)
         self.window.histos.append(plot)
         self.window.update()
     def plot_1d(self,data,name,dacname,min,max):
@@ -368,10 +368,10 @@ class PxarCoreCmd(cmd.Cmd):
             # return help for the cmd
             return [self.do_SignalProbe.__doc__, '']
 
-    @arity(2,2,[str, int, int])
-    def do_setDAC(self, dacname, value):
+    @arity(2,3,[str, int, int])
+    def do_setDAC(self, dacname, value, rocID = None):
         """setDAC [DAC name] [value] [ROCID]: Set the DAC to given value for given roc ID"""
-        self.api.setDAC(dacname, value)
+        self.api.setDAC(dacname, value, rocID)
     def complete_setDAC(self, text, line, start_index, end_index):
         if text and len(line.split(" ")) <= 2: # first argument and started to type
             # list matching entries
@@ -1057,7 +1057,7 @@ class PxarCoreCmd(cmd.Cmd):
             exEvent     = []
             for j in range(nTrigger):
                 data = self.convertedRaw()
-                if len(data) > 0:   #and data[0] < -100 (might add this as well if tindelay is set correctly)
+                if len(data) > 3:   #and data[0] < -100 (might add this as well if tindelay is set correctly)
                     if(it==0):
                         exEvent = data
                         it +=1
@@ -1155,7 +1155,7 @@ class PxarCoreCmd(cmd.Cmd):
         print "\nlooking for vthrcomp max",
         vthrcomp = 255
         t = time.time()
-        for i in range(15):
+        for i in range(25):
             print "\b.",
             sys.stdout.flush()
             for caldel in range(256):
@@ -1187,6 +1187,7 @@ class PxarCoreCmd(cmd.Cmd):
         print "test took: ", round(time.time()-t,2), "s"
 
         matrix = zeros((256,256))
+#        matrix = zeros((caldelMax+10,vthrcompMax-vthrcompMin+20))
 
         t = time.time()
         for vthrcomp in range(vthrcompMin,vthrcompMax):
@@ -1203,6 +1204,7 @@ class PxarCoreCmd(cmd.Cmd):
         print "test took: ", round(time.time()-t,2), "s"
 
         self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
+#        plot = Plotter.create_th2(matrix, 0, caldelMax + 10, vthrcompMin - 10, vthrcompMax + 10, 'DacDacScan', 'caldel ', 'vthrcomp\n', '')
         plot = Plotter.create_th2(matrix, 0, 255, 0, 255, 'DacDacScan', 'caldel ', 'vthrcomp\n', '')
         self.window.histos.append(plot)
         self.window.update()
@@ -1277,9 +1279,24 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0,1,[int])
     def do_averageLevel(self, test = 50):
         """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
+        self.api.daqTriggerSource("extern")
+        self.api.daqStop()
+        wbc = 115
+        self.api.setDAC("wbc", wbc)
+        self.api.setDAC("wbc", wbc, 1)
         self.api.daqStart()
+        matrix = []
+        for i in range(50):
+            matrix.append(0)
         for i in range(test):
-            self.api.daqTrigger(1,500)
+            data = self.convertedRaw()
+            index = 0
+            for j in data:
+                matrix[index] += j
+                index +=1
+        for i in range(50):
+            matrix[i] /= test
+        print matrix
 
 
 

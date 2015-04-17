@@ -170,17 +170,16 @@ def PxarStartup(directory, verbosity):
     rocPixels = list()
     rocI2C = []
     config_nrocs = config.get("nrocs")
-    print config_nrocs
+#    print config_nrocs
     config_nrocs  = config_nrocs.split()
     nrocs = int(config_nrocs[0])
     i2cs = [0]
     if len(config_nrocs) > 1:
-        print config_nrocs[1], config_nrocs[1].startswith('i2c')
+#        print config_nrocs[1], config_nrocs[1].startswith('i2c')
         if config_nrocs[1].startswith('i2c'):
-            print 'configure i2cs: ',
             i2cs = ' '.join(config_nrocs[2:])
             i2cs = [int(i) for i in i2cs.split(',')]
-            print i2cs
+            print "configure i2cs: ", i2cs
     for roc in xrange(nrocs):
         dacconfig = PxarParametersFile('%s%s_C%i.dat'%(os.path.join(directory,""),config.get("dacParameters"),roc))
         rocDacs.append(dacconfig.getAll())
