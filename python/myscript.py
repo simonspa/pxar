@@ -194,6 +194,7 @@ class PxarCoreCmd(cmd.Cmd):
             nCount += 1
         return event
 
+
     def addressLevelScan(self):
         self.api.daqStart()
         self.api.daqTrigger(1000,500)   #choose here how many triggers you want to send (crucial for the time it takes)
@@ -1279,25 +1280,32 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0,1,[int])
     def do_averageLevel(self, test = 50):
         """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
-        self.api.daqTriggerSource("extern")
-        self.api.daqStop()
+#        self.api.daqTriggerSource("extern")
+#        self.api.daqStop()
+#        wbc = 115
+#        self.api.setDAC("wbc", wbc)
+#        self.api.setDAC("wbc", wbc, 1)
+#        self.api.daqStart()
+#        matrix = []
+#        for i in range(50):
+#            matrix.append(0)
+#        for i in range(test):
+#            data = self.convertedRaw()
+#            index = 0
+#            for j in data:
+#                matrix[index] += j
+#                index +=1
+#        for i in range(50):
+#            matrix[i] /= test
+#        print matrix
+
         wbc = 115
         self.api.setDAC("wbc", wbc)
         self.api.setDAC("wbc", wbc, 1)
-        self.api.daqStart()
-        matrix = []
-        for i in range(50):
-            matrix.append(0)
         for i in range(test):
-            data = self.convertedRaw()
-            index = 0
-            for j in data:
-                matrix[index] += j
-                index +=1
-        for i in range(50):
-            matrix[i] /= test
-        print matrix
-
+            data = self.getRawEvent()
+            if len(data)>10:
+                print data
 
 
 

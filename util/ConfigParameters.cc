@@ -632,6 +632,7 @@ void ConfigParameters::readRocDacs() {
   if (!fReadDacParameters) {
     for (unsigned int i = 0; i < fnRocs; ++i) {
       stringstream filename;
+      int i2c = fI2cAddresses[i];
       filename << fDirectory << "/" << fDACParametersFileName << fTrimVcalSuffix << "_C" << i << ".dat"; 
       vector<pair<string, uint8_t> > rocDacs = readDacFile(filename.str()); 
       fDacParameters.push_back(rocDacs); 
@@ -1079,31 +1080,37 @@ void ConfigParameters::replaceAll(string& str, const string& from, const string&
 
 // ----------------------------------------------------------------------
 void ConfigParameters::readNrocs(string line) {
-  cleanupString(line);
-  string::size_type s0 = line.find(" "); 
-  string nrocs = line.substr(s0); 
-  fnRocs = atoi(nrocs.c_str()); 
-  string::size_type s1 = line.find("i2c:"); 
-  if (string::npos == s1) {
-    return;
-  } else {
-    string i2cstring = line.substr(s1+5);
-    s0 = i2cstring.find(","); 
-    string i2c(""), leftover("");
-    while (string::npos != s0) {
-      i2c = i2cstring.substr(0, s0);
-      fI2cAddresses.push_back(atoi(i2c.c_str())); 
-      i2cstring = i2cstring.substr(s0+1); 
-      s0 = i2cstring.find(","); 
-    }
-    //  -- get the last one as well
-    fI2cAddresses.push_back(atoi(i2cstring.c_str())); 
-    if (fnRocs != fI2cAddresses.size()) {
-      LOG(logWARNING) << "mismatch between number of i2c addresses and nRocs! Resetting nRocs to " 
-		      <<  fI2cAddresses.size();
-      fnRocs =  fI2cAddresses.size(); 
-    }
-  }
+	cleanupString(line);
+	string::size_type s0 = line.find(" ");
+	string nrocs = line.substr(s0);
+	fnRocs = atoi(nrocs.c_str());
+	string::size_type s1 = line.find("i2c:");
+	if (string::npos == s1) {
+		LOG(logDEBUG) << "Set default I2c addresses: "<<0<<"-"<<fnRocs-1;
+		for (int roc = 0; roc < fnRocs; roc++){
+			fI2cAddresses.push_back(roc);
+		}
+		return;
+	}
+	else
+	{
+		string i2cstring = line.substr(s1+5);
+		s0 = i2cstring.find(",");
+		string i2c(""), leftover("");
+		while (string::npos != s0) {
+			i2c = i2cstring.substr(0, s0);
+			fI2cAddresses.push_back(atoi(i2c.c_str()));
+			i2cstring = i2cstring.substr(s0+1);
+			s0 = i2cstring.find(",");
+		}
+		//  -- get the last one as well
+		fI2cAddresses.push_back(atoi(i2cstring.c_str()));
+		if (fnRocs != fI2cAddresses.size()) {
+			LOG(logWARNING) << "mismatch between number of i2c addresses and nRocs! Resetting nRocs to "
+					<<  fI2cAddresses.size();
+			fnRocs =  fI2cAddresses.size();
+		}
+	}
 }
 
 // ----------------------------------------------------------------------

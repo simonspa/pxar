@@ -173,7 +173,7 @@ def PxarStartup(directory, verbosity):
 #    print config_nrocs
     config_nrocs  = config_nrocs.split()
     nrocs = int(config_nrocs[0])
-    i2cs = [0]
+    i2cs = [i for i in range(nrocs)]
     if len(config_nrocs) > 1:
 #        print config_nrocs[1], config_nrocs[1].startswith('i2c')
         if config_nrocs[1].startswith('i2c'):
@@ -181,13 +181,14 @@ def PxarStartup(directory, verbosity):
             i2cs = [int(i) for i in i2cs.split(',')]
             print "configure i2cs: ", i2cs
     for roc in xrange(nrocs):
-        dacconfig = PxarParametersFile('%s%s_C%i.dat'%(os.path.join(directory,""),config.get("dacParameters"),roc))
+        if len(i2cs)> roc:
+            i2c = i2cs[roc]
+        else:
+            i2c = roc
+        dacconfig = PxarParametersFile('%s%s_C%i.dat'%(os.path.join(directory,""),config.get("dacParameters"),i2c))
+        rocI2C.append(i2c)
         rocDacs.append(dacconfig.getAll())
         rocPixels.append(pixels)
-        if len(i2cs)> roc:
-            rocI2C.append(i2cs[roc])
-        else:
-            rocI2C.append(roc)
 
     print "And we have just initialized " + str(len(pixels)) + " pixel configs to be used for every ROC!"
 
