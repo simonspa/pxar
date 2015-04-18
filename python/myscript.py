@@ -452,6 +452,32 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_getEfficiencyMap.__doc__, '']
 
+    @arity(0,10,[str, int, int, int, str, int, int, int, int, int])
+    def do_dacDacScan(self, dac1name = "caldel", dac1step = 1, dac1min = 0, dac1max = 255, dac2name = "vthrcomp", dac2step = 1, dac2min = 0, dac2max = 255, flags = 0, nTriggers = 10):
+        """getEfficiencyVsDACDAC [DAC1 name] [step size 1] [min 1] [max 1] [DAC2 name] [step size 2] [min 2] [max 2] [flags = 0] [nTriggers = 10]: returns the efficiency over a 2D DAC1-DAC2 scan"""
+        self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
+        self.api.testAllPixels(0)
+        self.api.testPixel(14,14,1)
+        data = self.api.getEfficiencyVsDACDAC(dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max, flags, nTriggers)
+        self.plot_2d(data,"DacDacScan",dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max)
+
+    def complete_dacDacScan(self, text, line, start_index, end_index):
+        if text and len(line.split(" ")) <= 2: # first argument and started to type
+            # list matching entries
+            return [dac for dac in dacdict.getAllROCNames()
+                        if dac.startswith(text)]
+        elif text and len(line.split(" ")) == 6:
+            # list matching entries
+            return [dac for dac in dacdict.getAllROCNames()
+                    if dac.startswith(text)]
+        else:
+            if (len(line.split(" ")) > 2 and len(line.split(" ")) < 6) or len(line.split(" ")) > 6:
+                # return help for the cmd
+                return [self.do_dacDacScan.__doc__, '']
+            else:
+                # return all DACS
+                return dacdict.getAllROCNames()
+
     @arity(0,0,[])
     def do_HVon(self):
         """HVon: switch High voltage for sensor bias on"""
@@ -1118,108 +1144,108 @@ class PxarCoreCmd(cmd.Cmd):
             return [self.do_wbcScan1.__doc__, '']
 
 
-    @arity(0,3,[int,int,int])
-    def do_dacDacScan(self, nTrigger = 5, col = 25, row = 40):
-        """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
-
-        self.api.maskAllPixels(1)
-        self.api.testPixel(col,row,1)
-        self.api.maskPixel(col,row,0)
-        self.api.daqStart()
-        print "--> enable and unmask Pixel " + str(col) + "/" + str(row) + " (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
-
-        vthrcompMin = 20
-        vthrcompMax = 155
-        caldelMax = 140
-
-        print "looking for vthrcomp min",
-        vthrcomp = 0
-        data = []
-        t = time.time()
-        for i in range(15):
-            print "\b.",
-            sys.stdout.flush()
-            for caldel in range(256):
-                self.api.setDAC("vthrcomp",vthrcomp)
-                self.api.setDAC("caldel",caldel)
-                self.api.daqTrigger(1,152)
-                data = self.convertedRaw()
-                if len(data)>3:
-                    vthrcompMin = vthrcomp - 10
-                    break
-            if len(data)>3:
-                break
-            vthrcomp += 10
-        print ""
-        print "test took: ", round(time.time()-t,2), "s"
-
-        print "\nlooking for vthrcomp max",
-        vthrcomp = 255
-        t = time.time()
-        for i in range(25):
-            print "\b.",
-            sys.stdout.flush()
-            for caldel in range(256):
-                self.api.setDAC("vthrcomp",vthrcomp)
-                self.api.setDAC("caldel",caldel)
-                self.api.daqTrigger(1,152)
-                data = self.convertedRaw()
-                if len(data)>3:
-                    vthrcompMax = vthrcomp + 10
-                    break
-            if len(data)>3:
-                break
-            vthrcomp -= 10
-        print ""
-        print "test took:", round(time.time()-t,2), "s"
-
-        t = time.time()
-        print "\nlooking for caldel max"
-        self.api.setDAC("vthrcomp",vthrcompMax-20)
-        caldel = 255
-        for i in range(256):
-            self.api.setDAC("caldel",caldel)
-            self.api.daqTrigger(1,152)
-            data = self.convertedRaw()
-            if len(data)>3:
-                caldelMax = caldel + 20
-                break
-            caldel -= 10
-        print "test took: ", round(time.time()-t,2), "s"
-
-        matrix = zeros((256,256))
-#        matrix = zeros((caldelMax+10,vthrcompMax-vthrcompMin+20))
-
-        t = time.time()
-        for vthrcomp in range(vthrcompMin,vthrcompMax):
-            for caldel in range(0,caldelMax):
-                print "",'{0:4.2f}%'.format(100*(float(vthrcomp-vthrcompMin)/(vthrcompMax-vthrcompMin)+float(1)/(vthrcompMax-vthrcompMin)*caldel/caldelMax)), "\r",
-                sys.stdout.flush()
-                self.api.setDAC("vthrcomp",vthrcomp)
-                self.api.setDAC("caldel",caldel)
-                self.api.daqTrigger(nTrigger,160)
-                for i in range(nTrigger):
-                    data = self.convertedRaw()
-                    if len(data)>3:
-                        matrix[caldel][vthrcomp] += 1
-        print "test took: ", round(time.time()-t,2), "s"
-
-        self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
-#        plot = Plotter.create_th2(matrix, 0, caldelMax + 10, vthrcompMin - 10, vthrcompMax + 10, 'DacDacScan', 'caldel ', 'vthrcomp\n', '')
-        plot = Plotter.create_th2(matrix, 0, 255, 0, 255, 'DacDacScan', 'caldel ', 'vthrcomp\n', '')
-        self.window.histos.append(plot)
-        self.window.update()
-
-        self.api.daqStop()
-#        self.api.daqTriggerSource("extern")
-#        self.api.setDAC("wbc", 115)
-#        self.api.setTestboardDelays({"tindelay":14,"toutdelay":2})
+#    @arity(0,3,[int,int,int])
+#    def do_dacDacScan(self, nTrigger = 5, col = 25, row = 40):
+#        """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
+#
+#        self.api.maskAllPixels(1)
+#        self.api.testPixel(col,row,1)
+#        self.api.maskPixel(col,row,0)
 #        self.api.daqStart()
-
-
-    def complete_dacDacScan(self, text, line, start_index, end_index):
-        # return help for the cmd
-        return [self.do_dacDacScan.__doc__, '']
+#        print "--> enable and unmask Pixel " + str(col) + "/" + str(row) + " (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
+#
+#        vthrcompMin = 20
+#        vthrcompMax = 155
+#        caldelMax = 140
+#
+#        print "looking for vthrcomp min",
+#        vthrcomp = 0
+#        data = []
+#        t = time.time()
+#        for i in range(15):
+#            print "\b.",
+#            sys.stdout.flush()
+#            for caldel in range(256):
+#                self.api.setDAC("vthrcomp",vthrcomp)
+#                self.api.setDAC("caldel",caldel)
+#                self.api.daqTrigger(1,152)
+#                data = self.convertedRaw()
+#                if len(data)>3:
+#                    vthrcompMin = vthrcomp - 10
+#                    break
+#            if len(data)>3:
+#                break
+#            vthrcomp += 10
+#        print ""
+#        print "test took: ", round(time.time()-t,2), "s"
+#
+#        print "\nlooking for vthrcomp max",
+#        vthrcomp = 255
+#        t = time.time()
+#        for i in range(25):
+#            print "\b.",
+#            sys.stdout.flush()
+#            for caldel in range(256):
+#                self.api.setDAC("vthrcomp",vthrcomp)
+#                self.api.setDAC("caldel",caldel)
+#                self.api.daqTrigger(1,152)
+#                data = self.convertedRaw()
+#                if len(data)>3:
+#                    vthrcompMax = vthrcomp + 10
+#                    break
+#            if len(data)>3:
+#                break
+#            vthrcomp -= 10
+#        print ""
+#        print "test took:", round(time.time()-t,2), "s"
+#
+#        t = time.time()
+#        print "\nlooking for caldel max"
+#        self.api.setDAC("vthrcomp",vthrcompMax-20)
+#        caldel = 255
+#        for i in range(256):
+#            self.api.setDAC("caldel",caldel)
+#            self.api.daqTrigger(1,152)
+#            data = self.convertedRaw()
+#            if len(data)>3:
+#                caldelMax = caldel + 20
+#                break
+#            caldel -= 10
+#        print "test took: ", round(time.time()-t,2), "s"
+#
+#        matrix = zeros((256,256))
+##        matrix = zeros((caldelMax+10,vthrcompMax-vthrcompMin+20))
+#
+#        t = time.time()
+#        for vthrcomp in range(vthrcompMin,vthrcompMax):
+#            for caldel in range(0,caldelMax):
+#                print "",'{0:4.2f}%'.format(100*(float(vthrcomp-vthrcompMin)/(vthrcompMax-vthrcompMin)+float(1)/(vthrcompMax-vthrcompMin)*caldel/caldelMax)), "\r",
+#                sys.stdout.flush()
+#                self.api.setDAC("vthrcomp",vthrcomp)
+#                self.api.setDAC("caldel",caldel)
+#                self.api.daqTrigger(nTrigger,160)
+#                for i in range(nTrigger):
+#                    data = self.convertedRaw()
+#                    if len(data)>3:
+#                        matrix[caldel][vthrcomp] += 1
+#        print "test took: ", round(time.time()-t,2), "s"
+#
+#        self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
+##        plot = Plotter.create_th2(matrix, 0, caldelMax + 10, vthrcompMin - 10, vthrcompMax + 10, 'DacDacScan', 'caldel ', 'vthrcomp\n', '')
+#        plot = Plotter.create_th2(matrix, 0, 255, 0, 255, 'DacDacScan', 'caldel ', 'vthrcomp\n', '')
+#        self.window.histos.append(plot)
+#        self.window.update()
+#
+#        self.api.daqStop()
+##        self.api.daqTriggerSource("extern")
+##        self.api.setDAC("wbc", 115)
+##        self.api.setTestboardDelays({"tindelay":14,"toutdelay":2})
+##        self.api.daqStart()
+#
+#
+#    def complete_dacDacScan(self, text, line, start_index, end_index):
+#        # return help for the cmd
+#        return [self.do_dacDacScan.__doc__, '']
 
 
     @arity(0,0,[])
