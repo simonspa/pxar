@@ -123,28 +123,8 @@ def PxarStartup(directory, verbosity):
         "ia":config.get("ia",1.190),
         "id":config.get("id",1.10)}
 
-    # Pattern Generator for single ROC operation:
-    if int(config.get("nTbms")) == 0:
-        pg_setup = (
-            ("PG_RESR",25),
-            ("PG_CAL",106),
-            ("PG_TRG",16),
-            ("PG_TOK",0))
-    else:
-        pg_setup = (
-            ("PG_RESR",15),
-            ("PG_CAL",106),
-            ("PG_TRG",0))
 
-    # Start an API instance from the core pxar library
-    api = PyPxarCore(usbId=config.get("testboardName"),logLevel=verbosity)
-    print api.getVersion()
-    if not api.initTestboard(pg_setup = pg_setup,
-                             power_settings = power_settings,
-                             sig_delays = tbparameters.getAll()):
-        print "WARNING: could not init DTB -- possible firmware mismatch."
-        print "Please check if a new FW version is available"
-        exit
+
 
 
     tbmDACs = []
@@ -189,6 +169,32 @@ def PxarStartup(directory, verbosity):
         rocI2C.append(i2c)
         rocDacs.append(dacconfig.getAll())
         rocPixels.append(pixels)
+    pgcal = int(rocDacs[0]['wbc']) + 6
+    print "pgcal:", pgcal
+
+    # Pattern Generator for single ROC operation:
+    if int(config.get("nTbms")) == 0:
+        pg_setup = (
+            ("PG_RESR",25),
+            ("PG_CAL",pgcal),
+            ("PG_TRG",16),
+            ("PG_TOK",0))
+    else:
+        pg_setup = (
+            ("PG_RESR",15),
+            ("PG_CAL",106),
+            ("PG_TRG",0))
+
+       # Start an API instance from the core pxar library
+    api = PyPxarCore(usbId=config.get("testboardName"),logLevel=verbosity)
+    print api.getVersion()
+    if not api.initTestboard(pg_setup = pg_setup,
+                             power_settings = power_settings,
+                             sig_delays = tbparameters.getAll()):
+        print "WARNING: could not init DTB -- possible firmware mismatch."
+        print "Please check if a new FW version is available"
+        exit
+
 
     print "And we have just initialized " + str(len(pixels)) + " pixel configs to be used for every ROC!"
 

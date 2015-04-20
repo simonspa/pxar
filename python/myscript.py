@@ -320,7 +320,29 @@ class PxarCoreCmd(cmd.Cmd):
         return data
 
 #    def varyDAC(self, dacname, dacvalue)
+    def averagedLevel(self, it):
 
+        levels = [0,0,0,0,0]
+        header = [0,0]
+        self.api.daqStart()
+        self.api.daqTrigger(30,500)
+        for i in range(it):
+            data = self.convertedRaw()
+            if len(data)==3:
+                for j in range(2):
+                    header[j] += data[j]
+            elif len(data) == 9:
+                for j in range(5):
+                    levels[j] += data[j+3]
+        if len(data)==3:
+            for j in range(2):
+                header[j] = round(header[j]/float(it),1)
+            print header
+        elif len(data) == 9:
+            for j in range(5):
+                levels[j] = round(levels[j]/float(it),1)
+            print levels
+        self.api.daqStop()
 
 ######################################CMDLINEINTERFACE############################################################################
 
@@ -578,7 +600,7 @@ class PxarCoreCmd(cmd.Cmd):
 
     @arity(0,0,[])
     def do_daqRawEvent(self):
-        """analogLevelScan: scan the ADC levels of an analog ROC"""
+        """analogLevelScan: plots the raw and converted event"""
         self.api.daqStart()
         self.api.daqTrigger(1,500)
         rawEvent = []
@@ -586,7 +608,10 @@ class PxarCoreCmd(cmd.Cmd):
             rawEvent = self.api.daqGetRawEvent()
         except RuntimeError:
             pass
-        print "raw Event:\t\t",rawEvent
+        print "raw Event:\t\t", "[",
+        for event in rawEvent:
+            print '{0:5d}'.format(event),
+        print "]"
         nCount = 0
         for i in rawEvent:
             i = i & 0x0fff
@@ -594,7 +619,10 @@ class PxarCoreCmd(cmd.Cmd):
                 i -= 4096
             rawEvent[nCount] = i
             nCount += 1
-        print "converted Event:\t",rawEvent
+        print "converted Event:\t", "[",
+        for event in rawEvent:
+            print '{0:5d}'.format(event),
+        print "]"
         self.api.daqStop()
     def complete_daqRawEvent(self, text, line, start_index, end_index):
         # return help for the cmd
@@ -602,14 +630,17 @@ class PxarCoreCmd(cmd.Cmd):
 
     @arity(0,0,[])
     def do_daqEvent(self):
-        """analogLevelScan: scan the ADC levels of an analog ROC"""
+        """analogLevelScan: plots the event"""
         self.api.daqStart()
         self.api.daqTrigger(1,500)
-        #print "##########################################"
-        x = self.api.daqGetEvent()
-        print x
+        data = self.api.daqGetEvent()
+        if len(data.pixels) == 0:
+            print "[]"
+        else:
+            for event in data.pixels:
+                print event
         self.api.daqStop()
-    def complete_daqRawEvent(self, text, line, start_index, end_index):
+    def complete_daqEvent(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_daqEvent.__doc__, '']
 
@@ -645,31 +676,22 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_enableAllPixel.__doc__, '']
 
-    @arity (2,2,[int, int])
-    def do_enableColumn(self, start, end):
-        """enableAllPixel: enables and unmasks all Pixels"""
-        for i in range(52):
-            for j in range(start,end+1):
-                self.api.maskPixel(i,j,0)
-        print str(4160 - self.api.getNMaskedPixels(0)) + " Pixels unmasked"
-    def complete_enableColumn(self, text, line, start_index, end_index):
-        # return help for the cmd
-        return [self.do_enableColumn.__doc__, '']
-
-    @arity(2,2,[int, int])
-    def do_enableFirstPixel(self, row, column):
-        """enablePixel [row] [column] : enables the desired Pixel and masks and disables the rest"""
+    @arity(0,2,[int, int])
+    def do_enableOnePixel(self, row = 14, column = 14):
+        """enableOnePixel [row] [column] : enables one Pixel (default 14/14); masks and disables the rest"""
+        self.api.testAllPixels(0)
         self.api.maskAllPixels(1)
         print "--> disable and mask all Pixels (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
+        self.api.testPixel(row,column,1)
         self.api.maskPixel(row,column,0)
         print "--> enable and unmask Pixel " + str(row) + "/" + str(column) + " (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
-    def complete_enableFirstPixel(self, text, line, start_index, end_index):
+    def complete_enableOnePixel(self, text, line, start_index, end_index):
         # return help for the cmd
-        return [self.do_enableFirstPixel.__doc__, '']
+        return [self.do_enableOnePixel.__doc__, '']
 
-    @arity(1,1,[int])
-    def do_xEnableBlock(self, blocksize):
-        """enablePixel [row] [column] : enables the desired Pixel and masks and disables the rest"""
+    @arity(1,3,[int, int, int])
+    def do_xEnableBlock(self, blocksize, row = 3, col = 3):
+        """xEnableBlock [blocksize] [row] [col] : masks all Pixel; starting from row and col (default 3/3) unmasks block of size blocksize  """
         self.api.maskAllPixels(1)
         print "--> all Pixels masked (" + str(self.api.getNMaskedPixels(0)) + ")"
         for i in range(3,blocksize+3):
@@ -682,7 +704,7 @@ class PxarCoreCmd(cmd.Cmd):
 
     @arity(2,2,[int, int])
     def do_enablePixel(self, row, column):
-        """enablePixel [row] [column] : enables the desired Pixel and masks and disables the rest"""
+        """enablePixel [row] [column] : enables and unmasks a Pixel """
         self.api.testPixel(row,column,1)
         self.api.maskPixel(row,column,0)
         print "--> enable and unmask Pixel " + str(row) + "/" + str(column) + " (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
@@ -816,21 +838,20 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_findDelays.__doc__, '']
 
-    @arity(0,0,[])
-    def do_ScanVana(self):
+    @arity(0,2,[int, int])
+    def do_scanVana(self, begin = 120, end = 160):
         """ScanVana: finds the best setting for vana so that the analogue current is nearly 24"""
-        for vana in range(100, 150):
-            x = self.api.getTBia()*1000
-            if (x<24.5 and x>23.5):
-                y = vana
-                break
-            self.api.setDAC("vana", vana-1)
+        for vana in range(begin, end):
+            self.api.setDAC("vana", vana)
             time.sleep(0.4)
-            print vana-1, x
-        print "\nset vana to ", vana-1
-    def complete_ScanVana(self, text, line, start_index, end_index):
+            current = self.api.getTBia()*1000
+            print vana, current
+            if (current<24.5 and current>23.5):
+                break
+        print "\nset vana to ", vana
+    def complete_scanVana(self, text, line, start_index, end_index):
         # return help for the cmd
-        return [self.do_ScanVana.__doc__, '']
+        return [self.do_scanVana.__doc__, '']
 
     @arity(2,2,[int, int])
     def do_varyClk(self, start, end):
@@ -1296,9 +1317,6 @@ class PxarCoreCmd(cmd.Cmd):
                         for col in range(52):
                             self.api.maskPixel(col, row, 1, nRoc)
 
-
-
-
     def complete_readMaskFile(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_readMaskFile.__doc__, '']
@@ -1339,6 +1357,110 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_averageLevel.__doc__, '']
 
+    @arity(1,3,[str, int, int])
+    def do_checkTBsettings(self, name, minValue = 0, maxValue = 20):
+        """ do_checkTBsettings [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
+
+        self.api.testAllPixels(0)
+        self.api.testPixel(15,59,1)
+        t = time.time()
+        for delay in range(minValue, maxValue):
+            self.api.setTestboardDelays({name: delay})
+            self.api.daqStart()
+            self.api.daqTrigger(21,500)
+            sumData = [0,0,0]
+            levels = [0,0,0,0,0]
+            for i in range (20):
+                data = self.convertedRaw()
+                if len(data)>2:
+                    for j in range(2):
+                        sumData[j] += data[j]
+                if len(data)>7:
+                    for j in range(5):
+                        levels[j] += data[j+3]
+
+            print name, delay, len(data),"\t",
+            for i in range(2):
+                print '{0:4.0f}'.format(sumData[i]/float(20)),
+            print "\t",
+            for i in range(5):
+                print '{0:3.0f}'.format(levels[i]/float(20)),
+            print
+            self.api.daqStop()
+        print "test took: ", round(time.time()-t,2), "s"
+
+    def complete_checkTBsettings(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_checkTBsettings.__doc__, '']
+
+    @arity(0,2,[int, int])
+    def do_levelCheck(self, it = 20, value = 20):
+        """ do_checkTBsettings [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
+
+        print "header\t",
+        self.averagedLevel(it)
+
+        print "-1\t",
+        self.api.testAllPixels(0)
+        self.api.testPixel(0,79,1)
+        self.averagedLevel(it)
+
+        print "0\t",
+        self.api.testAllPixels(0)
+        self.api.testPixel(15,59,1)
+        self.averagedLevel(it)
+
+        print "1\t",
+        self.api.testAllPixels(0)
+        self.api.testPixel(28,37,1)
+        self.averagedLevel(it)
+
+        print "2\t",
+        self.api.testAllPixels(0)
+        self.api.testPixel(43,16,1)
+        self.averagedLevel(it)
+
+        print "03033\t",
+        self.api.testAllPixels(0)
+        self.api.testPixel(20,48,1)
+        self.averagedLevel(it)
+
+        print "04044\t",
+        self.api.testAllPixels(0)
+        self.api.testPixel(23,45,1)
+        self.averagedLevel(it)
+
+
+
+    def complete_do_levelCheck(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_do_levelCheck.__doc__, '']
+
+    @arity(0,2,[int, float])
+    def do_triggerLoop(self, rate = 10, duration = 1):
+        """ do_triggerLoop [rate] [duration]: sends triggers with rate for duration"""
+
+#        for delay in range(min, max):
+#            self.api.setTestboardDelays({"sda": delay})
+#            print self.api.getTBia()*1000, " mA"
+        self.api.daqStart()
+        nTrig = int(60*duration)*rate
+        print "number of triggers:", nTrig
+        for i in range(nTrig):
+            self.api.daqTrigger(1,500)
+            time.sleep(float(1)/rate)
+#            print self.convertedRaw()
+#            print "", '\r{0:4.2f}%'.format(100*(float(i)/nTrig)), "\r",
+            sec = (nTrig-i)/float(rate)%60
+            min = (nTrig-i)/rate/60
+            print "", '\r{0:02d}:'.format(min), '\b{0:02d}:'.format(int(sec)), '\b{0:02.0f}'.format(100*(sec-int(sec))),
+            sys.stdout.flush()
+        print
+        self.api.daqStop()
+
+    def complete_triggerLoop(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.triggerLoop.__doc__, '']
 
     def do_quit(self, arg):
         """quit: terminates the application"""
@@ -1354,8 +1476,9 @@ class PxarCoreCmd(cmd.Cmd):
     do_de   = do_daqEvent
     do_sc   = do_setClockDelays
     do_vc   = do_varyClk
+    do_arm1 = do_enableOnePixel
     do_arm  = do_enablePixel
-    do_ucol = do_enableColumn
+    do_armAll = do_enableAllPixel
     do_raw  = do_daqGetRawEvent
     do_ds   = do_daqStart
     do_dt   = do_daqTrigger
