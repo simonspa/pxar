@@ -120,7 +120,7 @@ namespace pxar {
    //record.Add(GetLast());
 
    // Else keep reading and adding samples until we find any trailer marker.
-   while ((Get() & 0xe000) != 0xe000) {
+   while ((Get() & 0xe000) != 0xa000) {
      // Check if the last read sample has Event end marker:
      if ((GetLast() & 0xe000) == 0xa000) {
        record.SetEndError();
@@ -425,12 +425,12 @@ namespace pxar {
 	  if(pos > n-6) break;
 
 	  std::vector<uint16_t> data;
-	  data.push_back((*sample)[pos]);
-	  data.push_back((*sample)[pos+1]);
-	  data.push_back((*sample)[pos+2]);
-	  data.push_back((*sample)[pos+3]);
-	  data.push_back((*sample)[pos+4]);
-	  data.push_back((*sample)[pos+5]);
+	  data.push_back((*sample)[pos] & 0x0fff);
+	  data.push_back((*sample)[pos+1] & 0x0fff);
+	  data.push_back((*sample)[pos+2] & 0x0fff);
+	  data.push_back((*sample)[pos+3] & 0x0fff);
+	  data.push_back((*sample)[pos+4] & 0x0fff);
+	  data.push_back((*sample)[pos+5] & 0x0fff);
 
 	  try{
 	    LOG(logDEBUGPIPES) << "Trying to decode pixel: " << listVector(data,false,true);
