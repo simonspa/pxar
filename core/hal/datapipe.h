@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include "datatypes.h"
 #include "constants.h"
-#include "rpc_calls.h"
 
 namespace pxar {
 
@@ -12,7 +11,7 @@ namespace pxar {
   public:
   dataPipeException(const char *message) : std::runtime_error(message) {}
   };
-
+    
   class dpNotConnected : public dataPipeException {
   public:
   dpNotConnected() : dataPipeException("Not connected") {}
@@ -20,7 +19,7 @@ namespace pxar {
 
   // Data pipe classes
 
-  template <class T>
+  template <class T> 
     class dataSource {
     // The inheritor must define ReadLast and Read:
     virtual T ReadLast() = 0;
@@ -33,7 +32,7 @@ namespace pxar {
     virtual ~dataSource() {}
     template <class S> friend class dataSink;
   };
-
+    
   // Null source for not connected sinks
   template <class T>
     class nullSource : public dataSource<T> {
@@ -53,12 +52,12 @@ namespace pxar {
   // Formward declaration of dataPipe class:
   template <class TI, class TO> class dataPipe;
 
-  template <class T>
+  template <class T> 
     class dataSink {
-  protected:
+  protected: 
     dataSource<T> *src;
     static nullSource<T> null;
-  public:
+  public: 
   dataSink() : src(&null) {}
     T GetLast() { return src->ReadLast(); }
     T Get() { return src->Read(); }
@@ -67,13 +66,13 @@ namespace pxar {
     uint8_t GetEnvelopeType() { return src->ReadEnvelopeType(); }
     uint8_t GetDeviceType() { return src->ReadDeviceType(); }
     void GetAll() { while (true) Get(); }
-    template <class TI, class TO> friend void operator >> (dataSource<TI> &, dataSink<TO> &);
+    template <class TI, class TO> friend void operator >> (dataSource<TI> &, dataSink<TO> &); 
     template  <class TI, class TO> friend dataSource<TO>& operator >> (dataSource<TI> &in, dataPipe<TI,TO> &out);
   };
 
   template <class T>
     nullSource<T> dataSink<T>::null;
-
+   
   // The data pipe:
   template <class TI, class TO=TI>
     class dataPipe : public dataSink<TI>, public dataSource<TO> {};
@@ -83,7 +82,7 @@ namespace pxar {
     void operator >> (dataSource<TI> &in, dataSink<TO> &out) {
     out.src = &in;
   }
-
+    
   // Operator to connect source -> datapipe -> datapipe -> sink
   template <class TI, class TO>
     dataSource<TO>& operator >> (dataSource<TI> &in, dataPipe<TI,TO> &out) {
@@ -101,63 +100,6 @@ namespace pxar {
   {
   public:
   dsBufferEmpty() : dataPipeException("Buffer empty") {}
-  };
-
-  // DTB data source class
-  class dtbSource : public dataSource<uint16_t> {
-    volatile bool stopAtEmptyData;
-
-    // --- DTB control/state
-    CTestboard * tb;
-    uint8_t channel;
-    uint8_t chainlength;
-    uint32_t dtbRemainingSize;
-    uint8_t  dtbState;
-    bool connected;
-    uint8_t envelopetype;
-    uint8_t devicetype;
-
-    // --- data buffer
-    uint16_t lastSample;
-    unsigned int pos;
-    std::vector<uint16_t> buffer;
-    uint16_t FillBuffer();
-
-    // --- virtual data access methods
-    uint16_t Read() {
-      if(!connected) throw dpNotConnected();
-      return (pos < buffer.size()) ? lastSample = buffer[pos++] : FillBuffer();
-    }
-    uint16_t ReadLast() {
-      if(!connected) throw dpNotConnected();
-      return lastSample;
-    }
-    uint8_t ReadChannel() {
-      if(!connected) throw dpNotConnected();
-      return channel;
-    }
-    uint8_t ReadTokenChainLength() {
-      if(!connected) throw dpNotConnected();
-      return chainlength;
-    }
-    uint8_t ReadEnvelopeType() {
-      if(!connected) throw dpNotConnected();
-      return envelopetype;
-    }
-    uint8_t ReadDeviceType() {
-      if(!connected) throw dpNotConnected();
-      return devicetype;
-    }
-  public:
-  dtbSource(CTestboard * src, uint8_t daqchannel, uint8_t tokenChainLength, uint8_t tbmtype, uint8_t roctype, bool endlessStream)
-    : stopAtEmptyData(endlessStream), tb(src), channel(daqchannel), chainlength(tokenChainLength), connected(true), envelopetype(tbmtype), devicetype(roctype), lastSample(0x4000), pos(0) {}
-  dtbSource() : connected(false) {}
-    bool isConnected() { return connected; }
-
-    // --- control and status
-    uint8_t  GetState() { return dtbState; }
-    uint32_t GetRemainingSize() { return dtbRemainingSize; }
-    void Stop() { stopAtEmptyData = true; }
   };
 
   // DTB data Event splitter
@@ -183,6 +125,20 @@ namespace pxar {
   public:
   dtbEventSplitter() :
     nextStartDetected(false) {}
+  };
+
+  // This "splitter" does nothing than passing through all input data as one raw event
+  // this can be used for data which is already split into events
+  class passthroughSplitter : public dataPipe<uint16_t, rawEvent*> {
+    rawEvent record;
+    rawEvent* Read();
+    rawEvent* ReadLast() { return &record; }
+    uint8_t ReadChannel() { return GetChannel(); }
+    uint8_t ReadTokenChainLength() { return GetTokenChainLength(); }
+    uint8_t ReadEnvelopeType() { return GetEnvelopeType(); }
+    uint8_t ReadDeviceType() { return GetDeviceType(); }
+  public:
+    passthroughSplitter() {}
   };
 
   // DTB data decoding class
@@ -227,16 +183,9 @@ namespace pxar {
     void evalLastDAC(uint8_t roc, uint16_t val);
     int32_t ultrablack;
     int32_t black;
-    int32_t counter;
-    int64_t sumB;
-    int64_t sumUB;
-    float meanB;
-    float meanUB;
-    int32_t bla;
-
 
   public:
-  dtbEventDecoder() : decodingStats(), readback(), eventID(-1), ultrablack(0xfff), black(0xfff), counter(0), sumB(0), sumUB(0), meanB(0), meanUB(0),bla(0) {};
+  dtbEventDecoder() : decodingStats(), readback(), eventID(-1), ultrablack(0xfff), black(0xfff) {};
     void Clear() { decodingStats.clear(); readback.clear(); count.clear(); shiftReg.clear(); eventID = -1; };
     statistics getStatistics();
     std::vector<std::vector<uint16_t> > getReadback();

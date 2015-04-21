@@ -6,30 +6,6 @@
 
 namespace pxar {
 
-  uint16_t dtbSource::FillBuffer() {
-    pos = 0;
-    do {
-      dtbState = tb->Daq_Read(buffer, DTB_SOURCE_BLOCK_SIZE, dtbRemainingSize, channel);
-
-      if (buffer.size() == 0) {
-	if (stopAtEmptyData) throw dsBufferEmpty();
-	if (dtbState) throw dsBufferOverflow();
-      }
-    } while (buffer.size() == 0);
-
-    LOG(logDEBUGPIPES) << "-------------------------";
-    LOG(logDEBUGPIPES) << "Channel " << static_cast<int>(channel)
-		       << " (" << static_cast<int>(chainlength) << " ROCs)"
-		       << (envelopetype == TBM_NONE ? " DESER160 " : (envelopetype == TBM_EMU ? " SOFTTBM " : " DESER400 "));
-    LOG(logDEBUGPIPES) << "Remaining " << static_cast<int>(dtbRemainingSize);
-    LOG(logDEBUGPIPES) << "-------------------------";
-    LOG(logDEBUGPIPES) << "FULL RAW DATA BLOB:";
-    LOG(logDEBUGPIPES) << listVector(buffer,true);
-    LOG(logDEBUGPIPES) << "-------------------------";
-
-    return lastSample = buffer[pos++];
-  }
-
   rawEvent* dtbEventSplitter::SplitDeser400() {
     record.Clear();
 
@@ -120,7 +96,7 @@ namespace pxar {
    //record.Add(GetLast());
 
    // Else keep reading and adding samples until we find any trailer marker.
-   while ((Get() & 0xe000) != 0xa000) {
+   while ((Get() & 0xe000) != 0xe000) {
      // Check if the last read sample has Event end marker:
      if ((GetLast() & 0xe000) == 0xa000) {
        record.SetEndError();
@@ -139,6 +115,17 @@ namespace pxar {
    return &record;
   }
 
+  rawEvent* passthroughSplitter::Read() {
+    record.Clear();
+    try {
+      do {
+	record.Add(Get());
+      } while(1);
+    }
+    catch(dsBufferEmpty) {}
+    return &record;
+  }
+
   void dtbEventDecoder::CheckInvalidWord(uint16_t v) {
     // Check last bit of identifier nibble to be zero:
     if((v & 0x1000) == 0x0000) { return; }
@@ -151,7 +138,7 @@ namespace pxar {
 
     // Check if TBM event ID matches with expectation:
     if((v&0x00ff) != (eventID%256)) {
-      LOG(logERROR) << "   Event ID mismatch:  local ID (" << static_cast<int>(eventID)
+      LOG(logERROR) << "   Event ID mismatch:  local ID (" << static_cast<int>(eventID) 
 		    << ") !=  TBM ID (" << static_cast<int>(v&0x00ff) << ")";
       decodingStats.m_errors_tbm_eventid_mismatch++;
       // To continue readout, set event ID to the currently decoded one:
@@ -163,7 +150,6 @@ namespace pxar {
   }
 
   Event* dtbEventDecoder::DecodeDeser400() {
-
 
     roc_Event.Clear();
     rawEvent *sample = Get();
@@ -186,7 +172,7 @@ namespace pxar {
 
     // Check if ROC has inverted pixel address (ROC_PSI46DIG):
     bool invertedAddress = ( GetDeviceType() == ROC_PSI46DIG ? true : false );
-
+    
 
     // --- decode TBM header ---------------------------------
 
@@ -205,7 +191,7 @@ namespace pxar {
     CheckInvalidWord(v);
     if ((v & 0xe000) != 0x8000) tmpError = true;
     raw += v & 0x00ff;
-    LOG(logDEBUGPIPES) << "\t Data ID " << static_cast<int>(((v & 0x00c0) >> 6))
+    LOG(logDEBUGPIPES) << "\t Data ID " << static_cast<int>(((v & 0x00c0) >> 6)) 
 		       << " Value " << static_cast<int>((v & 0x003f));
 
     if(tmpError) { decodingStats.m_errors_tbm_header++; }
@@ -256,7 +242,7 @@ namespace pxar {
 	}
 
 	try {
-	  // Check if this is just fill bits of the TBM09 data stream
+	  // Check if this is just fill bits of the TBM09 data stream 
 	  // accounting for the other channel:
 	  if(GetTokenChainLength() == 4 && (raw&0xffffff) == 0xffffff) {
 	    LOG(logDEBUGPIPES) << "Empty hit detected (TBM09 data streams). Skipping.";
@@ -325,43 +311,10 @@ namespace pxar {
   }
 
   void dtbEventDecoder::AverageAnalogLevel(int32_t &variable, int16_t dataword) {
-
-    /**translate the measurement to a meaningful level*/
-    int16_t translateDataword = expandSign(dataword & 0x0fff);
-
-    /** take the mean for a given windowsize, initial measurement included */
-    int32_t windowSize = 1000;
-    if (counter<windowSize){
-        if (&variable == &ultrablack){
-            sumUB += translateDataword;
-            counter++;
-            meanUB = float(sumUB)/counter;
-        }
-        else if (&variable == &black){
-            sumB += translateDataword;
-            meanB = float(sumB)/counter;
-       //     meanB = -2; /**@radical declaration... */
-        }
-        variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+5);
-    }
-    /**sliding window*/
-    else {
-        if (&variable == &ultrablack){
-            meanUB = (float(windowSize)-1)/windowSize*meanUB + float(1)/windowSize*translateDataword ;
-        }
-        else if (&variable == &black){
-           meanB = (float(windowSize)-1)/windowSize*meanB + float(1)/windowSize*translateDataword ;
-         //   meanB = -2; /**@radical declaration */
-        }
-        variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+5);
-    }
-    /**output to check*/
-//    if (&variable == &black){
-//        if (bla < 1000){
-//            cout << bla << "\t" << meanUB << "\t" << translateDataword  << " " << meanB << "\n" ;
-//            bla++;
-//        }
-//    }
+    // Check if this is the initial measurement:
+    if(variable > 0xff) { variable = expandSign(dataword & 0x0fff); }
+    // Average the variable:
+    else { variable = (variable + expandSign(dataword & 0x0fff))/2; }
   }
 
   Event* dtbEventDecoder::DecodeAnalog() {
@@ -379,15 +332,6 @@ namespace pxar {
     decodingStats.m_info_words_read += n;
 
     if (n >= 3) {
-
-    if (n>3){
-        std::stringstream ss;
-        for (uint16_t i(0); i<n; i++)
-            ss << expandSign((*sample)[i] & 0x0fff) << " ";
-        LOG(logDEBUGHAL) << ss.str();
-        LOG(logDEBUGHAL) << black << " " << ultrablack << " ";
-
-    }
       // Reserve expected number of pixels from data length (subtract ROC headers):
       if (n - 3*GetTokenChainLength() > 0) roc_Event.pixels.reserve((n - 3*GetTokenChainLength())/6);
 
@@ -398,20 +342,20 @@ namespace pxar {
 	// its Ultrablack and Black level as initial values for auto-calibration:
 	int16_t levelS = (black - ultrablack)/8;
 
-	if(roc_n < 0 ||
+	if(roc_n < 0 || 
 	   // Ultrablack level:
-	   ((ultrablack-levelS < expandSign((*sample)[pos]) && ultrablack+levelS > expandSign((*sample)[pos]))
+	   ((ultrablack-levelS < expandSign((*sample)[pos] & 0x0fff) && ultrablack+levelS > expandSign((*sample)[pos] & 0x0fff))
 	   // Black level:
-	    && (black-levelS < expandSign((*sample)[pos+1]) && black+levelS > expandSign((*sample)[pos+1])))) {
+	    && (black-levelS < expandSign((*sample)[pos+1] & 0x0fff) && black+levelS > expandSign((*sample)[pos+1] & 0x0fff)))) {
 
 	  roc_n++;
 	  // Save the lastDAC value:
-	  evalLastDAC(roc_n, (*sample)[pos+2]);
-	  roc_Event.header = (*sample)[pos+2];
+	  evalLastDAC(roc_n, (*sample)[pos+2] & 0x0fff);
+	  roc_Event.header = (*sample)[pos+2] & 0x0fff;
 
 	  // Iterate to improve ultrablack and black measurement:
-	  AverageAnalogLevel(ultrablack, (*sample)[pos]);
-	  AverageAnalogLevel(black, (*sample)[pos+1]);
+	  AverageAnalogLevel(ultrablack, (*sample)[pos] & 0x0fff);
+	  AverageAnalogLevel(black, (*sample)[pos+1] & 0x0fff);
 
 	  LOG(logDEBUGPIPES) << "ROC Header: "
 			     << expandSign((*sample)[pos] & 0x0fff) << " (avg. " << ultrablack << ") (UB) "
@@ -431,7 +375,7 @@ namespace pxar {
 	  data.push_back((*sample)[pos+3] & 0x0fff);
 	  data.push_back((*sample)[pos+4] & 0x0fff);
 	  data.push_back((*sample)[pos+5] & 0x0fff);
-
+ 
 	  try{
 	    LOG(logDEBUGPIPES) << "Trying to decode pixel: " << listVector(data,false,true);
 	    pixel pix(data,roc_n,ultrablack,black);
@@ -545,7 +489,7 @@ namespace pxar {
     // Check if empty or missing ROCs:
     CheckEventValidity(roc_n);
 
-    LOG(logDEBUGPIPES) << &roc_Event;
+    LOG(logDEBUGPIPES) << roc_Event;
     return &roc_Event;
   }
 
@@ -602,7 +546,7 @@ namespace pxar {
     }
   }
 
-  statistics dtbEventDecoder::getStatistics() {
+  statistics dtbEventDecoder::getStatistics() { 
     // Automatically clear the statistics after it was read out:
     statistics tmp = decodingStats;
     decodingStats.clear();

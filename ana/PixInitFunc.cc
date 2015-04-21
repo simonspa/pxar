@@ -218,10 +218,15 @@ TF1* PixInitFunc::gpErr(TH1 *h) {
   fDoNotFit = false;
 
   // -- setup function
-  TF1* f = (TF1*)gROOT->FindObject("PIF_err");
+  TF1* f = (TF1*)gROOT->FindObject("PIF_gpErr");
   if (0 == f) {
+<<<<<<< HEAD
     f = new TF1("PIF_err", PIF_err, h->GetBinLowEdge(1), h->GetBinLowEdge(h->GetNbinsX()+1), 4);
     f->SetParNames("step", "slope", "floor", "plateau");
+=======
+    f = new TF1("PIF_gpErr", PIF_err, h->GetBinLowEdge(1), h->GetBinLowEdge(h->GetNbinsX()+1), 4);
+    f->SetParNames("step", "slope", "floor", "plateau");                       
+>>>>>>> remotes/upstream/datasources
     f->SetNpx(1000);
   } else {
     f->ReleaseParameter(0);
