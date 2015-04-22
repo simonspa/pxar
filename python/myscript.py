@@ -1482,7 +1482,7 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0,3,[float, int, bool])
     def do_hitMap(self, duration = 1, nEvents = 1000, module = True):
         """ do_hitMap [duration] [wbc]: collects triggers for a certain duration and plots a hitmap ... hopefully^^"""
-        wbc = 126
+        wbc = 106
         self.api.setDAC("wbc", wbc)
         self.api.daqTriggerSource("extern")
 
