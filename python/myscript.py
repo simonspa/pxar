@@ -313,7 +313,7 @@ class PxarCoreCmd(cmd.Cmd):
                 i = i & 0x0fff
                 if i & 0x0800:
                     i -= 4096
-                data[nCount] = int(round(float(i)/50,0))+1
+                data[nCount] = int(round(float(i-10)/50,0))+1
                 nCount += 1
         except RuntimeError:
             pass
@@ -527,13 +527,28 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_daqTriggerSource.__doc__, '']
 
-    @arity(0,0,[int])
+    @arity(0,1,[int])
+    def do_daqGetEvent(self, convert = 1):
+        """daqGetEvent [convert]: read one converted event from the event buffer, for convert = 0 it will print the addresslevels"""
+        try:
+            data = self.api.daqGetEvent()
+            print data
+        except RuntimeError:
+            pass
+
+    def complete_daqGetRawEvent(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_daqGetRawEvent.__doc__, '']
+
+    @arity(0,1,[int])
     def do_daqGetRawEvent(self, convert = 1):
         """daqGetRawEvent [convert]: read one converted event from the event buffer, for convert = 0 it will print the addresslevels"""
         if convert == 1:
             data = self.convertedRaw()
-        elif convert == 0:
+        elif convert == 2:
             data = self.getRawEvent()
+        elif convert == 0:
+            data = self.api.daqGetRawEvent()
         print data
 
     def complete_daqGetRawEvent(self, text, line, start_index, end_index):
@@ -548,7 +563,7 @@ class PxarCoreCmd(cmd.Cmd):
             data = self.api.daqGetEventBuffer()
             print data[0]
             for i in data:
-                print i.header, i.trailer, i.pixels[0], i.pixels[1]
+                print i
             #self.plot_eventdisplay(data)
         except RuntimeError:
             pass
@@ -633,7 +648,12 @@ class PxarCoreCmd(cmd.Cmd):
         """analogLevelScan: plots the event"""
         self.api.daqStart()
         self.api.daqTrigger(1,500)
-        data = self.api.daqGetEvent()
+        data = []
+        try:
+            data = self.api.daqGetEvent()
+        except RuntimeError:
+            pass
+        print len(data)
         if len(data.pixels) == 0:
             print "[]"
         else:
@@ -989,10 +1009,10 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.pixelTest.__doc__, '']
 
-    @arity(0,0,[])
-    def do_Test(self):
-        self.api.setDAC("wbc", 115)
-        self.api.setTestboardDelays({"tindelay":14,"toutdelay":2})
+    @arity(0,1,[int])
+    def do_Test(self, n_trigger=10000):
+        self.api.setDAC("wbc", 126, 3)
+        self.api.setTestboardDelays({"tindelay":23,"toutdelay":3})
         self.api.daqTriggerSource("extern")
         self.api.daqStart()
         time.sleep(0.1)
@@ -1003,13 +1023,15 @@ class PxarCoreCmd(cmd.Cmd):
             matrix.append([])
             for col in range(52):
                 matrix[row].append(0)
-        n_trigger = 10000
+       # n_trigger = 10000
         print 'Start Test with {0} Trigger'.format(n_trigger)
         for i in range(n_trigger):
             if i%100 == 0:
-                print '{0:5.2f}%\r'.format(i*100./n_trigger)
+                print '{0:5.2f}%\r'.format(i*100./n_trigger),
+                sys.stdout.flush()
 #            data = self.getRawEvent()
             event       = self.getRawEvent()
+#            print event, self.convertedRaw()
             length      = len(event)
             nEvent      = (length-3)/6          #number of single events
             addresses   = []
@@ -1086,8 +1108,8 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.Test.__doc__, '']
 
-    @arity(0,2,[int, int])
-    def do_wbcScan(self, minWBC = 90, nTrigger = 50):
+    @arity(0,3,[int, int, int])
+    def do_wbcScan(self, minWBC = 90, nTrigger = 7, time = 100):
         """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
         self.api.daqTriggerSource("extern")
         self.api.daqStop()
@@ -1098,14 +1120,14 @@ class PxarCoreCmd(cmd.Cmd):
         for wbc in range (minWBC,maxWBC):
             self.convertedRaw()
             self.api.setDAC("wbc", wbc)
-            time.sleep(0.01)
             self.api.daqStart()
+            time.sleep(time/100)
             nEvents     = 0
             it          = 0
             exEvent     = []
             for j in range(nTrigger):
                 data = self.convertedRaw()
-                if len(data) > 3:   #and data[0] < -100 (might add this as well if tindelay is set correctly)
+                if len(data) > 12:   #and data[0] < -100 (might add this as well if tindelay is set correctly)
                     if(it==0):
                         exEvent = data
                         it +=1
@@ -1131,38 +1153,38 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_wbcScan.__doc__, '']
 
-    @arity(0,3,[int, int, int])
-    def do_wbcScan1(self, minWBC = 90, maxWBC = 200, nTrigger = 50):
-        """ do_wbcScan [minWBC] [maxWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
-
-        self.api.daqTriggerSource("extern")
-
-        print "wbc \t#Events \texample Event"
-        wbcScan = []
-        for wbc in range (minWBC,maxWBC):
-            self.api.setDAC("wbc", wbc)
-            self.api.daqStart()
-
-            nEvents = 0
-            exEvent = []
-
-            for j in range(nTrigger):
-                try:
-                    data = self.api.daqGetEvent()
-                    if len(data.pixels) > 0:
-                        nEvents += 1
-                except RuntimeError:
-                    pass
-
-            nEvents = 100*nEvents/nTrigger
-            wbcScan.append(nEvents)
-
-            print '{0:03d}'.format(wbc),"\t", '{0:3.0f}%'.format(nEvents),"\t\t", exEvent
-            self.api.daqStop()
-
-        def complete_wbcScan1(self, text, line, start_index, end_index):
-            # return help for the cmd
-            return [self.do_wbcScan1.__doc__, '']
+#    @arity(0,3,[int, int, int])
+#    def do_wbcScan1(self, minWBC = 90, maxWBC = 200, nTrigger = 50):
+#        """ do_wbcScan [minWBC] [maxWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
+#
+#        self.api.daqTriggerSource("extern")
+#
+#        print "wbc \t#Events \texample Event"
+#        wbcScan = []
+#        for wbc in range (minWBC,maxWBC):
+#            self.api.setDAC("wbc", wbc)
+#            self.api.daqStart()
+#
+#            nEvents = 0
+#            exEvent = []
+#
+#            for j in range(nTrigger):
+#                try:
+#                    data = self.api.daqGetEvent()
+#                    if len(data.pixels) > 0:
+#                        nEvents += 1
+#                except RuntimeError:
+#                    pass
+#
+#            nEvents = 100*nEvents/nTrigger
+#            wbcScan.append(nEvents)
+#
+#            print '{0:03d}'.format(wbc),"\t", '{0:3.0f}%'.format(nEvents),"\t\t", exEvent
+#            self.api.daqStop()
+#
+#        def complete_wbcScan1(self, text, line, start_index, end_index):
+#            # return help for the cmd
+#            return [self.do_wbcScan1.__doc__, '']
 
 
 #    @arity(0,3,[int,int,int])
@@ -1316,7 +1338,6 @@ class PxarCoreCmd(cmd.Cmd):
                     for row in range(nMinRow, nMaxRow+1):
                         for col in range(52):
                             self.api.maskPixel(col, row, 1, nRoc)
-
     def complete_readMaskFile(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_readMaskFile.__doc__, '']
@@ -1429,9 +1450,6 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.testAllPixels(0)
         self.api.testPixel(23,45,1)
         self.averagedLevel(it)
-
-
-
     def complete_do_levelCheck(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_do_levelCheck.__doc__, '']
@@ -1457,10 +1475,85 @@ class PxarCoreCmd(cmd.Cmd):
             sys.stdout.flush()
         print
         self.api.daqStop()
-
     def complete_triggerLoop(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.triggerLoop.__doc__, '']
+
+    @arity(0,3,[float, int, bool])
+    def do_hitMap(self, duration = 1, nEvents = 1000, module = True):
+        """ do_hitMap [duration] [wbc]: collects triggers for a certain duration and plots a hitmap ... hopefully^^"""
+        wbc = 126
+        self.api.setDAC("wbc", wbc)
+        self.api.daqTriggerSource("extern")
+
+        t =  time.time()
+        self.api.daqStart()
+        for i in range(int(100*60*duration)):
+            min = int(60*duration-i/100)/60
+            sek = int(60*duration-i/100)%60
+            msek = int(100*60*duration-i)-int(60*100*duration-i)/100*100
+            print "\rtime", '{0:02d}:'.format(min), '\b{0:02d}:'.format(sek),'\b{0:02d}'.format(msek),
+            sys.stdout.flush()
+            time.sleep(0.01)
+        while True:
+            data = self.api.daqGetEvent()
+            if len(data.pixels)>0: break
+
+        d = zeros((417 if module else 53,161 if module else 81))
+        index = 0
+        while True:
+            print "\r#events:", '{0:06d}'.format(index),
+            sys.stdout.flush()
+            try:
+                data = self.api.daqGetEvent().pixels
+            except:
+                continue
+            for i in data:
+#                print i
+                if index>100: break
+            if  index > nEvents:
+                break
+            for px in data:
+                xoffset = 52*(px.roc%8) if module else 0
+                yoffset = 80*int(px.roc/8) if module else 0
+                # Flip the ROCs upside down:
+                y = (px.row + yoffset) if (px.roc < 8) else (2*yoffset - px.row - 1)
+                # Reverse order of the upper ROC row:
+                x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
+                d[x+1][y+1] += 1 if True else px.value
+            index +=1
+#        data = self.api.daqGetEventBuffer().pixels
+#            for px in data:
+#                xoffset = 52*(px.roc%8) if module else 0
+#                yoffset = 80*int(px.roc/8) if module else 0
+#                # Flip the ROCs upside down:
+#                y = (px.row + yoffset) if (px.roc < 8) else (2*yoffset - px.row - 1)
+#                # Reverse order of the upper ROC row:
+#                x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
+#                d[x+1][y+1] += 1 if True else px.value
+
+        self.api.daqStop()
+
+        print "test took: ", round(time.time()-t,2), "s"
+        self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
+        plot = Plotter.create_th2(d, 0, 417 if module else 53, 0, 161 if module else 81, "hitmap", 'pixels x', 'pixels y', "hitmap")
+        self.window.histos.append(plot)
+        self.window.update()
+
+
+    def complete_hitMap(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_hitMap.__doc__, '']
+
+    @arity(0,2,[int, str])
+    def do_setUp(self, wbc = 126, source = "extern"):
+        self.api.setDAC("wbc", wbc)
+        self.api.daqTriggerSource(source)
+
+
+    def complete_setUp(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_setUp.__doc__, '']
 
     def do_quit(self, arg):
         """quit: terminates the application"""
@@ -1485,6 +1578,7 @@ class PxarCoreCmd(cmd.Cmd):
     do_buf  = do_daqGetEventBuffer
     do_stat = do_daqStatus
     do_stop = do_daqStop
+    do_wbc   = do_setUp
 
 
 
