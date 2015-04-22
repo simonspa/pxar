@@ -1108,8 +1108,8 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.Test.__doc__, '']
 
-    @arity(0,2,[int, int])
-    def do_wbcScan(self, minWBC = 90, nTrigger = 7):
+    @arity(0,3,[int, int, int])
+    def do_wbcScan(self, minWBC = 90, nTrigger = 7, time = 100):
         """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
         self.api.daqTriggerSource("extern")
         self.api.daqStop()
@@ -1121,7 +1121,7 @@ class PxarCoreCmd(cmd.Cmd):
             self.convertedRaw()
             self.api.setDAC("wbc", wbc)
             self.api.daqStart()
-            time.sleep(1)
+            time.sleep(time/100)
             nEvents     = 0
             it          = 0
             exEvent     = []
