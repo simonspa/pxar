@@ -123,10 +123,6 @@ def PxarStartup(directory, verbosity):
         "ia":config.get("ia",1.190),
         "id":config.get("id",1.10)}
 
-
-
-
-
     tbmDACs = []
     for tbm in range(int(config.get("nTbms"))):
         for n in range(2):
@@ -150,12 +146,10 @@ def PxarStartup(directory, verbosity):
     rocPixels = list()
     rocI2C = []
     config_nrocs = config.get("nrocs")
-#    print config_nrocs
     config_nrocs  = config_nrocs.split()
     nrocs = int(config_nrocs[0])
     i2cs = [i for i in range(nrocs)]
     if len(config_nrocs) > 1:
-#        print config_nrocs[1], config_nrocs[1].startswith('i2c')
         if config_nrocs[1].startswith('i2c'):
             i2cs = ' '.join(config_nrocs[2:])
             i2cs = [int(i) for i in i2cs.split(',')]
@@ -169,8 +163,9 @@ def PxarStartup(directory, verbosity):
         rocI2C.append(i2c)
         rocDacs.append(dacconfig.getAll())
         rocPixels.append(pixels)
+
+    # set pgcal according to wbc
     pgcal = int(rocDacs[0]['wbc']) + 6
-    print "pgcal:", pgcal
 
     # Pattern Generator for single ROC operation:
     if int(config.get("nTbms")) == 0:
