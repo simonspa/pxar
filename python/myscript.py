@@ -1109,43 +1109,45 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.Test.__doc__, '']
 
     @arity(0,3,[int, int, int])
-    def do_wbcScan(self, minWBC = 90, nTrigger = 7, tim = 100):
-        """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
-        self.api.daqTriggerSource("extern")
-        self.api.daqStop()
+    def do_wbcScan(self, minWBC = 90, maxTriggers = 10, maxWBC = 255):
+        """ do_wbcScan [minWBC] [maxTriggers]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
 
-        print "wbc \t#Events \texample Event"
-        maxWBC = 255
+        self.api.daqTriggerSource("extern")
         wbcScan = []
+        print "wbc \tyield"
+
+        # loop over wbc
         for wbc in range (minWBC,maxWBC):
-            self.convertedRaw()
             self.api.setDAC("wbc", wbc)
             self.api.daqStart()
-            time.sleep(tim/100)
-            nEvents     = 0
-            it          = 0
-            exEvent     = []
-            for j in range(nTrigger):
-                data = self.convertedRaw()
-                if len(data) > 12:   #and data[0] < -100 (might add this as well if tindelay is set correctly)
-                    if(it==0):
-                        exEvent = data
-                        it +=1
-                    nEvents += 1
-            nEvents = 100*nEvents/nTrigger
-            wbcScan.append(nEvents)
+            nHits       = 0
+            nTriggers   = 0
+
+            #loop until you find nTriggers
+            while nTriggers < maxTriggers:
+                try:
+                    data = self.api.daqGetEvent()
+                    if len(data.pixels) > 0:
+                       nHits += 1
+                    nTriggers += 1
+                except RuntimeError:
+                    pass
+
+            hitYield = 100*nHits/maxTriggers
+            wbcScan.append(hitYield)
+            print '{0:03d}'.format(wbc),"\t", '{0:3.0f}%'.format(hitYield)
+
+            # stopping criterion
             if wbc>3+minWBC:
-                if wbcScan[-3] > 90:
-                    print "Set wbc to", wbc-2
-                    self.api.setDAC("wbc", wbc-2)
-                    self.api.daqStop()
+                if wbcScan[-4] > 90:
+                    print "Set DAC wbc to", wbc-3
+                    self.api.setDAC("wbc", wbc-3)
                     break
-            print '{0:03d}'.format(wbc),"\t", '{0:3.0f}%'.format(nEvents),"\t\t", exEvent
-            self.api.daqStop()
+
+        self.api.daqStop()
 
         self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
-#        plot = Plotter.create_th1(wbcScan, minWBC, maxWBC, "wbc scan", "wbc", "%")
-        plot = Plotter.create_mygraph(wbcScan, "wbc scan", "wbc", "evt/trig [%]", minWBC)
+        plot = Plotter.create_tgraph(wbcScan, "wbc scan", "wbc", "evt/trig [%]", minWBC)
         self.window.histos.append(plot)
         self.window.update()
 
@@ -1154,141 +1156,40 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_wbcScan.__doc__, '']
 
 #    @arity(0,3,[int, int, int])
-#    def do_wbcScan1(self, minWBC = 90, maxWBC = 200, nTrigger = 50):
-#        """ do_wbcScan [minWBC] [maxWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
-#
-#        self.api.daqTriggerSource("extern")
-#
 #        print "wbc \t#Events \texample Event"
+#        maxWBC = 255
 #        wbcScan = []
 #        for wbc in range (minWBC,maxWBC):
+#            self.convertedRaw()
 #            self.api.setDAC("wbc", wbc)
 #            self.api.daqStart()
-#
-#            nEvents = 0
-#            exEvent = []
-#
+#            time.sleep(tim/100)
+#            nEvents     = 0
+#            it          = 0
+#            exEvent     = []
 #            for j in range(nTrigger):
-#                try:
-#                    data = self.api.daqGetEvent()
-#                    if len(data.pixels) > 0:
-#                        nEvents += 1
-#                except RuntimeError:
-#                    pass
-#
+#                data = self.convertedRaw()
+#                if len(data) > 12:   #and data[0] < -100 (might add this as well if tindelay is set correctly)
+#                    if(it==0):
+#                        exEvent = data
+#                        it +=1
+#                    nEvents += 1
 #            nEvents = 100*nEvents/nTrigger
 #            wbcScan.append(nEvents)
-#
+#            if wbc>3+minWBC:
+#                if wbcScan[-3] > 90:
+#                    print "Set wbc to", wbc-2
+#                    self.api.setDAC("wbc", wbc-2)
+#                    self.api.daqStop()
+#                    break
 #            print '{0:03d}'.format(wbc),"\t", '{0:3.0f}%'.format(nEvents),"\t\t", exEvent
 #            self.api.daqStop()
 #
-#        def complete_wbcScan1(self, text, line, start_index, end_index):
-#            # return help for the cmd
-#            return [self.do_wbcScan1.__doc__, '']
-
-
-#    @arity(0,3,[int,int,int])
-#    def do_dacDacScan(self, nTrigger = 5, col = 25, row = 40):
-#        """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
-#
-#        self.api.maskAllPixels(1)
-#        self.api.testPixel(col,row,1)
-#        self.api.maskPixel(col,row,0)
-#        self.api.daqStart()
-#        print "--> enable and unmask Pixel " + str(col) + "/" + str(row) + " (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
-#
-#        vthrcompMin = 20
-#        vthrcompMax = 155
-#        caldelMax = 140
-#
-#        print "looking for vthrcomp min",
-#        vthrcomp = 0
-#        data = []
-#        t = time.time()
-#        for i in range(15):
-#            print "\b.",
-#            sys.stdout.flush()
-#            for caldel in range(256):
-#                self.api.setDAC("vthrcomp",vthrcomp)
-#                self.api.setDAC("caldel",caldel)
-#                self.api.daqTrigger(1,152)
-#                data = self.convertedRaw()
-#                if len(data)>3:
-#                    vthrcompMin = vthrcomp - 10
-#                    break
-#            if len(data)>3:
-#                break
-#            vthrcomp += 10
-#        print ""
-#        print "test took: ", round(time.time()-t,2), "s"
-#
-#        print "\nlooking for vthrcomp max",
-#        vthrcomp = 255
-#        t = time.time()
-#        for i in range(25):
-#            print "\b.",
-#            sys.stdout.flush()
-#            for caldel in range(256):
-#                self.api.setDAC("vthrcomp",vthrcomp)
-#                self.api.setDAC("caldel",caldel)
-#                self.api.daqTrigger(1,152)
-#                data = self.convertedRaw()
-#                if len(data)>3:
-#                    vthrcompMax = vthrcomp + 10
-#                    break
-#            if len(data)>3:
-#                break
-#            vthrcomp -= 10
-#        print ""
-#        print "test took:", round(time.time()-t,2), "s"
-#
-#        t = time.time()
-#        print "\nlooking for caldel max"
-#        self.api.setDAC("vthrcomp",vthrcompMax-20)
-#        caldel = 255
-#        for i in range(256):
-#            self.api.setDAC("caldel",caldel)
-#            self.api.daqTrigger(1,152)
-#            data = self.convertedRaw()
-#            if len(data)>3:
-#                caldelMax = caldel + 20
-#                break
-#            caldel -= 10
-#        print "test took: ", round(time.time()-t,2), "s"
-#
-#        matrix = zeros((256,256))
-##        matrix = zeros((caldelMax+10,vthrcompMax-vthrcompMin+20))
-#
-#        t = time.time()
-#        for vthrcomp in range(vthrcompMin,vthrcompMax):
-#            for caldel in range(0,caldelMax):
-#                print "",'{0:4.2f}%'.format(100*(float(vthrcomp-vthrcompMin)/(vthrcompMax-vthrcompMin)+float(1)/(vthrcompMax-vthrcompMin)*caldel/caldelMax)), "\r",
-#                sys.stdout.flush()
-#                self.api.setDAC("vthrcomp",vthrcomp)
-#                self.api.setDAC("caldel",caldel)
-#                self.api.daqTrigger(nTrigger,160)
-#                for i in range(nTrigger):
-#                    data = self.convertedRaw()
-#                    if len(data)>3:
-#                        matrix[caldel][vthrcomp] += 1
-#        print "test took: ", round(time.time()-t,2), "s"
-#
 #        self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
-##        plot = Plotter.create_th2(matrix, 0, caldelMax + 10, vthrcompMin - 10, vthrcompMax + 10, 'DacDacScan', 'caldel ', 'vthrcomp\n', '')
-#        plot = Plotter.create_th2(matrix, 0, 255, 0, 255, 'DacDacScan', 'caldel ', 'vthrcomp\n', '')
+##        plot = Plotter.create_th1(wbcScan, minWBC, maxWBC, "wbc scan", "wbc", "%")
+#        plot = Plotter.create_mygraph(wbcScan, "wbc scan", "wbc", "evt/trig [%]", minWBC)
 #        self.window.histos.append(plot)
 #        self.window.update()
-#
-#        self.api.daqStop()
-##        self.api.daqTriggerSource("extern")
-##        self.api.setDAC("wbc", 115)
-##        self.api.setTestboardDelays({"tindelay":14,"toutdelay":2})
-##        self.api.daqStart()
-#
-#
-#    def complete_dacDacScan(self, text, line, start_index, end_index):
-#        # return help for the cmd
-#        return [self.do_dacDacScan.__doc__, '']
 
 
     @arity(0,0,[])
@@ -1479,49 +1380,69 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.triggerLoop.__doc__, '']
 
-    @arity(0,3,[float, int, bool])
-    def do_hitMap(self, duration = 1, nEvents = 1000, module = True):
+    @arity(0,2,[int, bool])
+    def do_hitMap(self, maxTriggers = 1000, module = True):
         """ do_hitMap [duration] [wbc]: collects triggers for a certain duration and plots a hitmap ... hopefully^^"""
-        wbc = 106
+        wbc = 110
         self.api.setDAC("wbc", wbc)
         self.api.daqTriggerSource("extern")
 
         t =  time.time()
         self.api.daqStart()
-        for i in range(int(100*60*duration)):
-            min = int(60*duration-i/100)/60
-            sek = int(60*duration-i/100)%60
-            msek = int(100*60*duration-i)-int(60*100*duration-i)/100*100
-            print "\rtime", '{0:02d}:'.format(min), '\b{0:02d}:'.format(sek),'\b{0:02d}'.format(msek),
-            sys.stdout.flush()
-            time.sleep(0.01)
-        while True:
-            data = self.api.daqGetEvent()
-            if len(data.pixels)>0: break
-
+#        for i in range(int(100*60*duration)):
+#            min = int(60*duration-i/100)/60
+#            sek = int(60*duration-i/100)%60
+#            msek = int(100*60*duration-i)-int(60*100*duration-i)/100*100
+#            print "\rtime", '{0:02d}:'.format(min), '\b{0:02d}:'.format(sek),'\b{0:02d}'.format(msek),
+#            sys.stdout.flush()
+#            time.sleep(0.01)
+#        while True:
+#            data = self.api.daqGetEvent()
+#            if len(data.pixels)>0: break
+        data = []
         d = zeros((417 if module else 53,161 if module else 81))
-        index = 0
-        while True:
-            print "\r#events:", '{0:06d}'.format(index),
+        nTriggers = 0
+        t1 = time.time()
+        while nTriggers < maxTriggers:
+            print "\r#events:", '{0:06d}'.format(nTriggers),
+#            if nTriggers % 100 == 0:
+            print '{0:02.0d}'.format(nTriggers/(time.time()-t1)),
             sys.stdout.flush()
             try:
-                data = self.api.daqGetEvent().pixels
-            except:
-                continue
-            for i in data:
-#                print i
-                if index>100: break
-            if  index > nEvents:
-                break
-            for px in data:
-                xoffset = 52*(px.roc%8) if module else 0
-                yoffset = 80*int(px.roc/8) if module else 0
-                # Flip the ROCs upside down:
-                y = (px.row + yoffset) if (px.roc < 8) else (2*yoffset - px.row - 1)
-                # Reverse order of the upper ROC row:
-                x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
-                d[x+1][y+1] += 1 if True else px.value
-            index +=1
+                data = self.api.daqGetEvent()
+                if len(data.pixels)>0:
+                    nTriggers += 1
+                    for px in data.pixels:
+                        xoffset = 52*(px.roc%8) if module else 0
+                        yoffset = 80*int(px.roc/8) if module else 0
+                        # Flip the ROCs upside down:
+                        y = (px.row + yoffset) if (px.roc < 8) else (2*yoffset - px.row - 1)
+                        # Reverse order of the upper ROC row:
+                        x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
+                        d[x+1][y+1] += 1 if True else px.value
+            except RuntimeError:
+                pass
+#        while True:
+#            print "\r#events:", '{0:06d}'.format(index),
+#            sys.stdout.flush()
+#            try:
+#                data = self.api.daqGetEvent().pixels
+#            except:
+#                continue
+#            for i in data:
+##                print i
+#                if index>100: break
+#            if  index > nEvents:
+#                break
+#            for px in data:
+#                xoffset = 52*(px.roc%8) if module else 0
+#                yoffset = 80*int(px.roc/8) if module else 0
+#                # Flip the ROCs upside down:
+#                y = (px.row + yoffset) if (px.roc < 8) else (2*yoffset - px.row - 1)
+#                # Reverse order of the upper ROC row:
+#                x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
+#                d[x+1][y+1] += 1 if True else px.value
+#            index +=1
 #        data = self.api.daqGetEventBuffer().pixels
 #            for px in data:
 #                xoffset = 52*(px.roc%8) if module else 0

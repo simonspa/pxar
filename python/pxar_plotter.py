@@ -18,16 +18,19 @@ class Plotter(object):
 
     @staticmethod
     def create_tgraph(data, name, x_title, y_title, minimum = None, maximum = None):
-        xdata = list(xrange(len(data)))
+#        xdata = list(xrange(len(data)))
+        xdata = []
+        for i in range(len(data)):
+            xdata.append(minimum+i)
         x = array.array('d', xdata)
         y = array.array('d', data)
         gr = ROOT.TGraph(len(x),x,y)
         #gr.SetDirectory(0)
         gr.SetTitle(name)
         gr.SetLineColor(4)
-        gr.SetMarkerColor(4)
-        gr.SetMarkerSize(0.5)
-        gr.SetMarkerStyle(21)
+        gr.SetMarkerColor(2)
+        gr.SetMarkerSize(1.5)
+        gr.SetMarkerStyle(34)
         gr.GetXaxis().SetTitle(x_title)
         gr.GetYaxis().SetTitle(y_title)
         gr.SetDrawOption('Acp')
