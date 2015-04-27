@@ -344,6 +344,29 @@ class PxarCoreCmd(cmd.Cmd):
             print levels
         self.api.daqStop()
 
+    def rate(self, duration):
+
+        self.api.daqStart()
+        t = time.time()
+        t1 = 0
+        allTrig = 0
+        while t1 < duration:
+            tTrig = time.time()
+            nTriggers = 0
+            while nTriggers < 5:
+                try:
+                    data = self.api.daqGetEvent()
+                    nTriggers += 1
+                    allTrig += 1
+                except RuntimeError:
+                    pass
+            print '\r{0:02.2f}'.format(nTriggers/(time.time()-tTrig)),
+            sys.stdout.flush()
+            t1 = time.time() - t
+        print "complete rate", '{0:02.2f}'.format(allTrig/(time.time()-t))
+#        print time.time()-t
+        self.api.daqStop()
+
 ######################################CMDLINEINTERFACE############################################################################
 
     @arity(0,0,[])
@@ -859,7 +882,7 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_findDelays.__doc__, '']
 
     @arity(0,2,[int, int])
-    def do_scanVana(self, begin = 120, end = 160):
+    def do_scanVana(self, begin = 110, end = 160):
         """ScanVana: finds the best setting for vana so that the analogue current is nearly 24"""
         for vana in range(begin, end):
             self.api.setDAC("vana", vana)
@@ -1288,27 +1311,33 @@ class PxarCoreCmd(cmd.Cmd):
         t = time.time()
         for delay in range(minValue, maxValue):
             self.api.setTestboardDelays({name: delay})
-            self.api.daqStart()
-            self.api.daqTrigger(21,500)
+            time.sleep(1)
+            i = 0
+            self.api.setDAC("vana", 70+i)
+            i += 1
+#            self.api.daqStart()
+#            self.api.daqTrigger(21,500)
+            time.sleep(1)
             sumData = [0,0,0]
             levels = [0,0,0,0,0]
-            for i in range (20):
-                data = self.convertedRaw()
-                if len(data)>2:
-                    for j in range(2):
-                        sumData[j] += data[j]
-                if len(data)>7:
-                    for j in range(5):
-                        levels[j] += data[j+3]
-
-            print name, delay, len(data),"\t",
-            for i in range(2):
-                print '{0:4.0f}'.format(sumData[i]/float(20)),
-            print "\t",
-            for i in range(5):
-                print '{0:3.0f}'.format(levels[i]/float(20)),
-            print
-            self.api.daqStop()
+#            for i in range (20):
+#                data = self.convertedRaw()
+#                if len(data)>2:
+#                    for j in range(2):
+#                        sumData[j] += data[j]
+#                if len(data)>7:
+#                    for j in range(5):
+#                        levels[j] += data[j+3]
+#
+            print name, delay, #len(data),"\t",
+#            for i in range(2):
+#                print '{0:4.0f}'.format(sumData[i]/float(20)),
+#            print "\t",
+#            for i in range(5):
+#                print '{0:3.0f}'.format(levels[i]/float(20)),
+#            print
+            print self.api.getTBia()*1000
+#            self.api.daqStop()
         print "test took: ", round(time.time()-t,2), "s"
 
     def complete_checkTBsettings(self, text, line, start_index, end_index):
@@ -1380,14 +1409,15 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.triggerLoop.__doc__, '']
 
-    @arity(0,2,[int, bool])
-    def do_hitMap(self, maxTriggers = 1000, module = True):
-        """ do_hitMap [duration] [wbc]: collects triggers for a certain duration and plots a hitmap ... hopefully^^"""
-        wbc = 110
-        self.api.setDAC("wbc", wbc)
-        self.api.daqTriggerSource("extern")
+    @arity(0,3,[int, int, bool])
+    def do_hitMap(self, maxTriggers = 1000, wbc = 96, module = True):
+        """ do_hitMap [maxTriggers] [wbc]: collects a certain amount triggers and plots a hitmap ... hopefully^^"""
+#        self.api.setDAC("wbc", wbc)
+#        self.api.daqTriggerSource("extern")
 
         t =  time.time()
+
+
         self.api.daqStart()
 #        for i in range(int(100*60*duration)):
 #            min = int(60*duration-i/100)/60
@@ -1406,7 +1436,7 @@ class PxarCoreCmd(cmd.Cmd):
         while nTriggers < maxTriggers:
             print "\r#events:", '{0:06d}'.format(nTriggers),
 #            if nTriggers % 100 == 0:
-            print '{0:02.0d}'.format(nTriggers/(time.time()-t1)),
+            print '{0:02.0f}'.format(nTriggers/(time.time()-t1)),
             sys.stdout.flush()
             try:
                 data = self.api.daqGetEvent()
@@ -1475,6 +1505,14 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_setUp(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_setUp.__doc__, '']
+
+    @arity(0,1,[int])
+    def do_rate(self, duration = 30):
+        self.rate(duration)
+
+    def complete_rate(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_rate.__doc__, '']
 
     def do_quit(self, arg):
         """quit: terminates the application"""
