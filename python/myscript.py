@@ -1132,7 +1132,7 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.Test.__doc__, '']
 
     @arity(0,3,[int, int, int])
-    def do_wbcScan(self, minWBC = 90, maxTriggers = 10, maxWBC = 255):
+    def do_wbcScan(self, minWBC = 90, maxTriggers = 50, maxWBC = 130):
         """ do_wbcScan [minWBC] [maxTriggers]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
 
         self.api.daqTriggerSource("extern")
@@ -1151,7 +1151,7 @@ class PxarCoreCmd(cmd.Cmd):
                 try:
                     data = self.api.daqGetEvent()
                     if len(data.pixels) > 0:
-                       nHits += 1
+                        nHits += 1
                     nTriggers += 1
                 except RuntimeError:
                     pass
@@ -1409,40 +1409,52 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.triggerLoop.__doc__, '']
 
-    @arity(0,3,[int, int, bool])
-    def do_hitMap(self, maxTriggers = 1000, wbc = 96, module = True):
+    @arity(0,1,[int])
+    def do_hitMap(self, maxTriggers = 1000):
         """ do_hitMap [maxTriggers] [wbc]: collects a certain amount triggers and plots a hitmap ... hopefully^^"""
 #        self.api.setDAC("wbc", wbc)
 #        self.api.daqTriggerSource("extern")
 
+        windowsize = 100
         t =  time.time()
-
-
         self.api.daqStart()
-#        for i in range(int(100*60*duration)):
-#            min = int(60*duration-i/100)/60
-#            sek = int(60*duration-i/100)%60
-#            msek = int(100*60*duration-i)-int(60*100*duration-i)/100*100
-#            print "\rtime", '{0:02d}:'.format(min), '\b{0:02d}:'.format(sek),'\b{0:02d}'.format(msek),
-#            sys.stdout.flush()
-#            time.sleep(0.01)
-#        while True:
-#            data = self.api.daqGetEvent()
-#            if len(data.pixels)>0: break
+
+        #check if module is True
+        module = True
+        while True:
+            try:
+                data = self.api.daqGetEvent()
+                if data.pixels[0].roc == 0:
+                    module = False
+                break
+            except RuntimeError:
+                pass
+
         data = []
         d = zeros((417 if module else 53,161 if module else 81))
         nTriggers = 0
         t1 = time.time()
         while nTriggers < maxTriggers:
             print "\r#events:", '{0:06d}'.format(nTriggers),
-#            if nTriggers % 100 == 0:
-            print '{0:02.0f}'.format(nTriggers/(time.time()-t1)),
+            if nTriggers < windowsize:
+                mean = nTriggers/(time.time()-t1)
+                print 'rate: {0:03.0f} Hz'.format(mean),
+                if nTriggers == 90: t2 = time.time()
+            elif nTriggers > before and nTriggers % 10 == 0:
+                mean = float(windowsize-5)/windowsize*mean + float(windowsize-95)/windowsize*10/(time.time()-t2)
+                print 'rate: {0:03.0f} Hz'.format(mean),
+                t2 = time.time()
             sys.stdout.flush()
+            before = nTriggers
             try:
                 data = self.api.daqGetEvent()
-                if len(data.pixels)>0:
+#                if len(data.pixels)>0:
+#                    nTriggers += 1
+#                    for px in data.pixels:
+                if len(data.pixels)>1:
                     nTriggers += 1
-                    for px in data.pixels:
+                    for i in range(len(data.pixels)-1):
+                        px = data.pixels[i]
                         xoffset = 52*(px.roc%8) if module else 0
                         yoffset = 80*int(px.roc/8) if module else 0
                         # Flip the ROCs upside down:
@@ -1452,37 +1464,6 @@ class PxarCoreCmd(cmd.Cmd):
                         d[x+1][y+1] += 1 if True else px.value
             except RuntimeError:
                 pass
-#        while True:
-#            print "\r#events:", '{0:06d}'.format(index),
-#            sys.stdout.flush()
-#            try:
-#                data = self.api.daqGetEvent().pixels
-#            except:
-#                continue
-#            for i in data:
-##                print i
-#                if index>100: break
-#            if  index > nEvents:
-#                break
-#            for px in data:
-#                xoffset = 52*(px.roc%8) if module else 0
-#                yoffset = 80*int(px.roc/8) if module else 0
-#                # Flip the ROCs upside down:
-#                y = (px.row + yoffset) if (px.roc < 8) else (2*yoffset - px.row - 1)
-#                # Reverse order of the upper ROC row:
-#                x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
-#                d[x+1][y+1] += 1 if True else px.value
-#            index +=1
-#        data = self.api.daqGetEventBuffer().pixels
-#            for px in data:
-#                xoffset = 52*(px.roc%8) if module else 0
-#                yoffset = 80*int(px.roc/8) if module else 0
-#                # Flip the ROCs upside down:
-#                y = (px.row + yoffset) if (px.roc < 8) else (2*yoffset - px.row - 1)
-#                # Reverse order of the upper ROC row:
-#                x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
-#                d[x+1][y+1] += 1 if True else px.value
-
         self.api.daqStop()
 
         print "test took: ", round(time.time()-t,2), "s"
