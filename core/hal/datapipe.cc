@@ -93,11 +93,14 @@ namespace pxar {
      Get();
    }
    Get();
+   /**fix for eudaq*/
+   Get();
    //record.Add(GetLast());
 
    // Else keep reading and adding samples until we find any trailer marker.
-   /**HOTFIX*/
-   while ( ( (Get() & 0xE000) != 0x4000 ) ){
+   /**BUGFIX TBM emu */
+   uint16_t index(1);
+   while ( (Get() & 0xe000) != 0xe000 ){
      // Check if the last read sample has Event end marker:
      if ((GetLast() & 0xe000) == 0xa000) {
        record.SetEndError();
@@ -108,10 +111,25 @@ namespace pxar {
      // If total Event size is too big, break:
      if (record.GetSize() < 40000) record.Add(GetLast());
      else record.SetOverflow();
+     index++;
    }
-   /**adding data from trailer as a dirty bugfix*/
-   if (record.GetSize() < 40000) record.Add(GetLast());
-   else record.SetOverflow();
+   /**need to add 4 more values (5 for myscript 4 for eudaq)*/
+   /**adding e-trailer*/
+   if (index == 1){
+        Get();
+        for (uint16_t i(0); i<2; i++) {//i<3
+            if (record.GetSize() < 40000) record.Add(Get());
+            else record.SetOverflow();
+        }
+   }
+   else{
+        if (record.GetSize() < 40000) record.Add(GetLast());
+        else record.SetOverflow();
+        for (uint16_t i(0); i<3; i++) {//i<4
+            if (record.GetSize() < 40000) record.Add(Get());
+            else record.SetOverflow();
+        }
+    }
 
    LOG(logDEBUGPIPES) << "-------------------------";
    LOG(logDEBUGPIPES) << listVector(record.data,true);
