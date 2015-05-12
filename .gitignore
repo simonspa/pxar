@@ -11,6 +11,7 @@ test/
 *.pdf
 *.png
 *.log
+*.raw
 
 # ignore backup files of any sort of editor:
 ~*

@@ -94,7 +94,7 @@ namespace pxar {
    }
    Get();
    /**fix for eudaq*/
-   Get();
+   //Get();
    //record.Add(GetLast());
 
    // Else keep reading and adding samples until we find any trailer marker.
@@ -115,21 +115,21 @@ namespace pxar {
    }
    /**need to add 4 more values (5 for myscript 4 for eudaq)*/
    /**adding e-trailer*/
-   if (index == 1){
-        Get();
-        for (uint16_t i(0); i<2; i++) {//i<3
-            if (record.GetSize() < 40000) record.Add(Get());
-            else record.SetOverflow();
-        }
-   }
-   else{
-        if (record.GetSize() < 40000) record.Add(GetLast());
-        else record.SetOverflow();
-        for (uint16_t i(0); i<3; i++) {//i<4
-            if (record.GetSize() < 40000) record.Add(Get());
-            else record.SetOverflow();
-        }
-    }
+//   if (index == 1){
+//        Get();
+//        for (uint16_t i(0); i<6; i++) {//i<3 for one ROC
+//            if (record.GetSize() < 40000) record.Add(Get());
+//            else record.SetOverflow();
+//        }
+//   }
+//   else{
+//        if (record.GetSize() < 40000) record.Add(GetLast());
+//        else record.SetOverflow();
+//        for (uint16_t i(0); i<4; i++) {//i<4 for CLI i<3 for eudaq
+//            if (record.GetSize() < 40000) record.Add(Get());
+//            else record.SetOverflow();
+//        }
+//    }
 
    LOG(logDEBUGPIPES) << "-------------------------";
    LOG(logDEBUGPIPES) << listVector(record.data,true);

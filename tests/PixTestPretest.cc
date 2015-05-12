@@ -255,9 +255,13 @@ void PixTestPretest::setVana() {
 
   const double extra = 0.1; // [mA] besser zu viel als zu wenig
   const double eps = 0.25; // [mA] convergence
+  std::string roctype = fApi->_dut->getRocType();
   double slope;
-  if (vanaStart[0]>100) slope = 0.5; // check for analogue ROCs
-  else slope = 6; // 255 DACs / 40 mA
+  DeviceDictionary * _devices = DeviceDictionary::getInstance();
+   if (_devices->isAnalogROC(roctype))  slope = .5;
+   else                                 slope = 6 ; // 255 DACs / 40 mA
+//  if (vanaStart[0]>100) slope = 0.5; // check for analogue ROCs
+//  else slope = 6; // 255 DACs / 40 mA
 
   for (int roc = 0; roc < nRocs; ++roc) {
     if (!selectedRoc(roc)) {
@@ -317,6 +321,7 @@ void PixTestPretest::setVana() {
 
     rocIana[roc] = ia-i015; // more or less identical for all ROCS?!
     vanaStart[roc] = vana; // remember best
+    LOG(logINFO) << "Set vana of ROC " << roc << " to " <<  vana;
     fApi->setDAC( "vana", 0, roc ); // switch off for next ROC
 
   } // rocs
@@ -361,7 +366,7 @@ void PixTestPretest::setVana() {
   fDisplayedHist = find(fHistList.begin(), fHistList.end(), hsum);
   PixTest::update();
 
-  LOG(logINFO) << "PixTestPretest::setVana() done, Module Ia " << ia16 << " mA = " << ia16/nRocs << " mA/ROC";
+  LOG(logINFO) << "PixTestPretest::setVana() done, Module Ia " << ia16 << " mA = " << ia16/nRocs << " mA/ROC ";
 
 }
 

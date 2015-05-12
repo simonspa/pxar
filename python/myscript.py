@@ -497,6 +497,25 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_getEfficiencyMap.__doc__, '']
 
+    @arity(0,6,[str, int, int, int, int, int])
+    def do_getPulseheightVsDAC(self, dacname = "vcal", dacstep = 1, dacmin = 0, dacmax = 255, flags = 0, nTriggers = 10):
+        """getPulseheightVsDAC [DAC name] [step size] [min] [max] [flags = 0] [nTriggers = 10]: returns the pulseheight over a 1D DAC scan"""
+        data = self.api.getPulseheightVsDAC(dacname, dacstep, dacmin, dacmax, flags, nTriggers)
+        self.plot_1d(data,"Pulseheight",dacname,dacmin,dacmax)
+
+    def complete_getPulseheightVsDAC(self, text, line, start_index, end_index):
+        if text and len(line.split(" ")) <= 2: # first argument and started to type
+            # list matching entries
+            return [dac for dac in dacdict.getAllROCNames()
+                        if dac.startswith(text)]
+        else:
+            if len(line.split(" ")) > 2:
+                # return help for the cmd
+                return [self.do_getPulseheightVsDAC.__doc__, '']
+            else:
+                # return all DACS
+                return dacdict.getAllROCNames()
+
     @arity(0,10,[str, int, int, int, str, int, int, int, int, int])
     def do_dacDacScan(self, dac1name = "caldel", dac1step = 1, dac1min = 0, dac1max = 255, dac2name = "vthrcomp", dac2step = 1, dac2min = 0, dac2max = 255, flags = 0, nTriggers = 10):
         """getEfficiencyVsDACDAC [DAC1 name] [step size 1] [min 1] [max 1] [DAC2 name] [step size 2] [min 2] [max 2] [flags = 0] [nTriggers = 10]: returns the efficiency over a 2D DAC1-DAC2 scan"""
@@ -568,11 +587,16 @@ class PxarCoreCmd(cmd.Cmd):
         """daqGetRawEvent [convert]: read one converted event from the event buffer, for convert = 0 it will print the addresslevels"""
         if convert == 1:
             data = self.convertedRaw()
+            print data
         elif convert == 2:
             data = self.getRawEvent()
+            print data
         elif convert == 0:
             data = self.api.daqGetRawEvent()
-        print data
+            print data
+        elif convert == 3:
+            data = self.convertedRaw()
+            print "UB", data[0], "\tlength", len(data)
 
     def complete_daqGetRawEvent(self, text, line, start_index, end_index):
         # return help for the cmd
@@ -719,14 +743,14 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_enableAllPixel.__doc__, '']
 
-    @arity(0,2,[int, int])
-    def do_enableOnePixel(self, row = 14, column = 14):
+    @arity(0,3,[int, int, int])
+    def do_enableOnePixel(self, row = 14, column = 14, roc = 0):
         """enableOnePixel [row] [column] : enables one Pixel (default 14/14); masks and disables the rest"""
-        self.api.testAllPixels(0)
-        self.api.maskAllPixels(1)
+        self.api.testAllPixels(0, roc)
+        self.api.maskAllPixels(1, roc)
         print "--> disable and mask all Pixels (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
-        self.api.testPixel(row,column,1)
-        self.api.maskPixel(row,column,0)
+        self.api.testPixel(row,column,1, roc)
+        self.api.maskPixel(row,column,0, roc)
         print "--> enable and unmask Pixel " + str(row) + "/" + str(column) + " (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
     def complete_enableOnePixel(self, text, line, start_index, end_index):
         # return help for the cmd
@@ -1495,6 +1519,78 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_rate.__doc__, '']
 
+    @arity(0,2,[int, int])
+    def do_PHvsVcal(self, row = 14, column = 14):
+        self.api.testAllPixels(0)
+        self.api.maskAllPixels(1)
+        print "--> disable and mask all Pixels (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
+        self.api.testPixel(row,column,1)
+        self.api.maskPixel(row,column,0)
+        print "--> enable and unmask Pixel " + str(row) + "/" + str(column) + " (" + str(self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
+        self.api.daqStart()
+        for vcal in range(255):
+            self.api.setDAC("vcal", vcal)
+            sum = 0
+            for i in range(20):
+                self.api.daqTrigger(1, 500)
+                data = self.convertedRaw()
+                sum += data[-1]
+                #print vcal*7,
+                if (len(data)<8): sum = 0
+            print sum/20
+        self.api.daqStop()
+
+    def complete_PHvsVcal(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_PHvsVcal.__doc__, '']
+
+    @arity(0,1,[int])
+    def do_rawRate(self, nTrig = 100):
+        sum1 = 0
+        sum2 = 0
+        for trig in range (nTrig):
+            data = self.convertedRaw()
+            if len(data)>3: sum1 += 1
+            if len(data)>9: sum2 += 1
+        print 100*float(sum1)/nTrig, '%'
+        print 100*float(sum2)/nTrig, '%'
+
+    def complete_rawRate(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_rawRate.__doc__, '']
+
+    @arity(0,0,[])
+    def do_probes(self):
+        self.api.SignalProbe("a1","sdata1")
+        self.api.SignalProbe("a2","ctr")
+        self.api.SignalProbe("d1","tin")
+        self.api.SignalProbe("d2","tout")
+
+    def complete_probes(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_rawRate.__doc__, '']
+
+    @arity(0,2,[int, bool])
+    def do_xcheckEvents(self, nTrig = 100, doprint = False):
+
+        empty = 0
+        trig = 0
+        while trig<nTrig:
+            try:
+                data = self.convertedRaw()
+                if len(data) == 3:
+                    empty +=1
+                trig +=1
+                if doprint:
+                    print "UB", data[0], "\tlength", len(data)
+            except RuntimeError:
+                pass
+        print 'empty events: {0:03.0f}%'.format(100*float(empty)/nTrig), str(empty)+"/"+str(nTrig)
+
+    def complete_probes(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_rawRate.__doc__, '']
+
     def do_quit(self, arg):
         """quit: terminates the application"""
         sys.exit(1)
@@ -1519,6 +1615,7 @@ class PxarCoreCmd(cmd.Cmd):
     do_stat = do_daqStatus
     do_stop = do_daqStop
     do_wbc   = do_setUp
+    do_status = do_daqStatus
 
 
 

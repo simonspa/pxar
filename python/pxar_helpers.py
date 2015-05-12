@@ -168,10 +168,14 @@ def PxarStartup(directory, verbosity):
     # Pattern Generator for single ROC operation:
     if int(config.get("nTbms")) == 0:
         pg_setup = (
-            ("PG_RESR",25),
-            ("PG_CAL",pgcal),
+            #("PG_RESR",25),
+            #("PG_RESR",25),
+            #("PG_CAL",pgcal),
+            #("PG_TRG",16),
             ("PG_TRG",16),
-            ("PG_TOK",0))
+            ("PG_TOK",0)
+            #("PG_RESR",0),
+            )
     else:
         pg_setup = (
             ("PG_RESR",15),
@@ -181,6 +185,7 @@ def PxarStartup(directory, verbosity):
        # Start an API instance from the core pxar library
     api = PyPxarCore(usbId=config.get("testboardName"),logLevel=verbosity)
     print api.getVersion()
+    #print 'INIT TESTBOARDS', pg_setup
     if not api.initTestboard(pg_setup = pg_setup,
     power_settings = power_settings,
     sig_delays = tbparameters.getAll()):
