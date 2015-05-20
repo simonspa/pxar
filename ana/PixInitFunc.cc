@@ -221,7 +221,7 @@ TF1* PixInitFunc::gpErr(TH1 *h) {
   TF1* f = (TF1*)gROOT->FindObject("PIF_gpErr");
   if (0 == f) {
     f = new TF1("PIF_gpErr", PIF_err, h->GetBinLowEdge(1), h->GetBinLowEdge(h->GetNbinsX()+1), 4);
-    f->SetParNames("step", "slope", "floor", "plateau");                       
+    f->SetParNames("step", "slope", "floor", "plateau");
     f->SetNpx(1000);
   } else {
     f->ReleaseParameter(0);
@@ -301,12 +301,15 @@ TF1* PixInitFunc::errScurve(TH1 *h) {
   }
 
   f->SetParameter(0, h->GetBinCenter(0.5*(ibin+jbin)));
-  f->SetParameter(1, 2.0/(h->GetBinLowEdge(jbin) - h->GetBinLowEdge(ibin)));
-  //   cout << "init parameters 0: " << f->GetParameter(0) << " 1: " << f->GetParameter(1)
-  //        << " ibin: " << ibin << " jbin: " << jbin
-  //        << " lo: " << lo << " hi: " << hi
-  //        << " foundLo: " << foundLo
-  //        << endl;
+  //before Jamie's issue:   f->SetParameter(1, 2.0/(h->GetBinLowEdge(jbin) - h->GetBinLowEdge(ibin)));
+  f->SetParameter(1, 0.25*(h->GetBinLowEdge(jbin) - h->GetBinLowEdge(ibin)));
+  if (0) cout << "init parameters 0: " << f->GetParameter(0) << " 1: " << f->GetParameter(1)
+	      << " ibin: " << ibin << " jbin: " << jbin
+	      << " lo: " << lo << " hi: " << hi
+	      << " foundLo: " << foundLo
+	      << " plateauWidth: "  << plateauWidth
+	      << endl;
+
   if (jbin == ibin) {
     //    cout << "XXXXXXXXXXX PixInitFunc: STEP FUNCTION " << h->GetTitle() << " ibin = " << ibin << " jbin = " << jbin << endl;
     f->FixParameter(0, h->GetBinCenter(jbin));

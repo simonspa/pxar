@@ -185,7 +185,6 @@ def PxarStartup(directory, verbosity):
        # Start an API instance from the core pxar library
     api = PyPxarCore(usbId=config.get("testboardName"),logLevel=verbosity)
     print api.getVersion()
-    #print 'INIT TESTBOARDS', pg_setup
     if not api.initTestboard(pg_setup = pg_setup,
     power_settings = power_settings,
     sig_delays = tbparameters.getAll()):

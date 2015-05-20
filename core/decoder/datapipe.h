@@ -105,11 +105,7 @@ namespace pxar {
   // DTB data Event splitter
   class dtbEventSplitter : public dataPipe<uint16_t, rawEvent*> {
     rawEvent record;
-    rawEvent* Read() {
-      if(GetEnvelopeType() == TBM_NONE) return SplitDeser160();
-      else if(GetEnvelopeType() == TBM_EMU) return SplitSoftTBM();
-      else return SplitDeser400();
-    }
+    rawEvent* Read();
     rawEvent* ReadLast() { return &record; }
     uint8_t ReadChannel() { return GetChannel(); }
     uint8_t ReadTokenChainLength() { return GetTokenChainLength(); }
@@ -117,9 +113,9 @@ namespace pxar {
     uint8_t ReadDeviceType() { return GetDeviceType(); }
 
     // The splitter routines:
-    rawEvent* SplitDeser160();
-    rawEvent* SplitDeser400();
-    rawEvent* SplitSoftTBM();
+    void SplitDeser160();
+    void SplitDeser400();
+    void SplitSoftTBM();
 
     bool nextStartDetected;
   public:
@@ -144,25 +140,17 @@ namespace pxar {
   // DTB data decoding class
   class dtbEventDecoder : public dataPipe<rawEvent*, Event*> {
     Event roc_Event;
-    Event* Read() {
-      if(GetEnvelopeType() == TBM_NONE || GetEnvelopeType() == TBM_EMU) {
-	// Decode analog ROC data:
-	if(GetDeviceType() < ROC_PSI46DIG) { return DecodeAnalog(); }
-	// Decode digital ROC data:
-	else { return DecodeDeser160(); }
-      }
-      //else if(GetEnvelopeType() == TBM_EMU) return DecodeSoftTBM();
-      else return DecodeDeser400();
-    }
+    Event* Read();
     Event* ReadLast() { return &roc_Event; }
     uint8_t ReadChannel() { return GetChannel(); }
     uint8_t ReadTokenChainLength() { return GetTokenChainLength(); }
     uint8_t ReadEnvelopeType() { return GetEnvelopeType(); }
     uint8_t ReadDeviceType() { return GetDeviceType(); }
 
-    Event* DecodeAnalog();
-    Event* DecodeDeser160();
-    Event* DecodeDeser400();
+    void DecodeADC(rawEvent * sample);
+    void DecodeDeser160(rawEvent * sample);
+    void DecodeDeser400(rawEvent * sample);
+    void ProcessTBM(rawEvent * sample);
     statistics decodingStats;
 
     // Readback decoding:
@@ -174,7 +162,7 @@ namespace pxar {
     // Error checking:
     void CheckEventValidity(int16_t roc_n);
     void CheckInvalidWord(uint16_t v);
-    void CheckEventID(uint16_t v);
+    void CheckEventID();
     int16_t eventID;
 
     // Analog level averaging:

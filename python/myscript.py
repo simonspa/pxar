@@ -605,7 +605,7 @@ class PxarCoreCmd(cmd.Cmd):
         except RuntimeError:
             pass
 
-    def complete_daqGetRawEvent(self, text, line, start_index, end_index):
+    def complete_daqGetEvent(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_daqGetRawEvent.__doc__, '']
 
@@ -1617,6 +1617,26 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_probes(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_rawRate.__doc__, '']
+
+    @arity(0,2,[int, bool])
+    def do_checkStack(self, nTrig = 100, doprint = False):
+
+        stack = 0
+        trig = 0
+        while trig<nTrig:
+            data = self.convertedRaw()
+            if len(data)>1:
+                if data[-1] > 1:
+                    stack +=1
+                    print data[-1]
+                trig +=1
+                print '\r{0:05d}'.format(trig),
+                sys.stdout.flush()
+        print 'stacks larger than 2: {0:3.1f}%'.format(100*float(stack)/nTrig), str(stack)+"/"+str(nTrig)
+
+    def complete_checkStack(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_checkStack.__doc__, '']
 
     def do_quit(self, arg):
         """quit: terminates the application"""

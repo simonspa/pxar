@@ -164,7 +164,9 @@ namespace pxar {
       _registers["basee"]         = dacConfig(TBM_REG_CORES_A_B,255,TBM_REG);
 
       // Special TBM settings:
-      _registers["tokenchain"]    = dacConfig(TBM_TOKENCHAIN,8,TBM_REG);
+      _registers["nrocs"]         = dacConfig(TBM_TOKENCHAIN_0,8,TBM_REG);
+      _registers["nrocs1"]        = dacConfig(TBM_TOKENCHAIN_0,8,TBM_REG);
+      _registers["nrocs2"]        = dacConfig(TBM_TOKENCHAIN_1,8,TBM_REG);
 
       //------- ROC registers -----------------------------
       // DAC name, register and size reference:
@@ -306,6 +308,7 @@ namespace pxar {
       _devices["psi46digv3"]    = ROC_PSI46DIGV21;
 
       // TBM flavors:
+      _devices["notbm"]         = TBM_NONE;
       _devices["tbmemulator"]   = TBM_EMU;
       _devices["tbm08"]         = TBM_08;
       _devices["tbm08a"]        = TBM_08A;

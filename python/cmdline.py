@@ -21,7 +21,6 @@ except ImportError:
 import cmd      # for command interface and parsing
 import os # for file system cmds
 import sys
-import time
 
 # set up the DAC and probe dictionaries
 dacdict = PyRegisterDictionary()
@@ -134,7 +133,6 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.setTestboardDelays({"tindelay":tindelay,"toutdelay":toutdelay})
         self.api.daqStart()
         self.api.daqTrigger(1, 500)
-        rawEvent = []
 
         try:
             rawEvent = self.api.daqGetRawEvent()
@@ -152,22 +150,6 @@ class PxarCoreCmd(cmd.Cmd):
         if verbose: print "converted Event:\t",rawEvent
         self.api.daqStop()
         return rawEvent
-
-    def convertedRaw(self):
-
-        event = []
-        try:
-            event = self.api.daqGetRawEvent()
-        except RuntimeError:
-            pass
-        nCount = 0
-        for i in event:
-            i = i & 0x0fff
-            if i & 0x0800:
-                i -= 4096
-            event[nCount] = i
-            nCount += 1
-        return event
 
 ##########################################################################################################################
 
@@ -696,10 +678,10 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_analogLevelScan.__doc__, '']
 
-    @arity(2,2,[str, str])
-    def do_setSignalMode(self, signal, mode):
-        """setSignalMode [signal] [mode]: Set the DTB signal to given mode (normal, low, high, random)"""
-        self.api.setSignalMode(signal, mode)
+    @arity(2,3,[str, str, int])
+    def do_setSignalMode(self, signal, mode, speed = 0):
+        """setSignalMode [signal] [mode] [speed]: Set the DTB signal to given mode (normal, low, high, random). The [speed] parameter is only necessary for random signal mode."""
+        self.api.setSignalMode(signal, mode, speed)
 
     def complete_setSignalMode(self, text, line, start_index, end_index):
         if text and len(line.split(" ")) <= 2: # first argument and started to type
@@ -968,46 +950,49 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_findAnalogueTBDelays.__doc__, '']
 
-    @arity(0,2,[int, int])
-    def do_wbcScan(self, minWBC = 90, nTrigger = 50):
-        """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
+    @arity(0,3,[int, int, int])
+    def do_wbcScan(self, minWBC = 90, maxTriggers = 10, maxWBC = 255):
+        """ do_wbcScan [minWBC] [maxTriggers]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
+
         self.api.daqTriggerSource("extern")
+        wbcScan = []
+        print "wbc \tyield"
+
+        # loop over wbc
+        for wbc in range (minWBC,maxWBC):
+            self.api.setDAC("wbc", wbc)
+            self.api.daqStart()
+            nHits       = 0
+            nTriggers   = 0
+
+            #loop until you find maxTriggers
+            while nTriggers < maxTriggers:
+                try:
+                    data = self.api.daqGetEvent()
+                    if len(data.pixels) > 0:
+                       nHits += 1
+                    nTriggers += 1
+                except RuntimeError:
+                    pass
+
+            hitYield = 100*nHits/maxTriggers
+            wbcScan.append(hitYield)
+            print '{0:03d}'.format(wbc),"\t", '{0:3.0f}%'.format(hitYield)
+
+            # stopping criterion
+            if wbc>3+minWBC:
+                if wbcScan[-4] > 90:
+                    print "Set DAC wbc to", wbc-3
+                    self.api.setDAC("wbc", wbc-3)
+                    break
+
         self.api.daqStop()
 
-        print "wbc \t#Events \texample Event"
-        maxWBC = 255
-        wbcScan = []
-        for wbc in range (minWBC,maxWBC):
-            self.convertedRaw()
-            self.api.setDAC("wbc", wbc)
-            time.sleep(0.01)
-            self.api.daqStart()
-            nEvents     = 0
-            it          = 0
-            exEvent     = []
-            for j in range(nTrigger):
-                data = self.convertedRaw()
-                if len(data) > 0:   #and data[0] < -100 (might add this as well if tindelay is set correctly)
-                    if(it==0):
-                        exEvent = data
-                        it +=1
-                    nEvents += 1
-            nEvents = 100*nEvents/nTrigger
-            wbcScan.append(nEvents)
-            if wbc>3+minWBC:
-                if wbcScan[-3] > 90:
-                    print "Set wbc to", wbc-2
-                    self.api.setDAC("wbc", wbc-2)
-                    self.api.daqStop()
-                    break
-            print '{0:03d}'.format(wbc),"\t", '{0:3.0f}%'.format(nEvents),"\t\t", exEvent
-            self.api.daqStop()
-
-        self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
-#        plot = Plotter.create_th1(wbcScan, minWBC, maxWBC, "wbc scan", "wbc", "%")
-        plot = Plotter.create_mygraph(wbcScan, "wbc scan", "wbc", "evt/trig [%]", minWBC)
-        self.window.histos.append(plot)
-        self.window.update()
+        if(self.window):
+            self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
+            plot = Plotter.create_tgraph(wbcScan, "wbc scan", "wbc", "evt/trig [%]", minWBC)
+            self.window.histos.append(plot)
+            self.window.update()
 
     def complete_wbcScan(self, text, line, start_index, end_index):
         # return help for the cmd

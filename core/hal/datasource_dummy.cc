@@ -1,11 +1,21 @@
-#include "datapipe.h"
+#include "datasource_dtb.h"
 #include "helper.h"
+#include "log.h"
 #include "constants.h"
 #include "exceptions.h"
 
 namespace pxar {
 
   uint16_t dtbSource::FillBuffer() {
+    pos = 0;
+    do {
+      dtbState = 0;
+    
+      if (buffer.size() == 0) {
+	if (stopAtEmptyData) throw dsBufferEmpty();
+	if (dtbState) throw dsBufferOverflow();
+      }
+    } while (buffer.size() == 0);
 
     LOG(logDEBUGPIPES) << "-------------------------";
     LOG(logDEBUGPIPES) << "Channel " << static_cast<int>(channel)
@@ -17,41 +27,7 @@ namespace pxar {
     LOG(logDEBUGPIPES) << listVector(buffer,true);
     LOG(logDEBUGPIPES) << "-------------------------";
 
-    throw dsBufferEmpty();
-    return 0;
-  }
-
-  rawEvent* dtbEventSplitter::SplitDeser400() {
-    record.Clear();
-    return &record;
-  }
-
-  rawEvent* dtbEventSplitter::SplitDeser160() {
-    record.Clear();
-    return &record;
-  }
-
-  rawEvent* dtbEventSplitter::SplitSoftTBM() {
-    record.Clear();
-    return &record;
-  }
-
-  Event* dtbEventDecoder::DecodeDeser400() {
-
-    roc_Event.Clear();
-    return &roc_Event;
-  }
-
-  Event* dtbEventDecoder::DecodeDeser160() {
-
-    roc_Event.Clear();
-    return &roc_Event;
-  }
-
-  Event* dtbEventDecoder::DecodeAnalog() {
-
-    roc_Event.Clear();
-    return &roc_Event;
+    return lastSample = buffer[pos++];
   }
 
 }
