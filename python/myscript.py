@@ -431,6 +431,33 @@ class PxarCoreCmd(cmd.Cmd):
                 # return all DACS
                 return dacdict.getAllROCNames()
 
+    @arity(1,1,[str])
+    def do_run(self, filename):
+        """run [filename]: loads a list of commands to be executed on the pxar cmdline"""
+        try:
+            f = open(filename)
+        except IOError:
+            print "Error: cannot open file '" + filename + "'"
+        try:
+            for line in f:
+                if not line.startswith("#") and not line.isspace():
+                    print line.replace('\n', ' ').replace('\r', '')
+                    self.onecmd(line)
+        finally:
+            f.close()
+    def complete_run(self, text, line, start_index, end_index):
+        # tab-completion for the file path:
+        try:
+            # remove specific delimeters from the readline parser
+            # to allow completion of filenames with dashes
+            import readline
+            delims = readline.get_completer_delims( )
+            delims = delims.replace('-', '')
+            readline.set_completer_delims(delims)
+        except ImportError:
+            pass
+        return get_possible_filename_completions(extract_full_argument(line,end_index))
+
     @arity(0,0,[])
     def do_daqStart(self):
         """daqStart: starts a new DAQ session"""

@@ -168,9 +168,9 @@ def PxarStartup(directory, verbosity):
     # Pattern Generator for single ROC operation:
     if int(config.get("nTbms")) == 0:
         pg_setup = (
+            ("PG_RESR",25),
             #("PG_RESR",25),
-            #("PG_RESR",25),
-            #("PG_CAL",pgcal),
+            ("PG_CAL",pgcal),
             #("PG_TRG",16),
             ("PG_TRG",16),
             ("PG_TOK",0)
