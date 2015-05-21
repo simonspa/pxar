@@ -287,7 +287,6 @@ namespace pxar {
     // Loop over the full data:
     for(std::vector<uint16_t>::iterator word = sample->data.begin(); word != sample->data.end(); word++) {
 
-      std::cout << "Left: " << (sample->data.end() - word) << std::endl;
       // Not enough data for anything, stop here - and assume it was half a pixel hit:
       if((sample->data.end() - word < 2)) { 
 	decodingStats.m_errors_pixel_incomplete++;
@@ -315,8 +314,10 @@ namespace pxar {
 
 	LOG(logDEBUGPIPES) << "ROC Header: "
 			   << expandSign((*word) & 0x0fff) << " (avg. " << ultrablack << ") (UB) "
-			   << expandSign((*(++word)) & 0x0fff) << " (avg. " << black << ") (B) "
-			   << expandSign((*(++word)) & 0x0fff) << " (lastDAC) ";
+			   << expandSign((*(word+1)) & 0x0fff) << " (avg. " << black << ") (B) "
+			   << expandSign((*(word+2)) & 0x0fff) << " (lastDAC) ";
+	// Advance iterator:
+	word +=  2;
       }
       // We have a pixel hit:
       else {

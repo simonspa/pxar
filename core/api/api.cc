@@ -1421,9 +1421,6 @@ std::vector<Event> pxarCore::daqGetEventBuffer() {
 
 Event pxarCore::daqGetEvent() {
 
-  // Check DAQ status:
-  if(!daqStatus()) { return Event(); }
-
   // Return the next decoded Event from the FIFO buffer.
   // The HAL function throws pxar::DataNoEvent if no event is available
   Event * evt = _hal->daqEvent();
@@ -1433,9 +1430,6 @@ Event pxarCore::daqGetEvent() {
 }
 
 rawEvent pxarCore::daqGetRawEvent() {
-
-  // Check DAQ status:
-  if(!daqStatus()) { return rawEvent(); }
 
   // Return the next raw data record from the FIFO buffer:
   // The HAL function throws pxar::DataNoEvent if no event is available
