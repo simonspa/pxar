@@ -1184,7 +1184,7 @@ class PxarCoreCmd(cmd.Cmd):
 
     @arity(0,3,[int, int, int])
     def do_wbcScan(self, minWBC = 90, maxTriggers = 50, maxWBC = 130):
-        """ do_wbcScan [minWBC] [maxTriggers]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
+        """do_wbcScan [minimal WBC] [number of events] [maximal WBC]: \nsets wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches maxWBC (default [90] [100] [130])"""
 
         self.api.daqTriggerSource("extern")
         wbcScan = []
@@ -1217,6 +1217,12 @@ class PxarCoreCmd(cmd.Cmd):
                     print "Set DAC wbc to", wbc-3
                     self.api.setDAC("wbc", wbc-3)
                     break
+
+            # Clear the buffer:
+            try:
+                data = self.api.daqGetEventBuffer()
+            except RuntimeError:
+                pass
 
         self.api.daqStop()
 
@@ -1561,10 +1567,10 @@ class PxarCoreCmd(cmd.Cmd):
             for i in range(20):
                 self.api.daqTrigger(1, 500)
                 data = self.convertedRaw()
-                sum += data[-1]
+                sum += data[8]
                 #print vcal*7,
                 if (len(data)<8): sum = 0
-            print sum/20
+            print vcal*7, sum/20
         self.api.daqStop()
 
     def complete_PHvsVcal(self, text, line, start_index, end_index):
@@ -1638,6 +1644,39 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_checkStack.__doc__, '']
 
+    @arity(0,2,[int, bool])
+    def do_measurePH(self, maxTriggers = 20, doprint = False):
+
+        protons = 0
+        pions = 0
+        nTriggers = 0
+        while nTriggers < maxTriggers:
+#            try:
+#                data = self.api.daqGetEvent()
+#                if len(data.pixels) == 1:
+#                    print data.pixels[0]
+#                    nTriggers += 1
+#            except RuntimeError:
+#                pass
+            data = self.convertedRaw()
+            if len(data)<23 and len(data)>16:
+                if data[10]<-80:
+                    pions += data[10]
+                    nTriggers += 1
+        nTriggers = 0
+        while nTriggers < maxTriggers:
+            data = self.convertedRaw()
+            if len(data)<23 and len(data)>16:
+                if data[10]>-80:
+                    protons += data[10]
+                    nTriggers += 1
+        print protons/maxTriggers
+        print pions/maxTriggers
+
+    def complete_measurePH(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_measurePH.__doc__, '']
+
     def do_quit(self, arg):
         """quit: terminates the application"""
         sys.exit(1)
@@ -1663,6 +1702,7 @@ class PxarCoreCmd(cmd.Cmd):
     do_stop = do_daqStop
     do_wbc   = do_setUp
     do_status = do_daqStatus
+    do_event = do_daqGetEvent
 
 
 

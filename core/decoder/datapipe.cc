@@ -454,10 +454,36 @@ namespace pxar {
   }
 
   void dtbEventDecoder::AverageAnalogLevel(int32_t &variable, int16_t dataword) {
-    // Check if this is the initial measurement:
-    if(variable > 0xff) { variable = expandSign(dataword & 0x0fff); }
-    // Average the variable:
-    else { variable = (variable + expandSign(dataword & 0x0fff))/2; }
+    /**translate the measurement to a meaningful level*/
+    int16_t translateDataword = expandSign(dataword & 0x0fff);
+
+    /** take the mean for a given windowsize, initial measurement included */
+    int32_t windowSize = 1000;
+    if (counter<windowSize){
+      if (&variable == &ultrablack){
+	sumUB += translateDataword;
+	counter++;
+	meanUB = float(sumUB)/counter;
+      }
+      else if (&variable == &black){
+	sumB += translateDataword;
+	meanB = float(sumB)/counter;
+	//     meanB = -2; /**@radical declaration... */
+      }
+      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+5);
+    }
+    /**sliding window*/
+    else {
+      if (&variable == &ultrablack){
+	meanUB = (float(windowSize)-1)/windowSize*meanUB + float(1)/windowSize*translateDataword ;
+      }
+      else if (&variable == &black){
+	meanB = (float(windowSize)-1)/windowSize*meanB + float(1)/windowSize*translateDataword ;
+	//   meanB = -2; /**@radical declaration */
+      }
+      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+5);
+    }
+
   }
 
   void dtbEventDecoder::evalLastDAC(uint8_t roc, uint16_t val) {
