@@ -470,7 +470,7 @@ namespace pxar {
 	meanB = float(sumB)/counter;
 	//     meanB = -2; /**@radical declaration... */
       }
-      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+5);
+      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+6);
     }
     /**sliding window*/
     else {
@@ -481,7 +481,7 @@ namespace pxar {
 	meanB = (float(windowSize)-1)/windowSize*meanB + float(1)/windowSize*translateDataword ;
 	//   meanB = -2; /**@radical declaration */
       }
-      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+5);
+      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+6);
     }
 
   }
