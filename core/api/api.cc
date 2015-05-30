@@ -461,7 +461,7 @@ bool pxarCore::flashTB(std::string filename) {
   // Try to open the flash file
   std::ifstream flashFile;
 
-  LOG(logINFO) << "Trying to open " << filename;
+  LOG4CPLUS_INFO(pxarCoreLogger, "Trying to open " << filename);
   flashFile.open(filename.c_str(), std::ifstream::in);
   if(!flashFile.is_open()) {
     LOG(logERROR) << "Could not open specified DTB flash file \"" << filename<< "\"!";
@@ -591,7 +591,7 @@ std::vector<uint16_t> pxarCore::daqADC(std::string signalName, uint8_t gain, uin
 }
 
 statistics pxarCore::getStatistics() {
-  LOG(logINFO) << "Fetched DAQ statistics. Counters are being reset now.";
+  LOG4CPLUS_INFO(pxarCoreLogger, "Fetched DAQ statistics. Counters are being reset now.");
   // Return the accumulated number of decoding errors:
   return _hal->daqStatistics();
 }
@@ -1462,7 +1462,7 @@ bool pxarCore::daqStop(const bool init) {
 
   if(!status()) {return false;}
   if(!_daq_running) {
-    LOG(logINFO) << "No DAQ running, not executing daqStop command.";
+    LOG4CPLUS_INFO(pxarCoreLogger, "No DAQ running, not executing daqStop command.");
     return false;
   }
 
@@ -1507,8 +1507,8 @@ std::vector<Event*> pxarCore::expandLoop(HalMemFnPixelSerial pixelfn, HalMemFnPi
     // Compare the configuration of the first ROC with all others:
     if(!comparePixelConfiguration(_dut->getEnabledPixels(enabledRocs.at(0)),_dut->getEnabledPixels(*rc))) {
       flags |= FLAG_FORCE_SERIAL;
-      LOG(logINFO) << "Not all ROCs have their pixels configured the same way. "
-		   << "Running in FLAG_FORCE_SERIAL mode.";
+      LOG4CPLUS_INFO(pxarCoreLogger, "Not all ROCs have their pixels configured the same way. "
+		     << "Running in FLAG_FORCE_SERIAL mode.");
       break;
     }
   }
@@ -1661,7 +1661,7 @@ std::vector<Event*> pxarCore::expandLoop(HalMemFnPixelSerial pixelfn, HalMemFnPi
   SetCalibrateBits(false);
 
   // Print timer value:
-  LOG(logINFO) << "Test took " << t << "ms.";
+  LOG4CPLUS_INFO(pxarCoreLogger, "Test took " << t << "ms.");
 
   return data;
 } // expandLoop()
