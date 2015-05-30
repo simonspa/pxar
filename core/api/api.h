@@ -28,6 +28,7 @@ typedef unsigned char uint8_t;
 #include <map>
 #include "datatypes.h"
 #include "exceptions.h"
+#include "log4cplus/logger.h"
 
 // PXAR Flags
 
@@ -800,6 +801,10 @@ namespace pxar {
 
   private:
 
+    /** Private logger object for pxarCore
+     */
+    log4cplus::Logger pxarCoreLogger;
+    
     /** Private HAL object for the API to access hardware routines
      */
     hal * _hal;
