@@ -91,6 +91,9 @@ include( cmake/Platform.cmake)
 # Include packages for threading:
 FIND_PACKAGE(Threads)
 
+# Include library for logging:
+FIND_PACKAGE(Log4cplus REQUIRED)
+
 IF(BUILD_dummydtb)
   MESSAGE(WARNING "Build flag BUILD_dummydtb passed. Turning off all interfaces")
   SET(INTERFACE_ETH OFF)
