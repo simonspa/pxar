@@ -86,7 +86,7 @@ bool pxarCore::initTestboard(std::vector<std::pair<std::string,uint8_t> > sig_de
 
 void pxarCore::setTestboardDelays(std::vector<std::pair<std::string,uint8_t> > sig_delays) {
   if(!_hal->status()) {
-    LOG(logERROR) << "Signal delays not updated!";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "Signal delays not updated!");
     return;
   }
   checkTestboardDelays(sig_delays);
@@ -96,7 +96,7 @@ void pxarCore::setTestboardDelays(std::vector<std::pair<std::string,uint8_t> > s
 
 void pxarCore::setPatternGenerator(std::vector<std::pair<std::string,uint8_t> > pg_setup) {
   if(!_hal->status()) {
-    LOG(logERROR) << "Pattern generator not updated!";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "Pattern generator not updated!");
     return;
   }
   verifyPatternGenerator(pg_setup);
@@ -106,7 +106,7 @@ void pxarCore::setPatternGenerator(std::vector<std::pair<std::string,uint8_t> > 
 
 void pxarCore::setTestboardPower(std::vector<std::pair<std::string,double> > power_settings) {
   if(!_hal->status()) {
-    LOG(logERROR) << "Voltages/current limits not upated!";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "Voltages/current limits not upated!");
     return;
   }
   checkTestboardPower(power_settings);
@@ -140,8 +140,8 @@ bool pxarCore::initDUT(uint8_t hubid,
   // Check if I2C addresses were supplied - if so, check size agains sets of DACs:
   if(!rocI2Cs.empty()) {
     if(rocI2Cs.size() != rocDACs.size()) {
-      LOG(logCRITICAL) << "Hm, we have " << rocI2Cs.size() << " I2C addresses but " << rocDACs.size() << " DAC configs.";
-      LOG(logCRITICAL) << "This cannot end well...";
+      LOG4CPLUS_FATAL(pxarCoreLogger, "Hm, we have " << rocI2Cs.size() << " I2C addresses but " << rocDACs.size() << " DAC configs.");
+      LOG4CPLUS_FATAL(pxarCoreLogger, "This cannot end well...");
       throw InvalidConfig("Mismatch between number of I2C addresses and DAC configurations");
     }
     LOG4CPLUS_DEBUG(pxarCoreLogger, "I2C addresses for all ROCs are provided as user input.");
@@ -150,30 +150,30 @@ bool pxarCore::initDUT(uint8_t hubid,
 
   // Check size of rocDACs and rocPixels against each other
   if(rocDACs.size() != rocPixels.size()) {
-    LOG(logCRITICAL) << "Hm, we have " << rocDACs.size() << " DAC configs but " << rocPixels.size() << " pixel configs.";
-    LOG(logCRITICAL) << "This cannot end well...";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "Hm, we have " << rocDACs.size() << " DAC configs but " << rocPixels.size() << " pixel configs.");
+    LOG4CPLUS_FATAL(pxarCoreLogger, "This cannot end well...");
     throw InvalidConfig("Mismatch between number of DAC and pixel configurations");
   }
   // check for presence of DAC/pixel configurations
   if (rocDACs.size() == 0 || rocPixels.size() == 0){
-    LOG(logCRITICAL) << "No DAC/pixel configurations for any ROC supplied!";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "No DAC/pixel configurations for any ROC supplied!");
     throw InvalidConfig("No DAC/pixel configurations for any ROC supplied");
   }
   // check individual pixel configs
   for(std::vector<std::vector<pixelConfig> >::iterator rocit = rocPixels.begin();rocit != rocPixels.end(); rocit++){
     // check pixel configuration sizes
     if ((*rocit).size() == 0){
-      LOG(logWARNING) << "No pixel configured for ROC "<< static_cast<int>(rocit - rocPixels.begin()) << "!";
+      LOG4CPLUS_WARN(pxarCoreLogger, "No pixel configured for ROC "<< static_cast<int>(rocit - rocPixels.begin()) << "!");
     }
     if ((*rocit).size() > 4160){
-      LOG(logCRITICAL) << "Too many pixels (N_pixel="<< rocit->size() <<" > 4160) configured for ROC "<< static_cast<int>(rocit - rocPixels.begin()) << "!";
+      LOG4CPLUS_FATAL(pxarCoreLogger, "Too many pixels (N_pixel="<< rocit->size() <<" > 4160) configured for ROC "<< static_cast<int>(rocit - rocPixels.begin()) << "!");
       throw InvalidConfig("Too many pixels (>4160) configured");
     }
     // check individual pixel configurations
     int nduplicates = 0;
     for(std::vector<pixelConfig>::iterator pixit = rocit->begin(); pixit != rocit->end(); pixit++){
       if (std::count_if(rocit->begin(),rocit->end(),findPixelXY(pixit->column(),pixit->row())) > 1){
-	LOG(logCRITICAL) << "Config for pixel in column " << static_cast<int>(pixit->column()) << " and row "<< static_cast<int>(pixit->row()) << " present multiple times in ROC " << static_cast<int>(rocit-rocPixels.begin()) << "!";
+	LOG4CPLUS_FATAL(pxarCoreLogger, "Config for pixel in column " << static_cast<int>(pixit->column()) << " and row "<< static_cast<int>(pixit->row()) << " present multiple times in ROC " << static_cast<int>(rocit-rocPixels.begin()) << "!");
 	nduplicates++;
       }
     }
@@ -183,7 +183,7 @@ bool pxarCore::initDUT(uint8_t hubid,
 
     // check for pixels out of range
     if (std::count_if((*rocit).begin(),(*rocit).end(),findPixelBeyondXY(51,79)) > 0) {
-      LOG(logCRITICAL) << "Found pixels with values for column and row outside of valid address range on ROC "<< static_cast<int>(rocit - rocPixels.begin()) << "!";
+      LOG4CPLUS_FATAL(pxarCoreLogger, "Found pixels with values for column and row outside of valid address range on ROC "<< static_cast<int>(rocit - rocPixels.begin()) << "!");
       throw InvalidConfig("Found pixels with values for column and row outside of valid address range");
     }
   }
@@ -242,9 +242,9 @@ bool pxarCore::initDUT(uint8_t hubid,
       std::pair<std::map<uint8_t,uint8_t>::iterator,bool> ret;
       ret = newtbm.dacs.insert( std::make_pair(tbmregister,value) );
       if(ret.second == false) {
-	LOG(logWARNING) << "Overwriting existing DAC \"" << dacIt->first 
-			<< "\" value " << static_cast<int>(ret.first->second)
-			<< " with " << static_cast<int>(value);
+	LOG4CPLUS_WARN(pxarCoreLogger, "Overwriting existing DAC \"" << dacIt->first 
+			  << "\" value " << static_cast<int>(ret.first->second)
+			  << " with " << static_cast<int>(value));
 	newtbm.dacs[tbmregister] = value;
       }
     }
@@ -314,9 +314,9 @@ bool pxarCore::initDUT(uint8_t hubid,
       std::pair<std::map<uint8_t,uint8_t>::iterator,bool> ret;
       ret = newroc.dacs.insert( std::make_pair(dacRegister,dacValue) );
       if(ret.second == false) {
-	LOG(logWARNING) << "Overwriting existing DAC \"" << dacIt->first 
-			<< "\" value " << static_cast<int>(ret.first->second)
-			<< " with " << static_cast<int>(dacValue);
+	LOG4CPLUS_WARN(pxarCoreLogger, "Overwriting existing DAC \"" << dacIt->first 
+			  << "\" value " << static_cast<int>(ret.first->second)
+			  << " with " << static_cast<int>(dacValue));
 	newroc.dacs[dacRegister] = dacValue;
       }
     }
@@ -325,10 +325,10 @@ bool pxarCore::initDUT(uint8_t hubid,
     for(std::vector<pixelConfig>::iterator pixIt = rocPixels.at(rocIt - rocDACs.begin()).begin(); pixIt != rocPixels.at(rocIt - rocDACs.begin()).end(); ++pixIt) {
       // Check the trim value to be within boundaries:
       if((*pixIt).trim() > 15) {
-	LOG(logWARNING) << "Pixel " 
-			<< static_cast<int>((*pixIt).column()) << ", " 
-			<< static_cast<int>((*pixIt).row())<< " trim value " 
-			<< static_cast<int>((*pixIt).trim()) << " exceeds limit. Set to 15.";
+	LOG4CPLUS_WARN(pxarCoreLogger, "Pixel " 
+			  << static_cast<int>((*pixIt).column()) << ", " 
+			  << static_cast<int>((*pixIt).row())<< " trim value " 
+			  << static_cast<int>((*pixIt).trim()) << " exceeds limit. Set to 15.");
 	(*pixIt).setTrim(15);
       }
       // Push the pixelConfigs into the rocConfig:
@@ -341,8 +341,8 @@ bool pxarCore::initDUT(uint8_t hubid,
 
   // Check number of ROCs agains total token chain length:
   if(!_dut->tbm.empty() && _dut->roc.size() != nrocs_total) {
-    LOG(logCRITICAL) << "Hm, we have " << _dut->roc.size() << " ROC configurations but a total token chain length of " << nrocs_total << " ROCs.";
-    LOG(logCRITICAL) << "This cannot end well...";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "Hm, we have " << _dut->roc.size() << " ROC configurations but a total token chain length of " << nrocs_total << " ROCs.");
+    LOG4CPLUS_FATAL(pxarCoreLogger, "This cannot end well...");
     throw InvalidConfig("Mismatch between number of ROC configurations and total token chain length.");
   }
 
@@ -355,7 +355,7 @@ bool pxarCore::initDUT(uint8_t hubid,
 bool pxarCore::programDUT() {
 
   if(!_dut->_initialized) {
-    LOG(logERROR) << "DUT not initialized, unable to program it.";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "DUT not initialized, unable to program it.");
     return false;
   }
 
@@ -412,16 +412,16 @@ bool pxarCore::verifyRegister(std::string name, uint8_t &id, uint8_t &value, uin
 
   // Check if it was found:
   if(id == type) {
-    LOG(logERROR) << "Invalid register name \"" << name << "\".";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "Invalid register name \"" << name << "\".");
     return false;
   }
 
   // Read register value limit:
   uint8_t regLimit = _dict->getSize(id, type);
   if(value > regLimit) {
-    LOG(logWARNING) << "Register range overflow, set register \"" 
-		    << name << "\" (" << static_cast<int>(id) << ") to " 
-		    << static_cast<int>(regLimit) << " (was: " << static_cast<int>(value) << ")";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Register range overflow, set register \"" 
+		      << name << "\" (" << static_cast<int>(id) << ") to " 
+		      << static_cast<int>(regLimit) << " (was: " << static_cast<int>(value) << ")");
     value = static_cast<uint8_t>(regLimit);
   }
 
@@ -442,7 +442,7 @@ uint8_t pxarCore::stringToDeviceCode(std::string name) {
   uint8_t _code = _devices->getDevCode(name);
   LOG4CPLUS_DEBUG(pxarCoreLogger, "Device type return: " << static_cast<int>(_code));
 
-  if(_code == 0x0) {LOG(logERROR) << "Unknown device \"" << static_cast<int>(_code) << "\"!";}
+  if(_code == 0x0) { LOG4CPLUS_ERROR(pxarCoreLogger, "Unknown device \"" << static_cast<int>(_code) << "\"!"); }
   return _code;
 }
 
@@ -452,9 +452,9 @@ uint8_t pxarCore::stringToDeviceCode(std::string name) {
 bool pxarCore::flashTB(std::string filename) {
 
   if(_hal->status() || _dut->status()) {
-    LOG(logERROR) << "The testboard should only be flashed without initialization"
-		  << " and with all attached DUTs powered down.";
-    LOG(logERROR) << "Please power cycle the testboard and flash directly after startup!";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "The testboard should only be flashed without initialization"
+		    << " and with all attached DUTs powered down.");
+    LOG4CPLUS_ERROR(pxarCoreLogger, "Please power cycle the testboard and flash directly after startup!");
     return false;
   }
 
@@ -464,7 +464,7 @@ bool pxarCore::flashTB(std::string filename) {
   LOG4CPLUS_INFO(pxarCoreLogger, "Trying to open " << filename);
   flashFile.open(filename.c_str(), std::ifstream::in);
   if(!flashFile.is_open()) {
-    LOG(logERROR) << "Could not open specified DTB flash file \"" << filename<< "\"!";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "Could not open specified DTB flash file \"" << filename<< "\"!");
     return false;
   }
   
@@ -571,7 +571,7 @@ bool pxarCore::SignalProbe(std::string probe, std::string name) {
     }
   }
     
-  LOG(logERROR) << "Invalid probe name \"" << probe << "\" selected!";
+  LOG4CPLUS_ERROR(pxarCoreLogger, "Invalid probe name \"" << probe << "\" selected!");
   return false;
 }
 
@@ -620,7 +620,7 @@ bool pxarCore::setDAC(std::string dacName, uint8_t dacValue, uint8_t rocID) {
       // Update the DUT DAC Value:
       ret = rocit->dacs.insert(std::make_pair(dacRegister,dacValue));
       if(ret.second == true) {
-	LOG(logWARNING) << "DAC \"" << dacName << "\" was not initialized. Created with value " << static_cast<int>(dacValue);
+	LOG4CPLUS_WARN(pxarCoreLogger, "DAC \"" << dacName << "\" was not initialized. Created with value " << static_cast<int>(dacValue));
       }
       else {
 	rocit->dacs[dacRegister] = dacValue;
@@ -634,7 +634,7 @@ bool pxarCore::setDAC(std::string dacName, uint8_t dacValue, uint8_t rocID) {
 
   // We might not have found this ROC:
   if(rocit == _dut->roc.end()) {
-    LOG(logERROR) << "ROC@I2C " << static_cast<int>(rocID) << " does not exist in the DUT!";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "ROC@I2C " << static_cast<int>(rocID) << " does not exist in the DUT!");
     return false;
   }
 
@@ -659,7 +659,7 @@ bool pxarCore::setDAC(std::string dacName, uint8_t dacValue) {
     // Update the DUT DAC Value:
     ret = rocit->dacs.insert(std::make_pair(dacRegister,dacValue));
     if(ret.second == true) {
-      LOG(logWARNING) << "DAC \"" << dacName << "\" was not initialized. Created with value " << static_cast<int>(dacValue);
+      LOG4CPLUS_WARN(pxarCoreLogger, "DAC \"" << dacName << "\" was not initialized. Created with value " << static_cast<int>(dacValue));
     }
     else {
       rocit->dacs[dacRegister] = dacValue;
@@ -704,7 +704,7 @@ bool pxarCore::setTbmReg(std::string regName, uint8_t regValue, uint8_t tbmid) {
     // Update the DUT register Value:
     ret = _dut->tbm.at(tbmid).dacs.insert(std::make_pair(_register,regValue));
     if(ret.second == true) {
-      LOG(logWARNING) << "Register \"" << regName << "\" (" << std::hex << static_cast<int>(_register) << std::dec << ") was not initialized. Created with value " << static_cast<int>(regValue);
+      LOG4CPLUS_WARN(pxarCoreLogger, "Register \"" << regName << "\" (" << std::hex << static_cast<int>(_register) << std::dec << ") was not initialized. Created with value " << static_cast<int>(regValue));
     }
     else {
       _dut->tbm.at(tbmid).dacs[_register] = regValue;
@@ -714,7 +714,7 @@ bool pxarCore::setTbmReg(std::string regName, uint8_t regValue, uint8_t tbmid) {
     _hal->tbmSetReg(_register,regValue);
   }
   else {
-    LOG(logERROR) << "TBM " << tbmid << " is not existing in the DUT!";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "TBM " << tbmid << " is not existing in the DUT!");
     return false;
   }
   return true;
@@ -741,7 +741,7 @@ std::vector< std::pair<uint8_t, std::vector<pixel> > > pxarCore::getPulseheightV
   // Check DAC range
   if(dacMin > dacMax) {
     // Swapping the range:
-    LOG(logWARNING) << "Swapping upper and lower bound.";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Swapping upper and lower bound.");
     uint8_t temp = dacMin;
     dacMin = dacMax;
     dacMax = temp;
@@ -799,7 +799,7 @@ std::vector< std::pair<uint8_t, std::vector<pixel> > > pxarCore::getEfficiencyVs
   // Check DAC range
   if(dacMin > dacMax) {
     // Swapping the range:
-    LOG(logWARNING) << "Swapping upper and lower bound.";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Swapping upper and lower bound.");
     uint8_t temp = dacMin;
     dacMin = dacMax;
     dacMax = temp;
@@ -863,14 +863,14 @@ std::vector< std::pair<uint8_t, std::vector<pixel> > > pxarCore::getThresholdVsD
   // Check DAC ranges
   if(dac1min > dac1max) {
     // Swapping the range:
-    LOG(logWARNING) << "Swapping upper and lower bound.";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Swapping upper and lower bound.");
     uint8_t temp = dac1min;
     dac1min = dac1max;
     dac1max = temp;
   }
   if(dac2min > dac2max) {
     // Swapping the range:
-    LOG(logWARNING) << "Swapping upper and lower bound.";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Swapping upper and lower bound.");
     uint8_t temp = dac2min;
     dac2min = dac2max;
     dac2max = temp;
@@ -887,7 +887,7 @@ std::vector< std::pair<uint8_t, std::vector<pixel> > > pxarCore::getThresholdVsD
 
   // Check the threshold percentage level provided:
   if(threshold == 0 || threshold > 100) {
-    LOG(logCRITICAL) << "Threshold level of " << static_cast<int>(threshold) << "% is not possible!";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "Threshold level of " << static_cast<int>(threshold) << "% is not possible!");
     return std::vector< std::pair<uint8_t, std::vector<pixel> > >();
   }
 
@@ -944,14 +944,14 @@ std::vector< std::pair<uint8_t, std::pair<uint8_t, std::vector<pixel> > > > pxar
   // Check DAC ranges
   if(dac1min > dac1max) {
     // Swapping the range:
-    LOG(logWARNING) << "Swapping upper and lower bound.";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Swapping upper and lower bound.");
     uint8_t temp = dac1min;
     dac1min = dac1max;
     dac1max = temp;
   }
   if(dac2min > dac2max) {
     // Swapping the range:
-    LOG(logWARNING) << "Swapping upper and lower bound.";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Swapping upper and lower bound.");
     uint8_t temp = dac2min;
     dac2min = dac2max;
     dac2max = temp;
@@ -1017,14 +1017,14 @@ std::vector< std::pair<uint8_t, std::pair<uint8_t, std::vector<pixel> > > > pxar
   // Check DAC ranges
   if(dac1min > dac1max) {
     // Swapping the range:
-    LOG(logWARNING) << "Swapping upper and lower bound.";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Swapping upper and lower bound.");
     uint8_t temp = dac1min;
     dac1min = dac1max;
     dac1max = temp;
   }
   if(dac2min > dac2max) {
     // Swapping the range:
-    LOG(logWARNING) << "Swapping upper and lower bound.";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Swapping upper and lower bound.");
     uint8_t temp = dac2min;
     dac2min = dac2max;
     dac2max = temp;
@@ -1151,7 +1151,7 @@ std::vector<pixel> pxarCore::getThresholdMap(std::string dacName, uint8_t dacSte
 
   // Check the threshold percentage level provided:
   if(threshold == 0 || threshold > 100) {
-    LOG(logCRITICAL) << "Threshold level of " << static_cast<int>(threshold) << "% is not possible!";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "Threshold level of " << static_cast<int>(threshold) << "% is not possible!");
     return std::vector<pixel>();
   }
 
@@ -1206,8 +1206,8 @@ bool pxarCore::daqStart(const int buffersize, const bool init) {
 
   // Check requested buffer size:
   if(buffersize > DTB_SOURCE_BUFFER_SIZE) {
-    LOG(logWARNING) << "Requested buffer size too large, setting to max. " \
-		    << DTB_SOURCE_BUFFER_SIZE;
+    LOG4CPLUS_WARN(pxarCoreLogger, "Requested buffer size too large, setting to max. " \
+		      << DTB_SOURCE_BUFFER_SIZE);
     _daq_buffersize = DTB_SOURCE_BUFFER_SIZE;
   }
   else { _daq_buffersize = buffersize; }
@@ -1230,7 +1230,7 @@ bool pxarCore::daqStart(const int buffersize, const bool init) {
 
   }
   else if(!_daq_startstop_warning){
-    LOG(logWARNING) << "Not unmasking DUT, not setting Calibrate bits!"; 
+    LOG4CPLUS_WARN(pxarCoreLogger, "Not unmasking DUT, not setting Calibrate bits!");
     _daq_startstop_warning = true;
   }
 
@@ -1254,7 +1254,7 @@ bool pxarCore::daqSingleSignal(std::string triggerSignal) {
   // Get the signal from the dictionary object:
   uint16_t sig = _dict->getSignal(triggerSignal,PATTERN_TRG);
   if(sig == PATTERN_ERR) {
-    LOG(logCRITICAL) << "Could not find trigger signal \"" << triggerSignal << "\" in the dictionary!";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "Could not find trigger signal \"" << triggerSignal << "\" in the dictionary!");
     throw InvalidConfig("Wrong trigger signal provided.");
   }
 
@@ -1266,7 +1266,7 @@ bool pxarCore::daqSingleSignal(std::string triggerSignal) {
 bool pxarCore::daqTriggerSource(std::string triggerSource) {
 
   if(daqStatus()) {
-    LOG(logERROR) << "DAQ is already running! Stop DAQ to change the trigger source.";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "DAQ is already running! Stop DAQ to change the trigger source.");
     return false;
   }
 
@@ -1288,7 +1288,7 @@ bool pxarCore::daqTriggerSource(std::string triggerSource) {
       LOG4CPLUS_DEBUG(pxarCoreLogger, "Trigger Source Identifier " << s << ": " << sig << " (0x" << std::hex << sig << std::dec << ")");
     }
     else {
-      LOG(logCRITICAL) << "Could not find trigger source identifier \"" << s << "\" in the dictionary!";
+      LOG4CPLUS_FATAL(pxarCoreLogger, "Could not find trigger source identifier \"" << s << "\" in the dictionary!");
       throw InvalidConfig("Wrong trigger source identifier provided.");
     }
   }
@@ -1341,7 +1341,7 @@ bool pxarCore::daqStatus(uint8_t & perFull) {
   uint32_t filled_buffer = _hal->daqBufferStatus();
   perFull = static_cast<uint8_t>(static_cast<float>(filled_buffer)/_daq_buffersize*100.0);
   if(filled_buffer > 0.9*_daq_buffersize) {
-    LOG(logWARNING) << "DAQ buffer about to overflow!";
+    LOG4CPLUS_WARN(pxarCoreLogger, "DAQ buffer about to overflow!");
     return false;
   }
 
@@ -1357,10 +1357,10 @@ uint16_t pxarCore::daqTrigger(uint32_t nTrig, uint16_t period) {
   // the pattern generator duration, so limit it to that:
   if(period < _dut->pg_sum) {
     period = _dut->pg_sum;
-    LOG(logWARNING) << "Loop period setting too small for configured "
-		    << "Pattern generator. "
-		    << "Forcing loop delay to " << period << " clk";
-    LOG(logWARNING) << "To suppress this warning supply a larger delay setting";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Loop period setting too small for configured "
+		      << "Pattern generator. "
+		      << "Forcing loop delay to " << period << " clk");
+    LOG4CPLUS_WARN(pxarCoreLogger, "To suppress this warning supply a larger delay setting");
   }
   // Just passing the call to the HAL, not doing anything else here:
   _hal->daqTrigger(nTrig,period);
@@ -1375,10 +1375,10 @@ uint16_t pxarCore::daqTriggerLoop(uint16_t period) {
   // the pattern generator duration, so limit it to that:
   if(period < _dut->pg_sum) {
     period = _dut->pg_sum;
-    LOG(logWARNING) << "Loop period setting too small for configured "
-		    << "Pattern generator. "
-		    << "Forcing loop delay to " << period << " clk";
-    LOG(logWARNING) << "To suppress this warning supply a larger delay setting";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Loop period setting too small for configured "
+		      << "Pattern generator. "
+		      << "Forcing loop delay to " << period << " clk");
+    LOG4CPLUS_WARN(pxarCoreLogger, "To suppress this warning supply a larger delay setting");
   }
   _hal->daqTriggerLoop(period);
   LOG4CPLUS_DEBUG(pxarCoreLogger, "Loop period set to " << period << " clk");
@@ -1485,7 +1485,7 @@ bool pxarCore::daqStop(const bool init) {
     }
   }
   else if(!_daq_startstop_warning){
-    LOG(logWARNING) << "Not unmasking DUT, not setting Calibrate bits!"; 
+    LOG4CPLUS_WARN(pxarCoreLogger, "Not unmasking DUT, not setting Calibrate bits!");
     _daq_startstop_warning = true;
   }
 
@@ -1636,7 +1636,7 @@ std::vector<Event*> pxarCore::expandLoop(HalMemFnPixelSerial pixelfn, HalMemFnPi
       } // roc loop
     }// single pixel fnc
     else {
-      LOG(logCRITICAL) << "LOOP EXPANSION FAILED -- NO MATCHING FUNCTION TO CALL?!";
+      LOG4CPLUS_FATAL(pxarCoreLogger, "LOOP EXPANSION FAILED -- NO MATCHING FUNCTION TO CALL?!");
       // do NOT throw an exception here: this is not a runtime problem
       // but can only be a bug in the code -> this could not be handled by unwinding the stack
 
@@ -1649,7 +1649,7 @@ std::vector<Event*> pxarCore::expandLoop(HalMemFnPixelSerial pixelfn, HalMemFnPi
 
   // check that we ended up with data
   if (data.empty()){
-    LOG(logCRITICAL) << "NO DATA FROM TEST FUNCTION -- are any TBMs/ROCs/PIXs enabled?!";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "NO DATA FROM TEST FUNCTION -- are any TBMs/ROCs/PIXs enabled?!");
     // Mask device, clear leftover calibrate signals:
     MaskAndTrim(false);
     SetCalibrateBits(false);
@@ -1672,7 +1672,7 @@ std::vector<Event*> pxarCore::condenseTriggers(std::vector<Event*> data, uint16_
   std::vector<Event*> packed;
 
   if(data.size()%nTriggers != 0) {
-    LOG(logCRITICAL) << "Data size does not correspond to " << nTriggers << " triggers! Aborting data processing!";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "Data size does not correspond to " << nTriggers << " triggers! Aborting data processing!");
     return packed;
   }
 
@@ -1758,10 +1758,10 @@ std::vector<pixel> pxarCore::repackMapData(std::vector<Event*> data, uint16_t nT
 	if(pixit->column() != expected_column || pixit->row() != expected_row) {
 
 	  // With the full chip unmasked we want to know if the pixel in question was amongst the ones recorded:
-	  if((flags&FLAG_FORCE_UNMASKED) != 0) { LOG(logDEBUGPIPES) << "This is a background hit: " << (*pixit); }
+	  if((flags&FLAG_FORCE_UNMASKED) != 0) { LOG4CPLUS_TRACE(pxarCoreLogger, "This is a background hit: " << (*pixit)); }
 	  else {
 	    // With only the pixel in question unmasked we want to warn about other appeareances:
-	    LOG(logERROR) << "This pixel doesn't belong here: " << (*pixit) << ". Expected [" << static_cast<int>(expected_column) << "," << static_cast<int>(expected_row) << ",x]";
+	    LOG4CPLUS_ERROR(pxarCoreLogger, "This pixel doesn't belong here: " << (*pixit) << ". Expected [" << static_cast<int>(expected_column) << "," << static_cast<int>(expected_row) << ",x]");
 	  }
 
 	  // Convention: set a negative pixel value for out-of-order pixel hits:
@@ -1803,7 +1803,7 @@ std::vector< std::pair<uint8_t, std::vector<pixel> > > pxarCore::repackDacScanDa
   std::vector<Event*> packed = condenseTriggers(data, nTriggers, efficiency);
 
   if(packed.size() % static_cast<size_t>((dacMax-dacMin)/dacStep+1) != 0) {
-    LOG(logCRITICAL) << "Data size not as expected! " << packed.size() << " data blocks do not fit to " << static_cast<int>((dacMax-dacMin)/dacStep+1) << " DAC values!";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "Data size not as expected! " << packed.size() << " data blocks do not fit to " << static_cast<int>((dacMax-dacMin)/dacStep+1) << " DAC values!");
     return result;
   }
 
@@ -1825,10 +1825,10 @@ std::vector< std::pair<uint8_t, std::vector<pixel> > > pxarCore::repackDacScanDa
 	if(pixit->column() != expected_column || pixit->row() != expected_row) {
 
 	  // With the full chip unmasked we want to know if the pixel in question was amongst the ones recorded:
-	  if((flags&FLAG_FORCE_UNMASKED) != 0) { LOG(logDEBUGPIPES) << "This is a background hit: " << (*pixit); }
+	  if((flags&FLAG_FORCE_UNMASKED) != 0) { LOG4CPLUS_TRACE(pxarCoreLogger, "This is a background hit: " << (*pixit)); }
 	  else {
 	    // With only the pixel in question unmasked we want to warn about other appeareances:
-	    LOG(logERROR) << "This pixel doesn't belong here: " << (*pixit) << ". Expected [" << static_cast<int>(expected_column) << "," << static_cast<int>(expected_row) << ",x]";
+	    LOG4CPLUS_ERROR(pxarCoreLogger, "This pixel doesn't belong here: " << (*pixit) << ". Expected [" << static_cast<int>(expected_column) << "," << static_cast<int>(expected_row) << ",x]");
 	  }
 
 	  // Convention: set a negative pixel value for out-of-order pixel hits:
@@ -1953,7 +1953,7 @@ std::vector<pixel> pxarCore::repackThresholdMapData (std::vector<Event*> data, u
     // "dacMax" (rising edge) or "dacMin" (falling edge):
     if((flags&FLAG_RISING_EDGE) != 0) { px->setValue(dacMax); }
     else { px->setValue(dacMin); }
-    LOG(logWARNING) << "No threshold found for " << (*px);
+    LOG4CPLUS_WARN(pxarCoreLogger, "No threshold found for " << (*px));
   }
 
   // Sort the output map by ROC->col->row - just because we are so nice:
@@ -2072,7 +2072,7 @@ std::vector<std::pair<uint8_t,std::vector<pixel> > > pxarCore::repackThresholdDa
       // "dacMax" (rising edge) or "dacMin" (falling edge):
       if((flags&FLAG_RISING_EDGE) != 0) { px->setValue(dac2max); }
       else { px->setValue(dac2min); }
-      LOG(logWARNING) << "No threshold found for " << (*px) << " at DAC value " << static_cast<int>(dac->first);
+      LOG4CPLUS_WARN(pxarCoreLogger, "No threshold found for " << (*px) << " at DAC value " << static_cast<int>(dac->first));
     }
   }
 
@@ -2094,7 +2094,7 @@ std::vector< std::pair<uint8_t, std::pair<uint8_t, std::vector<pixel> > > > pxar
   std::vector<Event*> packed = condenseTriggers(data, nTriggers, efficiency);
 
   if(packed.size() % static_cast<size_t>(((dac1max-dac1min)/dac1step+1)*((dac2max-dac2min)/dac2step+1)) != 0) {
-    LOG(logCRITICAL) << "Data size not as expected! " << packed.size() << " data blocks do not fit to " << static_cast<int>(((dac1max-dac1min)/dac1step+1)*((dac2max-dac2min)/dac2step+1)) << " DAC values!";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "Data size not as expected! " << packed.size() << " data blocks do not fit to " << static_cast<int>(((dac1max-dac1min)/dac1step+1)*((dac2max-dac2min)/dac2step+1)) << " DAC values!");
     return result;
   }
 
@@ -2212,9 +2212,9 @@ void pxarCore::checkTestboardDelays(std::vector<std::pair<std::string,uint8_t> >
     std::pair<std::map<uint8_t,uint8_t>::iterator,bool> ret;
     ret = delays.insert( std::make_pair(sigRegister,sigValue) );
     if(ret.second == false) {
-      LOG(logWARNING) << "Overwriting existing DTB delay setting \"" << sigIt->first 
-		      << "\" value " << static_cast<int>(ret.first->second)
-		      << " with " << static_cast<int>(sigValue);
+      LOG4CPLUS_WARN(pxarCoreLogger, "Overwriting existing DTB delay setting \"" << sigIt->first 
+			<< "\" value " << static_cast<int>(ret.first->second)
+			<< " with " << static_cast<int>(sigValue));
       delays[sigRegister] = sigValue;
     }
   }
@@ -2230,35 +2230,35 @@ void pxarCore::checkTestboardPower(std::vector<std::pair<std::string,double> > p
     std::transform((*it).first.begin(), (*it).first.end(), (*it).first.begin(), ::tolower);
 
     if((*it).second < 0) {
-      LOG(logERROR) << "Negative value for power setting \"" << (*it).first << "\". Using default limit.";
+      LOG4CPLUS_ERROR(pxarCoreLogger, "Negative value for power setting \"" << (*it).first << "\". Using default limit.");
       continue;
     }
 
     if((*it).first.compare("va") == 0) { 
-      if((*it).second > va) { LOG(logWARNING) << "Limiting \"" << (*it).first << "\" to " << va; }
+      if((*it).second > va) { LOG4CPLUS_WARN(pxarCoreLogger, "Limiting \"" << (*it).first << "\" to " << va); }
       else { va = (*it).second; }
       _dut->va = va;
     }
     else if((*it).first.compare("vd") == 0) {
-      if((*it).second > vd) { LOG(logWARNING) << "Limiting \"" << (*it).first << "\" to " << vd; }
+      if((*it).second > vd) { LOG4CPLUS_WARN(pxarCoreLogger, "Limiting \"" << (*it).first << "\" to " << vd); }
       else {vd = (*it).second; }
       _dut->vd = vd;
     }
     else if((*it).first.compare("ia") == 0) {
-      if((*it).second > ia) { LOG(logWARNING) << "Limiting \"" << (*it).first << "\" to " << ia; }
+      if((*it).second > ia) { LOG4CPLUS_WARN(pxarCoreLogger, "Limiting \"" << (*it).first << "\" to " << ia); }
       else { ia = (*it).second; }
       _dut->ia = ia;
     }
     else if((*it).first.compare("id") == 0) {
-      if((*it).second > id) { LOG(logWARNING) << "Limiting \"" << (*it).first << "\" to " << id; }
+      if((*it).second > id) { LOG4CPLUS_WARN(pxarCoreLogger, "Limiting \"" << (*it).first << "\" to " << id); }
       else { id = (*it).second; }
       _dut->id = id;
     }
-    else { LOG(logERROR) << "Unknown power setting " << (*it).first << "! Skipping.";}
+    else { LOG4CPLUS_ERROR(pxarCoreLogger, "Unknown power setting " << (*it).first << "! Skipping."); }
   }
 
   if(va < 0.01 || vd < 0.01 || ia < 0.01 || id < 0.01) {
-    LOG(logCRITICAL) << "Power settings are not sufficient. Please check and re-configure!";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "Power settings are not sufficient. Please check and re-configure!");
     throw InvalidConfig("Power settings are not sufficient. Please check and re-configure.");
   }
 }
@@ -2272,8 +2272,8 @@ void pxarCore::verifyPatternGenerator(std::vector<std::pair<std::string,uint8_t>
 
   // Check total length of the pattern generator:
   if(pg_setup.size() > 256) {
-    LOG(logCRITICAL) << "Pattern too long (" << pg_setup.size() << " entries) for pattern generator. "
-		     << "Only 256 entries allowed!";
+    LOG4CPLUS_FATAL(pxarCoreLogger, "Pattern too long (" << pg_setup.size() << " entries) for pattern generator. "
+		    << "Only 256 entries allowed!");
     throw InvalidConfig("Pattern too long for pattern generator. Please check and re-configure.");
   }
   else { LOG4CPLUS_DEBUG(pxarCoreLogger, "Pattern generator setup with " << pg_setup.size() << " entries provided."); }
@@ -2287,14 +2287,14 @@ void pxarCore::verifyPatternGenerator(std::vector<std::pair<std::string,uint8_t>
 
     // Check for current element if delay is zero:
     if(it->second == 0 && it != pg_setup.end() -1 ) {
-      LOG(logCRITICAL) << "Found delay = 0 on early entry! This stops the pattern generator at position " 
-		       << static_cast<int>(it - pg_setup.begin())  << ".";
+      LOG4CPLUS_FATAL(pxarCoreLogger, "Found delay = 0 on early entry! This stops the pattern generator at position " 
+		      << static_cast<int>(it - pg_setup.begin())  << ".");
       throw InvalidConfig("Found delay = 0 on early entry! This stops the pattern generator.");
     }
 
     // Check last entry for PG stop signal (delay = 0):
     if(it == pg_setup.end() - 1 && it->second != 0) {
-      LOG(logWARNING) << "No delay = 0 found on last entry. Setting last delay to 0 to stop the pattern generator.";
+      LOG4CPLUS_WARN(pxarCoreLogger, "No delay = 0 found on last entry. Setting last delay to 0 to stop the pattern generator.");
       it->second = 0;
     }
 
@@ -2310,7 +2310,7 @@ void pxarCore::verifyPatternGenerator(std::vector<std::pair<std::string,uint8_t>
       uint16_t sig = _dict->getSignal(s,PATTERN_PG);
       if(sig != PATTERN_ERR) signal += sig;
       else {
-	LOG(logCRITICAL) << "Could not find pattern generator signal \"" << s << "\" in the dictionary!";
+	LOG4CPLUS_FATAL(pxarCoreLogger, "Could not find pattern generator signal \"" << s << "\" in the dictionary!");
 	throw InvalidConfig("Wrong pattern generator signal provided.");
       }
 
@@ -2325,14 +2325,14 @@ void pxarCore::verifyPatternGenerator(std::vector<std::pair<std::string,uint8_t>
 
   // If there is no trigger, no data is requested and read out from any detector:
   if(!have_trigger) {
-    LOG(logWARNING) << "Pattern generator does not contain a trigger signal. "
-		    << "No data is expected from the DUT!";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Pattern generator does not contain a trigger signal. "
+		      << "No data is expected from the DUT!");
   }
   // If a TBM Reset is present the TBM event counter gets reset every cycle, so
   // we can't use the event id to check for missing events in the readout:
   if(have_tbmreset) {
-    LOG(logWARNING) << "Pattern generator contains TBM Reset signal. "
-		    << "No event number cross checks possible.";
+    LOG4CPLUS_WARN(pxarCoreLogger, "Pattern generator contains TBM Reset signal. "
+		      << "No event number cross checks possible.");
   }
 
   // Store the Pattern Generator commands in the DUT:
@@ -2358,7 +2358,7 @@ bool pxarCore::setExternalClock(bool enable) {
   if(enable) {
     // Try to set the clock to external source:
     if(_hal->IsClockPresent()) { _hal->SetClockSource(CLK_SRC_EXT); return true; }
-    else LOG(logCRITICAL) << "DTB reports that no external clock is present!";
+    else LOG4CPLUS_FATAL(pxarCoreLogger, "DTB reports that no external clock is present!");
     return false;
   }
   else {
@@ -2393,7 +2393,7 @@ void pxarCore::setSignalMode(std::string signal, std::string mode, uint8_t speed
   else if(mode == "high")   modeValue = 2;
   else if(mode == "random") modeValue = 3;
   else {
-    LOG(logERROR) << "Unknown signal mode \"" << mode << "\"";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "Unknown signal mode \"" << mode << "\"");
     return;
   }
 
