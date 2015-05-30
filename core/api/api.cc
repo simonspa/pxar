@@ -2,12 +2,20 @@
  * pxar API class implementation
  */
 
+// pxarCore includes
 #include "api.h"
 #include "hal.h"
-#include "log.h"
 #include "timer.h"
 #include "helper.h"
 #include "dictionaries.h"
+
+// log4cplus includes
+#include "log4cplus/logger.h"
+#include "log4cplus/loglevel.h"
+#include "log4cplus/layout.h"
+#include "log4cplus/consoleappender.h"
+
+// STL includes
 #include <algorithm>
 #include <fstream>
 #include <cmath>
@@ -15,6 +23,7 @@
 #include "config.h"
 
 using namespace pxar;
+using namespace log4cplus;
 
 pxarCore::pxarCore(std::string usbId, std::string logLevel) : 
   _daq_running(false), 
@@ -22,12 +31,22 @@ pxarCore::pxarCore(std::string usbId, std::string logLevel) :
   _daq_startstop_warning(false)
 {
 
-  LOG(logQUIET) << "Instanciating API for " << PACKAGE_STRING;
-
   // Set up the libpxar API/HAL logging mechanism:
-  Log::ReportingLevel() = Log::FromString(logLevel);
-  LOG(logINFO) << "Log level: " << logLevel;
+  SharedAppenderPtr pxarCoreAppender(new ConsoleAppender());
+  pxarCoreAppender->setName("pxarCoreAppender");
+  std::auto_ptr<Layout> myLayout = std::auto_ptr<Layout>(new log4cplus::PatternLayout("[%d{%H:%M:%S.%q}] [%c] %5p: %m%n"));
+  pxarCoreAppender->setLayout( myLayout );
 
+  pxarCoreLogger = Logger::getInstance("pxarCore");
+  pxarCoreLogger.addAppender(pxarCoreAppender);
+
+  pxarCoreLogger.setLogLevel(TRACE_LOG_LEVEL);
+
+  LOG4CPLUS_INFO(pxarCoreLogger, "Instanciating API for " << PACKAGE_STRING);
+    
+  //Log::ReportingLevel() = Log::FromString(logLevel);
+  LOG4CPLUS_INFO(pxarCoreLogger, "Log level: " << logLevel);
+  
   // Get a new HAL instance with the DTB USB ID passed to the API constructor:
   _hal = new hal(usbId);
 
