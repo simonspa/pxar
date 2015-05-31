@@ -1,6 +1,5 @@
 #include "api.h"
 #include "datatypes.h"
-#include "log.h"
 #include "constants.h"
 #include <stdlib.h>
 
@@ -18,7 +17,7 @@ namespace pxar {
     while(row == j) row = rand()%80;
 
     pixel px = pixel(rocid,col,row,pulseheight);
-    LOG(logDEBUGPIPES) << "Adding noise hit: " << px;
+    LOG4CPLUS_DEBUG(decodingLogger, "Adding noise hit: " << px);
     return px;
   }
 
