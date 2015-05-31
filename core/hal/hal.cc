@@ -1,6 +1,5 @@
 // pxarCore includes
 #include "hal.h"
-#include "log.h"
 #include "timer.h"
 #include "helper.h"
 #include "config.h"
