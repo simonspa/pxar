@@ -377,7 +377,7 @@ uint8_t CTestboard::Daq_Read(std::vector<uint16_t> &data, uint32_t blocksize, ui
   data.clear();
 
   // If we are on external triggers, just deliver one event per channel:
-  if(trigger == TRG_SEL_ASYNC | trigger == TRG_SEL_ASYNC_DIR) {
+  if(trigger == TRG_SEL_ASYNC || trigger == TRG_SEL_ASYNC_DIR) {
     if(!daq_status.at(channel)) { available = 0; return 0; }
     fillRawData(daq_event.at(channel)++,daq_buffer.at(channel),tbmtype,roci2c.size(),false,true,0,0);
     mDelay(10);
