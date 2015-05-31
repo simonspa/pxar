@@ -9,268 +9,268 @@
 using namespace pxar;
 
 void CTestboard::GetInfo(std::string &message) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   message = " pxarCore DTB Emulator \n "
     + std::string(PACKAGE_STRING)
     + "\n";
 }
 
 uint16_t CTestboard::GetBoardId() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return 0x0;
 }
 
 void CTestboard::GetHWVersion(std::string &rpc_par1) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   rpc_par1 = "Hardware Revision 0";
 }
 
 uint16_t CTestboard::GetFWVersion() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return 0x0;
 }
 
 uint16_t CTestboard::GetSWVersion() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return 0x0;
 }
 
 uint16_t CTestboard::UpgradeGetVersion() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return 0x0100;
 }
 
 uint8_t CTestboard::UpgradeStart(uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return 0;
 }
 
 uint8_t CTestboard::UpgradeData(std::string &) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return 0;
 }
 
 uint8_t CTestboard::UpgradeError() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return 0;
 }
 
 void CTestboard::UpgradeErrorMsg(std::string &rpc_par1) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   rpc_par1 = "No error.";
 }
 
 void CTestboard::UpgradeExec(uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Init() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Welcome() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::SetLed(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::cDelay(uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::uDelay(uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   pxar::mDelay(1);
 }
 
 // Emulator always has the same clock:
 void CTestboard::SetClockSource(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 bool CTestboard::IsClockPresent() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return true;
 }
 
 void CTestboard::SetClock(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::SetClockStretch(uint8_t, uint16_t, uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Sig_SetMode(uint8_t, uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Sig_SetPRBS(uint8_t, uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Sig_SetDelay(uint8_t, uint16_t, int8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Sig_SetLevel(uint8_t, uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Sig_SetOffset(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Sig_SetLVDS() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Sig_SetLCDS() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Sig_SetRdaToutDelay(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::SignalProbeD1(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::SignalProbeD2(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::SignalProbeA1(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::SignalProbeA2(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::SignalProbeADC(uint8_t, uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Pon() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Poff() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::_SetVD(uint16_t voltage) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   vd = voltage;
 }
 
 void CTestboard::_SetVA(uint16_t voltage) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   va = voltage;
 }
 
 void CTestboard::_SetID(uint16_t current) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   id = current;
 }
 
 void CTestboard::_SetIA(uint16_t current) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   ia = current;
 }
 
 uint16_t CTestboard::_GetVD() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return vd;
 }
 
 uint16_t CTestboard::_GetVA() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return va;
 }
 
 uint16_t CTestboard::_GetID() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return id;
 }
 
 uint16_t CTestboard::_GetIA() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return ia;
 }
 
 uint16_t CTestboard::_GetVD_Reg() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return vd;
 }
 
 uint16_t CTestboard::_GetVDAC_Reg() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return vd;
 }
 
 uint16_t CTestboard::_GetVD_Cap() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return vd;
 }
 
 void CTestboard::HVon() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::HVoff() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::ResetOn() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::ResetOff() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 uint8_t CTestboard::GetStatus() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return 0;
 }
 
 void CTestboard::SetRocAddress(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Pg_SetCmd(uint16_t, uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 // FIXME PG could be used for real.
 void CTestboard::Pg_SetCmdAll(std::vector<uint16_t> &) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Pg_SetSum(uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Pg_Stop() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Pg_Single() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Pg_Trigger() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 // Receiving triggers for PG:
 void CTestboard::Pg_Triggers(uint32_t nTriggers, uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 
   // Check how many open DAQ channels we have:
   size_t channels = std::count(daq_status.begin(), daq_status.end(), true);
@@ -286,13 +286,13 @@ void CTestboard::Pg_Triggers(uint32_t nTriggers, uint16_t) {
 
 // FIXME Receiving loop command
 void CTestboard::Pg_Loop(uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   // Set DAQ into state where it always returns events.
 }
 
 // Trigger selection
 void CTestboard::Trigger_Select(uint16_t src) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   // Store trigger:
   trigger = src;
   // Triggers via TBM Emulator:
@@ -300,28 +300,28 @@ void CTestboard::Trigger_Select(uint16_t src) {
 }
 
 void CTestboard::Trigger_Delay(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Trigger_Timeout(uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Trigger_SetGenPeriodic(uint32_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Trigger_SetGenRandom(uint32_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Trigger_Send(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 // DAQ Open
 uint32_t CTestboard::Daq_Open(uint32_t buffersize, uint8_t channel) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 
   if(channel > daq_buffer.size()) return 0;
   
@@ -332,48 +332,48 @@ uint32_t CTestboard::Daq_Open(uint32_t buffersize, uint8_t channel) {
 }
 
 void CTestboard::Daq_Close(uint8_t channel) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   // Clear DAQ buffer
   daq_buffer.at(channel).clear();
 }
 
 void CTestboard::Daq_Start(uint8_t channel) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   daq_status.at(channel) = true;
   daq_event.at(channel) = 0;
 }
 
 void CTestboard::Daq_Stop(uint8_t channel) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   daq_status.at(channel) = false;
 }
 
 uint32_t CTestboard::Daq_GetSize(uint8_t channel) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   if(daq_status.at(channel)) return daq_buffer.at(channel).size();
   else return 0;
 }
 
 uint8_t CTestboard::Daq_FillLevel(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   // We are always on 30%:
   return 30;
 }
 
 uint8_t CTestboard::Daq_FillLevel() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   // We are always on 30%:
   return 30;
 }
 
 uint8_t CTestboard::Daq_Read(std::vector<uint16_t> &data, uint32_t blocksize, uint8_t channel) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   uint32_t available = 0;
   return Daq_Read(data, blocksize, available, channel);
 }
 
 uint8_t CTestboard::Daq_Read(std::vector<uint16_t> &data, uint32_t blocksize, uint32_t &available, uint8_t channel) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   data.clear();
 
   // If we are on external triggers, just deliver one event per channel:
@@ -396,142 +396,142 @@ uint8_t CTestboard::Daq_Read(std::vector<uint16_t> &data, uint32_t blocksize, ui
 }
 
 void CTestboard::Daq_Select_ADC(uint16_t, uint8_t, uint8_t, uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Daq_Select_Deser160(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Daq_Select_Deser400() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   // Produce TBM headers!
 }
 
 void CTestboard::Daq_Deser400_Reset(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Daq_Deser400_OldFormat(bool) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Daq_Select_Datagenerator(uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::Daq_DeselectAll() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 // Collect all ROCs that have ever been programmed:
 void CTestboard::roc_I2cAddr(uint8_t i2c) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   std::vector<uint8_t>::iterator thisroc = std::find(roci2c.begin(),roci2c.end(),i2c);
   if(thisroc == roci2c.end()) roci2c.push_back(i2c);
 }
 
 void CTestboard::roc_ClrCal() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::roc_SetDAC(uint8_t, uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::roc_Pix(uint8_t, uint8_t, uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::roc_Pix_Trim(uint8_t, uint8_t, uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::roc_Pix_Mask(uint8_t, uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::roc_Pix_Cal(uint8_t, uint8_t, bool) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::roc_Col_Enable(uint8_t, bool) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::roc_AllCol_Enable(bool) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::roc_Col_Mask(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::roc_Chip_Mask() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 bool CTestboard::TBM_Present() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return (tbmtype != TBM_NONE);
 }
 
 void CTestboard::tbm_Enable(bool tbm) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   if(tbm) tbmtype = TBM_08;
   else tbmtype = TBM_NONE;
 }
 
 void CTestboard::tbm_Addr(uint8_t, uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::mod_Addr(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::tbm_Set(uint8_t, uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 bool CTestboard::tbm_Get(uint8_t, uint8_t &) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return true;
 }
 
 bool CTestboard::tbm_GetRaw(uint8_t, uint32_t &) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return true;
 }
 
 int16_t CTestboard::TrimChip(std::vector<int16_t> &) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return 0;
 }
 
 // FIXME do we emulate loop interrupts?
 void CTestboard::LoopInterruptReset() {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 void CTestboard::SetLoopTriggerDelay(uint16_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 }
 
 bool CTestboard::SetI2CAddresses(std::vector<uint8_t> &rpc_par1) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   nrocs_loops = rpc_par1.size();
   return true;
 }
 
 // FIXME here we could implement masked pixels
 bool CTestboard::SetTrimValues(uint8_t, std::vector<uint8_t> &) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return true;
 }
 
 bool CTestboard::LoopMultiRocAllPixelsCalibrate(std::vector<uint8_t> &roci2cs, uint16_t nTriggers, uint16_t flags) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 
   // Check how many open DAQ channels we have:
   size_t channels = std::count(daq_status.begin(), daq_status.end(), true);
@@ -554,7 +554,7 @@ bool CTestboard::LoopMultiRocAllPixelsCalibrate(std::vector<uint8_t> &roci2cs, u
 }
 
 bool CTestboard::LoopMultiRocOnePixelCalibrate(std::vector<uint8_t> &roci2cs, uint8_t column, uint8_t row, uint16_t nTriggers, uint16_t flags) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 
   // Check how many open DAQ channels we have:
   size_t channels = std::count(daq_status.begin(), daq_status.end(), true);
@@ -573,7 +573,7 @@ bool CTestboard::LoopMultiRocOnePixelCalibrate(std::vector<uint8_t> &roci2cs, ui
 }
 
 bool CTestboard::LoopSingleRocAllPixelsCalibrate(uint8_t, uint16_t nTriggers, uint16_t flags) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   
   uint32_t event = 0;
   for(size_t i = 0; i < ROC_NUMCOLS; i++) {
@@ -589,7 +589,7 @@ bool CTestboard::LoopSingleRocAllPixelsCalibrate(uint8_t, uint16_t nTriggers, ui
 }
 
 bool CTestboard::LoopSingleRocOnePixelCalibrate(uint8_t, uint8_t column, uint8_t row, uint16_t nTriggers, uint16_t flags) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 
   uint32_t event = 0;
   for(size_t k = 0; k < nTriggers; k++) {
@@ -605,7 +605,7 @@ bool CTestboard::LoopMultiRocAllPixelsDacScan(std::vector<uint8_t> &roci2cs, uin
 }
 
 bool CTestboard::LoopMultiRocAllPixelsDacScan(std::vector<uint8_t> &roci2cs, uint16_t nTriggers, uint16_t flags, uint8_t, uint8_t dacstep, uint8_t dacmin, uint8_t dacmax) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 
   // Check how many open DAQ channels we have:
   size_t channels = std::count(daq_status.begin(), daq_status.end(), true);
@@ -640,7 +640,7 @@ bool CTestboard::LoopMultiRocOnePixelDacScan(std::vector<uint8_t> &roci2cs, uint
 }
 
 bool CTestboard::LoopMultiRocOnePixelDacScan(std::vector<uint8_t> &roci2cs, uint8_t column, uint8_t row, uint16_t nTriggers, uint16_t flags, uint8_t, uint8_t dacstep, uint8_t dacmin, uint8_t dacmax) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   
   // Check how many open DAQ channels we have:
   size_t channels = std::count(daq_status.begin(), daq_status.end(), true);
@@ -671,7 +671,7 @@ bool CTestboard::LoopSingleRocAllPixelsDacScan(uint8_t roci2c, uint16_t nTrigger
 }
 
 bool CTestboard::LoopSingleRocAllPixelsDacScan(uint8_t, uint16_t nTriggers, uint16_t flags, uint8_t, uint8_t dacstep, uint8_t dacmin, uint8_t dacmax) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 
   uint8_t dachalf = static_cast<uint8_t>(dacmax-dacmin)/2;
   uint32_t event = 0;
@@ -699,7 +699,7 @@ bool CTestboard::LoopSingleRocOnePixelDacScan(uint8_t roci2c, uint8_t column, ui
 }
 
 bool CTestboard::LoopSingleRocOnePixelDacScan(uint8_t, uint8_t column, uint8_t row, uint16_t nTriggers, uint16_t flags, uint8_t, uint8_t dacstep, uint8_t dacmin, uint8_t dacmax) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   
   uint8_t dachalf = static_cast<uint8_t>(dacmax-dacmin)/2;
   uint32_t event = 0;
@@ -723,7 +723,7 @@ bool CTestboard::LoopMultiRocAllPixelsDacDacScan(std::vector<uint8_t> &roci2cs, 
 }
 
 bool CTestboard::LoopMultiRocAllPixelsDacDacScan(std::vector<uint8_t> &roci2cs, uint16_t nTriggers, uint16_t flags, uint8_t, uint8_t dac1step, uint8_t dac1min, uint8_t dac1max, uint8_t, uint8_t dac2step, uint8_t dac2min, uint8_t dac2max) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 
   // Check how many open DAQ channels we have:
   size_t channels = std::count(daq_status.begin(), daq_status.end(), true);
@@ -759,7 +759,7 @@ bool CTestboard::LoopMultiRocOnePixelDacDacScan(std::vector<uint8_t> &roci2cs, u
 }
 
 bool CTestboard::LoopMultiRocOnePixelDacDacScan(std::vector<uint8_t> &roci2cs, uint8_t column, uint8_t row, uint16_t nTriggers, uint16_t flags, uint8_t, uint8_t dac1step, uint8_t dac1min, uint8_t dac1max, uint8_t, uint8_t dac2step, uint8_t dac2min, uint8_t dac2max) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 
   // Check how many open DAQ channels we have:
   size_t channels = std::count(daq_status.begin(), daq_status.end(), true);
@@ -791,7 +791,7 @@ bool CTestboard::LoopSingleRocAllPixelsDacDacScan(uint8_t roci2c, uint16_t nTrig
 }
 
 bool CTestboard::LoopSingleRocAllPixelsDacDacScan(uint8_t, uint16_t nTriggers, uint16_t flags, uint8_t, uint8_t dac1step, uint8_t dac1min, uint8_t dac1max, uint8_t, uint8_t dac2step, uint8_t dac2min, uint8_t dac2max) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 
   uint32_t event = 0;
 
@@ -820,7 +820,7 @@ bool CTestboard::LoopSingleRocOnePixelDacDacScan(uint8_t roci2c, uint8_t column,
 }
 
 bool CTestboard::LoopSingleRocOnePixelDacDacScan(uint8_t, uint8_t column, uint8_t row, uint16_t nTriggers, uint16_t flags, uint8_t, uint8_t dac1step, uint8_t dac1min, uint8_t dac1max, uint8_t, uint8_t dac2step, uint8_t dac2min, uint8_t dac2max) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
 
   uint32_t event = 0;
 
@@ -841,7 +841,7 @@ bool CTestboard::LoopSingleRocOnePixelDacDacScan(uint8_t, uint8_t column, uint8_
 }
 
 uint16_t CTestboard::GetADC(uint8_t) {
-  LOG(pxar::logDEBUGRPC) << "called.";
+  LOG4CPLUS_DEBUG(rpcLogger, "called.");
   return 0;
 }
 

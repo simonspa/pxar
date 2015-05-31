@@ -1,7 +1,32 @@
 #pragma once
+
+/** Cannot use stdint.h when running rootcint on WIN32 */
+#if ((defined WIN32) && (defined __CINT__))
+typedef unsigned int uint32_t;
+typedef unsigned int DWORD;
+#include <Windows4Root.h>
+#else
+#if (defined WIN32)
+typedef unsigned int uint32_t;
+#include <Windows.h>
+#else
+#include <sys/time.h>
+#include <stdint.h>
+#endif //WIN32
+#endif //WIN32 && CINT
+
+#ifdef WIN32
+#define __func__ __FUNCTION__
+#endif // WIN32
+
 #include <vector>
-#include "log.h"
 #include "constants.h"
+
+// log4cplus includes
+#include "log4cplus/logger.h"
+#include "log4cplus/loglevel.h"
+#include "log4cplus/layout.h"
+#include "log4cplus/consoleappender.h"
 
 class CRpcError {
  public:
@@ -27,12 +52,21 @@ class CTestboard {
   std::vector<std::vector<uint16_t> > daq_buffer; // Data buffers
   std::vector<bool> daq_status; // Channel status
   std::vector<size_t> daq_event; // Event counters
-  
+
+  log4cplus::Logger rpcLogger;
+
  public:
  CTestboard() : vd(0), va(0), id(0), ia(0),
     nrocs_loops(0), roci2c(), tbmtype(TBM_NONE),trigger(TRG_SEL_PG_DIR),
-    daq_buffer(), daq_status(), daq_event()
+    daq_buffer(), daq_status(), daq_event(), rpcLogger()
   {
+    log4cplus::SharedAppenderPtr rpcAppender(new log4cplus::ConsoleAppender());
+    rpcAppender->setName("rpcAppender");
+    rpcAppender->setLayout(std::auto_ptr<log4cplus::Layout>(new log4cplus::PatternLayout("[%d{%H:%M:%S.%q}|%8.8c] %5p: %m%n")));
+    rpcLogger = log4cplus::Logger::getInstance("RPC");
+    rpcLogger.addAppender(rpcAppender);
+    rpcLogger.setLogLevel(log4cplus::TRACE_LOG_LEVEL);
+
     // Initialize all available DAQ channels:
     for(size_t i = 0; i < DTB_DAQ_CHANNELS; i++) {
       daq_buffer.push_back(std::vector<uint16_t>());
