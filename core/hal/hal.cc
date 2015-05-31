@@ -292,7 +292,7 @@ bool hal::flashTestboard(std::ifstream& flashFile) {
     LOG4CPLUS_INFO(halLogger, "DTB download complete.");
     mDelay(200);
     LOG4CPLUS_INFO(halLogger, "FLASH write start (LED 1..4 on)");
-    LOG(logWARNING) << "DO NOT INTERUPT DTB POWER! - Wait till LEDs goes off and connection is closed.";
+    LOG4CPLUS_WARN(halLogger, "DO NOT INTERUPT DTB POWER! - Wait till LEDs goes off and connection is closed.");
     _testboard->UpgradeExec(recordCount);
     _testboard->Flush();
     return true;
@@ -380,7 +380,7 @@ bool hal::CheckCompatibility() {
 
   // If they don't match check RPC calls one by one and print offenders:
   if(dtb_hashcmd.compare("GetRpcCallHash$I") != 0 || dtbCmdHash != hostCmdHash) {
-    LOG(logWARNING) << "RPC Call hashes of DTB and Host do not match!";
+    LOG4CPLUS_WARN(halLogger, "RPC Call hashes of DTB and Host do not match!");
 
     if(!_testboard->RpcLink()) {
       LOG4CPLUS_FATAL(halLogger, "Please update your DTB with the correct flash file.");
@@ -457,7 +457,7 @@ bool hal::FindDTB(std::string &rpcId) {
       }
       _testboard->Close();
     }
-    else LOG(logWARNING) << "-- in use";
+    else LOG4CPLUS_WARN(halLogger, "-- in use");
     _testboard->ClearInterface();
   }
 
@@ -685,10 +685,10 @@ void hal::AllColumnsSetEnable(uint8_t roci2c, bool enable) {
   _testboard->roc_I2cAddr(roci2c);
 
   // Attach/detach all columns:
-  LOG(logDEBUGAPI) << (enable ? "Attaching" : "Detaching")
-		   << " all columns "
-		   << (enable ? "to" : "from")
-		   << " periphery for ROC@I2C " << static_cast<int>(roci2c);
+  LOG4CPLUS_DEBUG(halLogger, (enable ? "Attaching" : "Detaching")
+		  << " all columns "
+		  << (enable ? "to" : "from")
+		  << " periphery for ROC@I2C " << static_cast<int>(roci2c));
 
   for(size_t column = 0; column < ROC_NUMCOLS; column++ ) {
     _testboard->roc_Col_Enable(static_cast<uint8_t>(column),enable);
