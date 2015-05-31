@@ -6,6 +6,7 @@
 #include "datapipe.h"
 #include "datasource_dtb.h"
 #include "constants.h"
+#include "log4cplus/logger.h"
 
 namespace pxar {
 
@@ -391,6 +392,10 @@ namespace pxar {
     uint16_t GetADC(uint8_t rpc_par1);
 
   private:
+
+    /** Private logger object for pxarCore HAL
+     */
+    log4cplus::Logger halLogger;
 
     /** Private instance of the testboard RPC interface, routes all
      *  hardware access:
