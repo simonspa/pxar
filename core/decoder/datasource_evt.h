@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include "datapipe.h"
 #include "helper.h"
-#include "log.h"
 
 namespace pxar {
 
@@ -25,7 +24,6 @@ namespace pxar {
     // --- virtual data access methods
     uint16_t Read() {
       if(!connected) throw dpNotConnected();
-      // LOG(logDEBUGPIPES) << "pos " << pos;
       return (pos < buffer.size()) ? lastSample = buffer[pos++] : throw dsBufferEmpty();
     }
     uint16_t ReadLast() {
@@ -51,23 +49,23 @@ namespace pxar {
   public:
   evtSource(uint8_t daqchannel, uint8_t tokenChainLength, uint8_t tbmtype, uint8_t roctype)
     : channel(daqchannel), chainlength(tokenChainLength), envelopetype(tbmtype), devicetype(roctype), lastSample(0x4000), pos(0), connected(true) {
-      LOG(logDEBUGPIPES) << "New evtSource instantiated with properties:";
-      LOG(logDEBUGPIPES) << "-------------------------";
-      LOG(logDEBUGPIPES) << "Channel " << static_cast<int>(channel)
-			 << " (" << static_cast<int>(chainlength) << " ROCs)"
-			 << (envelopetype == TBM_NONE ? " DESER160 " : (envelopetype == TBM_EMU ? " SOFTTBM " : " DESER400 "));
+      LOG4CPLUS_DEBUG(decodingLogger, "New evtSource instantiated with properties:");
+      LOG4CPLUS_DEBUG(decodingLogger, "-------------------------");
+      LOG4CPLUS_DEBUG(decodingLogger, "Channel " << static_cast<int>(channel)
+		      << " (" << static_cast<int>(chainlength) << " ROCs)"
+		      << (envelopetype == TBM_NONE ? " DESER160 " : (envelopetype == TBM_EMU ? " SOFTTBM " : " DESER400 ")));
     }
   evtSource() : connected(false) {};
     void AddData(uint16_t data) {
       buffer.push_back(data);
-      LOG(logDEBUGPIPES) << buffer.size() << " words buffered.";
+      LOG4CPLUS_DEBUG(decodingLogger, buffer.size() << " words buffered.");
     }
     void AddData(std::vector<uint16_t> data) {
       buffer.insert(buffer.end(), data.begin(), data.end());
-      LOG(logDEBUGPIPES) << "-------------------------";
-      LOG(logDEBUGPIPES) << "FULL RAW DATA BLOB (" << buffer.size() << " words buffered):";
-      LOG(logDEBUGPIPES) << listVector(buffer,true);
-      LOG(logDEBUGPIPES) << "-------------------------";
+      LOG4CPLUS_DEBUG(decodingLogger, "-------------------------");
+      LOG4CPLUS_DEBUG(decodingLogger, "FULL RAW DATA BLOB (" << buffer.size() << " words buffered):");
+      LOG4CPLUS_DEBUG(decodingLogger, listVector(buffer,true));
+      LOG4CPLUS_DEBUG(decodingLogger, "-------------------------");
     }
 
     // --- control and status
