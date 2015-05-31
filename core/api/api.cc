@@ -27,6 +27,8 @@ using namespace log4cplus;
 
 std::auto_ptr<Layout> pxar::pxarCoreLayout = std::auto_ptr<Layout>(new PatternLayout("[%d{%H:%M:%S.%q}|%8.8c] %5p: %m%n"));
 SharedAppenderPtr pxar::pxarCoreAppender = SharedAppenderPtr(new ConsoleAppender());
+Logger pxar::pxarCoreLogger = Logger::getInstance("pxarCore");
+Logger pxar::decodingLogger = Logger::getInstance("Decoder");
 
 pxarCore::pxarCore(std::string usbId, std::string logLevel) : 
   _daq_running(false), 
@@ -38,7 +40,6 @@ pxarCore::pxarCore(std::string usbId, std::string logLevel) :
   pxar::pxarCoreAppender->setName("pxarCoreAppender");
   pxar::pxarCoreAppender->setLayout(pxarCoreLayout);
   
-  pxarCoreLogger = Logger::getInstance("pxarCore");
   pxarCoreLogger.addAppender(pxarCoreAppender);
 
   pxarCoreLogger.setLogLevel(TRACE_LOG_LEVEL);

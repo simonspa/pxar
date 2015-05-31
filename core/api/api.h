@@ -116,7 +116,8 @@ namespace pxar {
    */
   extern std::auto_ptr<log4cplus::Layout> pxarCoreLayout;
   extern log4cplus::SharedAppenderPtr pxarCoreAppender;
-
+  extern log4cplus::Logger pxarCoreLogger;
+  extern log4cplus::Logger decodingLogger;
 
   /** pxar API class definition
    *
@@ -807,10 +808,6 @@ namespace pxar {
 
   private:
 
-    /** Private logger object for pxarCore
-     */
-    log4cplus::Logger pxarCoreLogger;
-    
     /** Private HAL object for the API to access hardware routines
      */
     hal * _hal;
