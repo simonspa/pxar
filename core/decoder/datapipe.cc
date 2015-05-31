@@ -1,6 +1,5 @@
 #include "datapipe.h"
 #include "helper.h"
-#include "log.h"
 #include "constants.h"
 #include "exceptions.h"
 
@@ -16,10 +15,10 @@ namespace pxar {
     // Split the data stream according to DESER400 alignment markers:
     else { SplitDeser400(); }
 
-    LOG(logDEBUGPIPES) << "SINGLE SPLIT EVENT:";
-    if(GetDeviceType() < ROC_PSI46DIG) { LOG(logDEBUGPIPES) << listVector(record.data,false,true); }
-    else { LOG(logDEBUGPIPES) << listVector(record.data,true); }
-    LOG(logDEBUGPIPES) << "-------------------------";
+    LOG4CPLUS_DEBUG(decodingLogger, "SINGLE SPLIT EVENT:");
+    if(GetDeviceType() < ROC_PSI46DIG) { LOG4CPLUS_DEBUG(decodingLogger, listVector(record.data,false,true)); }
+    else { LOG4CPLUS_DEBUG(decodingLogger, listVector(record.data,true)); }
+    LOG4CPLUS_DEBUG(decodingLogger, "-------------------------");
 
     return &record;
   }
@@ -142,12 +141,12 @@ namespace pxar {
     // Decode DESER160 Data for digital devices without real TBM
     else { DecodeDeser160(sample); }
 
-    LOG(logDEBUGPIPES) << roc_Event;
+    LOG4CPLUS_DEBUG(decodingLogger, "Event: " << roc_Event);
     return &roc_Event;
   }
 
   void dtbEventDecoder::ProcessTBM(rawEvent * sample) {
-    LOG(logDEBUGPIPES) << "Processing TBM header and trailer...";
+    LOG4CPLUS_DEBUG(decodingLogger, "Processing TBM header and trailer...");
 
     // Check if the data is long enough to hold header and trailer:
     if(sample->GetSize() < 4) {
@@ -168,8 +167,8 @@ namespace pxar {
     // Store the two header words:
     roc_Event.header = ((sample->data.at(0) & 0x00ff) << 8) + (sample->data.at(1) & 0x00ff);
 
-    LOG(logDEBUGPIPES) << "TBM " << static_cast<int>(GetChannel()) << " Header:";
-    IFLOG(logDEBUGPIPES) { roc_Event.printHeader(); }
+    LOG4CPLUS_DEBUG(decodingLogger, "TBM " << static_cast<int>(GetChannel()) << " Header:");
+    //FIXME LOG4CPLUS_INFO(decodingLogger, roc_Event.printHeader());
 
     // Check for correct TBM event ID:
     CheckEventID();
@@ -187,8 +186,8 @@ namespace pxar {
     roc_Event.trailer = ((sample->data.at(size-2) & 0x00ff) << 8) 
       + (sample->data.at(size-1) & 0x00ff);
 
-    LOG(logDEBUGPIPES) << "TBM " << static_cast<int>(GetChannel()) << " Trailer:";
-    IFLOG(logDEBUGPIPES) roc_Event.printTrailer();
+    LOG4CPLUS_DEBUG(decodingLogger, "TBM " << static_cast<int>(GetChannel()) << " Trailer:");
+    //FIXME LOG4CPLUS_INFO(decodingLogger, roc_Event.printTrailer());
 
     // Remove header and trailer:
     sample->data.erase(sample->data.begin(), sample->data.begin() + 2);
@@ -196,7 +195,7 @@ namespace pxar {
   }
 
   void dtbEventDecoder::DecodeDeser400(rawEvent * sample) {
-    LOG(logDEBUGPIPES) << "Decoding ROC data from DESER400...";
+    LOG4CPLUS_DEBUG(decodingLogger, "Decoding ROC data from DESER400...");
 
     // Count the ROC headers:
     int16_t roc_n = -1;
@@ -216,9 +215,9 @@ namespace pxar {
 
 	// Check for DESER400 failure:
 	if(((*word) & 0x0ff0) == 0x0ff0) {
-	  LOG(logCRITICAL) << "TBM " << static_cast<int>(GetChannel())
-			   << " ROC " << static_cast<int>(roc_n)
-			   << " header reports DESER400 failure!";
+	  LOG4CPLUS_FATAL(decodingLogger, "TBM " << static_cast<int>(GetChannel())
+			  << " ROC " << static_cast<int>(roc_n)
+			  << " header reports DESER400 failure!");
 	  decodingStats.m_errors_event_invalid_xor++;
 	  throw DataDecodingError("Invalid XOR eye diagram encountered.");
 	}
@@ -244,7 +243,7 @@ namespace pxar {
 	  // Check if this is just fill bits of the TBM09 data stream 
 	  // accounting for the other channel:
 	  if(GetTokenChainLength() == 4 && (raw&0xffffff) == 0xffffff) {
-	    LOG(logDEBUGPIPES) << "Empty hit detected (TBM09 data streams). Skipping.";
+	    LOG4CPLUS_DEBUG(decodingLogger, "Empty hit detected (TBM09 data streams). Skipping.");
 	    continue;
 	  }
 
@@ -275,7 +274,7 @@ namespace pxar {
   }
 
   void dtbEventDecoder::DecodeADC(rawEvent * sample) {
-    LOG(logDEBUGPIPES) << "Decoding ROC data from ADC...";
+    LOG4CPLUS_DEBUG(decodingLogger, "Decoding ROC data from ADC...");
 
     int16_t roc_n = -1;
 
@@ -311,10 +310,10 @@ namespace pxar {
 	// Iterate to improve ultrablack and black measurement:
 	AverageAnalogLevel((*word) & 0x0fff, (*(word+1)) & 0x0fff);
 
-	LOG(logDEBUGPIPES) << "ROC Header: "
-			   << expandSign((*word) & 0x0fff) << " (avg. " << ultrablack << ") (UB) "
-			   << expandSign((*(word+1)) & 0x0fff) << " (avg. " << black << ") (B) "
-			   << expandSign((*(word+2)) & 0x0fff) << " (lastDAC) ";
+	LOG4CPLUS_DEBUG(decodingLogger, "ROC Header: "
+			<< expandSign((*word) & 0x0fff) << " (avg. " << ultrablack << ") (UB) "
+			<< expandSign((*(word+1)) & 0x0fff) << " (avg. " << black << ") (B) "
+			<< expandSign((*(word+2)) & 0x0fff) << " (lastDAC) ");
 	// Advance iterator:
 	word +=  2;
       }
@@ -331,7 +330,7 @@ namespace pxar {
 	for(size_t i = 0; i < 5; i++) { data.push_back((*(++word)) & 0x0fff); }
  
 	try{
-	  LOG(logDEBUGPIPES) << "Trying to decode pixel: " << listVector(data,false,true);
+	  LOG4CPLUS_DEBUG(decodingLogger, "Trying to decode pixel: " << listVector(data,false,true));
 	  pixel pix(data,roc_n,ultrablack,black);
 	  roc_Event.pixels.push_back(pix);
 	  decodingStats.m_info_pixels_valid++;
@@ -348,7 +347,7 @@ namespace pxar {
   }
 
   void dtbEventDecoder::DecodeDeser160(rawEvent * sample) {
-    LOG(logDEBUGPIPES) << "Decoding ROC data from DESER160...";
+    LOG4CPLUS_DEBUG(decodingLogger, "Decoding ROC data from DESER160...");
 
     // Count the ROC headers:
     int16_t roc_n = -1;
@@ -417,8 +416,8 @@ namespace pxar {
 
     // Check if TBM event ID matches with expectation:
     if(roc_Event.triggerCount() != (eventID%256)) {
-      LOG(logERROR) << "   Event ID mismatch:  local ID (" << static_cast<int>(eventID) 
-		    << ") !=  TBM ID (" << static_cast<int>(roc_Event.triggerCount()) << ")";
+      LOG4CPLUS_ERROR(decodingLogger, "   Event ID mismatch:  local ID (" << static_cast<int>(eventID) 
+		      << ") !=  TBM ID (" << static_cast<int>(roc_Event.triggerCount()) << ")");
       decodingStats.m_errors_tbm_eventid_mismatch++;
       // To continue readout, set event ID to the currently decoded one:
       eventID = roc_Event.triggerCount();
@@ -434,8 +433,8 @@ namespace pxar {
     // If the number of ROCs does not correspond to what we expect
     // clear the event and return:
     if(roc_n+1 != GetTokenChainLength()) {
-      LOG(logERROR) << "Number of ROCs (" << static_cast<int>(roc_n+1)
-		    << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
+      LOG4CPLUS_ERROR(decodingLogger, "Number of ROCs (" << static_cast<int>(roc_n+1)
+		      << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")");
       decodingStats.m_errors_roc_missing++;
       // Clearing event content:
       roc_Event.Clear();
@@ -443,12 +442,12 @@ namespace pxar {
     // Count empty events
     else if(roc_Event.pixels.empty()) { 
       decodingStats.m_info_events_empty++;
-      LOG(logDEBUGPIPES) << "Event is empty.";
+      LOG4CPLUS_DEBUG(decodingLogger, "Event is empty.");
     }
     // Count valid events
     else {
       decodingStats.m_info_events_valid++;
-      LOG(logDEBUGPIPES) << "Event is valid.";
+      LOG4CPLUS_DEBUG(decodingLogger, "Event is valid.");
     }
   }
 
@@ -474,9 +473,9 @@ namespace pxar {
     if(readback.size() <= roc) readback.resize(roc+1);
     readback.at(roc).push_back(val);
 
-    LOG(logDEBUGPIPES) << "Readback ROC "
-		       << static_cast<int>(roc+GetChannel()*GetTokenChainLength())
-		       << " " << static_cast<int>(expandSign(val & 0x0fff));
+    LOG4CPLUS_DEBUG(decodingLogger, "Readback ROC "
+		    << static_cast<int>(roc+GetChannel()*GetTokenChainLength())
+		    << " " << static_cast<int>(expandSign(val & 0x0fff)));
   }
 
   void dtbEventDecoder::evalReadback(uint8_t roc, uint16_t val) {
@@ -495,25 +494,25 @@ namespace pxar {
 	if(readback.size() <= roc) readback.resize(roc+1);
 	readback.at(roc).push_back(shiftReg.at(roc));
 
-	LOG(logDEBUGPIPES) << "Readback ROC "
-			   << static_cast<int>(roc+GetChannel()*GetTokenChainLength())
-			   << " " << ((readback.at(roc).back()>>8)&0x00ff)
-			   << " (0x" << std::hex << ((readback.at(roc).back()>>8)&0x00ff)
-			   << std::dec << "): " << (readback.at(roc).back()&0xff)
-			   << " (0x" << std::hex << (readback.at(roc).back()&0xff)
-			   << std::dec << ")";
+	LOG4CPLUS_DEBUG(decodingLogger, "Readback ROC "
+			<< static_cast<int>(roc+GetChannel()*GetTokenChainLength())
+			<< " " << ((readback.at(roc).back()>>8)&0x00ff)
+			<< " (0x" << std::hex << ((readback.at(roc).back()>>8)&0x00ff)
+			<< std::dec << "): " << (readback.at(roc).back()&0xff)
+			<< " (0x" << std::hex << (readback.at(roc).back()&0xff)
+			<< std::dec << ")");
       }
       else {
 	// If this is the first readback cycle of the ROC, ignore the mismatch:
 	if(readback.size() <= roc || readback.at(roc).empty()) {
-	  LOG(logDEBUGAPI) << "ROC " << static_cast<int>(roc)
-			   << ": first readback marker after "
-			   << count.at(roc) << " readouts. Ignoring error condition.";
+	  LOG4CPLUS_INFO(decodingLogger, "ROC " << static_cast<int>(roc)
+			 << ": first readback marker after "
+			 << count.at(roc) << " readouts. Ignoring error condition.");
 	}
 	else {
-	  LOG(logWARNING) << "ROC " << static_cast<int>(roc)
-			  << ": Readback start marker after "
-			  << count.at(roc) << " readouts!";
+	  LOG4CPLUS_WARN(decodingLogger, "ROC " << static_cast<int>(roc)
+			 << ": Readback start marker after "
+			 << count.at(roc) << " readouts!");
 	  decodingStats.m_errors_roc_readback++;
 	}
       }
