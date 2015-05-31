@@ -28,7 +28,9 @@ typedef unsigned char uint8_t;
 #include <map>
 #include "datatypes.h"
 #include "exceptions.h"
+
 #include "log4cplus/logger.h"
+#include "log4cplus/layout.h"
 
 // PXAR Flags
 
@@ -110,6 +112,10 @@ namespace pxar {
   typedef  std::vector<Event*> (hal::*HalMemFnRocSerial)(uint8_t rocid, std::vector<int32_t> parameter);
   typedef  std::vector<Event*> (hal::*HalMemFnPixelSerial)(uint8_t rocid, uint8_t column, uint8_t row, std::vector<int32_t> parameter);
 
+  /** Logging objects that can be used by other classes
+   */
+  extern std::auto_ptr<log4cplus::Layout> pxarCoreLayout;
+  extern log4cplus::SharedAppenderPtr pxarCoreAppender;
 
 
   /** pxar API class definition

@@ -25,18 +25,19 @@
 using namespace pxar;
 using namespace log4cplus;
 
+std::auto_ptr<Layout> pxar::pxarCoreLayout = std::auto_ptr<Layout>(new PatternLayout("[%d{%H:%M:%S.%q}|%8.8c] %5p: %m%n"));
+SharedAppenderPtr pxar::pxarCoreAppender = SharedAppenderPtr(new ConsoleAppender());
+
 pxarCore::pxarCore(std::string usbId, std::string logLevel) : 
   _daq_running(false), 
   _daq_buffersize(DTB_SOURCE_BUFFER_SIZE),
   _daq_startstop_warning(false)
 {
 
-  // Set up the libpxar API/HAL logging mechanism:
-  SharedAppenderPtr pxarCoreAppender(new ConsoleAppender());
-  pxarCoreAppender->setName("pxarCoreAppender");
-  std::auto_ptr<Layout> myLayout = std::auto_ptr<Layout>(new log4cplus::PatternLayout("[%d{%H:%M:%S.%q}] [%c] %5p: %m%n"));
-  pxarCoreAppender->setLayout( myLayout );
-
+  // Set up the pxarCore API logging mechanism:
+  pxar::pxarCoreAppender->setName("pxarCoreAppender");
+  pxar::pxarCoreAppender->setLayout(pxarCoreLayout);
+  
   pxarCoreLogger = Logger::getInstance("pxarCore");
   pxarCoreLogger.addAppender(pxarCoreAppender);
 
