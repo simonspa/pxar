@@ -1,6 +1,5 @@
 #include "datatypes.h"
 #include "helper.h"
-#include "log.h"
 #include "exceptions.h"
 #include "constants.h"
 
@@ -11,7 +10,7 @@ namespace pxar {
     // Get the pulse height:
     setValue(static_cast<double>((raw & 0x0f) + ((raw >> 1) & 0xf0)));
     if((raw & 0x10) > 0) {
-      LOG(logDEBUGAPI) << "invalid pulse-height fill bit from raw value of "<< std::hex << raw << std::dec << ": " << *this;
+      LOG4CPLUS_DEBUG(pxarCoreLogger, "invalid pulse-height fill bit from raw value of "<< std::hex << raw << std::dec << ": " << *this);
       throw DataInvalidPulseheightError("Error decoding pixel raw value");
     }
 
@@ -28,7 +27,7 @@ namespace pxar {
 
     // Perform range checks:
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {
-      LOG(logDEBUGAPI) << "Invalid pixel from raw value of "<< std::hex << raw << std::dec << ": " << *this;
+      LOG4CPLUS_DEBUG(pxarCoreLogger, "Invalid pixel from raw value of "<< std::hex << raw << std::dec << ": " << *this);
       if(_row == ROC_NUMROWS) throw DataCorruptBufferError("Error decoding pixel raw value");
       else throw DataInvalidAddressError("Error decoding pixel raw value");
     }
@@ -43,7 +42,7 @@ namespace pxar {
   void pixel::decodeAnalog(std::vector<uint16_t> analog, int16_t ultrablack, int16_t black) {
     // Check pixel data length:
     if(analog.size() != 6) {
-      LOG(logDEBUGAPI) << "Received wrong number of data words for a pixel: " << analog.size();
+      LOG4CPLUS_DEBUG(pxarCoreLogger, "Received wrong number of data words for a pixel: " << analog.size());
       throw DataInvalidAddressError("Received wrong number of data words for a pixel");
     }
 
@@ -70,7 +69,7 @@ namespace pxar {
 
     // Perform range checks:
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {
-      LOG(logDEBUGAPI) << "Invalid pixel from levels "<< listVector(analog) << ": " << *this;
+      LOG4CPLUS_DEBUG(pxarCoreLogger, "Invalid pixel from levels "<< listVector(analog) << ": " << *this);
       throw DataInvalidAddressError("Error decoding pixel address");
     }
   }
@@ -90,66 +89,66 @@ namespace pxar {
     raw |= ((dcol)/6 << 21);
     raw |= (((dcol%6)) << 18);
 
-    LOG(logDEBUGPIPES) << "Pix  " << static_cast<int>(_column) << "|" 
-		       << static_cast<int>(_row) << " = "
-		       << dcol << "/" << r << " = "
-		       << dcol/6 << " " << dcol%6 << " "
-		       << r/36 << " " << (r%36)/6 << " " << (r%36)%6;
+    LOG4CPLUS_DEBUG(decodingLogger, "Pix  " << static_cast<int>(_column) << "|" 
+		    << static_cast<int>(_row) << " = "
+		    << dcol << "/" << r << " = "
+		    << dcol/6 << " " << dcol%6 << " "
+		    << r/36 << " " << (r%36)/6 << " " << (r%36)%6);
 
     // Return the 24 bits belonging to the pixel:
     return (raw & 0x00ffffff);
   }
 
   void Event::printHeader() {
-    LOG(logINFO) << "Header content: 0x" << std::hex << header << std::dec;
-    LOG(logINFO) << "\t Event ID \t" << static_cast<int>(this->triggerCount());
-    LOG(logINFO) << "\t Data ID " << static_cast<int>(this->dataID()) 
-		       << " Value " << static_cast<int>(this->dataValue());
+    LOG4CPLUS_INFO(pxarCoreLogger, "Header content: 0x" << std::hex << header << std::dec);
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t Event ID \t" << static_cast<int>(this->triggerCount()));
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t Data ID " << static_cast<int>(this->dataID()) 
+		   << " Value " << static_cast<int>(this->dataValue()));
   }
 
   void Event::printTrailer() {
-    LOG(logINFO) << "Trailer content: 0x" << std::hex << trailer << std::dec;
-    LOG(logINFO) << "\t Token Pass \t" << textBool(this->hasTokenPass());
-    LOG(logINFO) << "\t Reset TBM \t" << textBool(this->hasResetTBM());
-    LOG(logINFO) << "\t Reset ROC \t" << textBool(this->hasResetROC());
-    LOG(logINFO) << "\t Sync Err \t" << textBool(this->hasSyncError());
-    LOG(logINFO) << "\t Sync Trigger \t" << textBool(this->hasSyncTrigger());
-    LOG(logINFO) << "\t ClearTrig Cnt \t" << textBool(this->hasClearTriggerCount());
-    LOG(logINFO) << "\t Cal Trigger \t" << textBool(this->hasCalTrigger());
-    LOG(logINFO) << "\t Stack Full \t" << textBool(this->stackFull());
+    LOG4CPLUS_INFO(pxarCoreLogger, "Trailer content: 0x" << std::hex << trailer << std::dec);
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t Token Pass \t" << textBool(this->hasTokenPass()));
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t Reset TBM \t" << textBool(this->hasResetTBM()));
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t Reset ROC \t" << textBool(this->hasResetROC()));
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t Sync Err \t" << textBool(this->hasSyncError()));
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t Sync Trigger \t" << textBool(this->hasSyncTrigger()));
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t ClearTrig Cnt \t" << textBool(this->hasClearTriggerCount()));
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t Cal Trigger \t" << textBool(this->hasCalTrigger()));
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t Stack Full \t" << textBool(this->stackFull()));
 
-    LOG(logINFO) << "\t Auto Reset \t" << textBool(this->hasAutoReset());
-    LOG(logINFO) << "\t PKAM Reset \t" << textBool(this->hasPkamReset());
-    LOG(logINFO) << "\t Stack Count \t" << static_cast<int>(this->stackCount());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t Auto Reset \t" << textBool(this->hasAutoReset()));
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t PKAM Reset \t" << textBool(this->hasPkamReset()));
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t Stack Count \t" << static_cast<int>(this->stackCount()));
   }
 
   void statistics::dump() {
     // Print out the full statistics:
-    LOG(logINFO) << "Decoding statistics:";
-    LOG(logINFO) << "  General information:";
-    LOG(logINFO) << "\t 16bit words read:         " << this->info_words_read();
-    LOG(logINFO) << "\t valid events total:       " << this->info_events_total();
-    LOG(logINFO) << "\t empty events:             " << this->info_events_empty();
-    LOG(logINFO) << "\t valid events with pixels: " << this->info_events_valid();
-    LOG(logINFO) << "\t valid pixel hits:         " << this->info_pixels_valid();
-    LOG(logINFO) << "  Event errors: \t           " << this->errors_event();
-    LOG(logINFO) << "\t start marker:             " << this->errors_event_start();
-    LOG(logINFO) << "\t stop marker:              " << this->errors_event_stop();
-    LOG(logINFO) << "\t overflow:                 " << this->errors_event_overflow();
-    LOG(logINFO) << "\t invalid 5bit words:       " << this->errors_event_invalid_words();
-    LOG(logINFO) << "\t invalid XOR eye diagram:  " << this->errors_event_invalid_xor();
-    LOG(logINFO) << "  TBM errors: \t\t           " << this->errors_tbm();
-    LOG(logINFO) << "\t flawed TBM headers:       " << this->errors_tbm_header();
-    LOG(logINFO) << "\t flawed TBM trailers:      " << this->errors_tbm_trailer();
-    LOG(logINFO) << "\t event ID mismatches:      " << this->errors_tbm_eventid_mismatch();
-    LOG(logINFO) << "  ROC errors: \t\t           " << this->errors_roc();
-    LOG(logINFO) << "\t missing ROC header(s):    " << this->errors_roc_missing();
-    LOG(logINFO) << "\t misplaced readback start: " << this->errors_roc_readback();
-    LOG(logINFO) << "  Pixel decoding errors:\t   " << this->errors_pixel();
-    LOG(logINFO) << "\t pixel data incomplete:    " << this->errors_pixel_incomplete();
-    LOG(logINFO) << "\t pixel address:            " << this->errors_pixel_address();
-    LOG(logINFO) << "\t pulse height fill bit:    " << this->errors_pixel_pulseheight();
-    LOG(logINFO) << "\t buffer corruption:        " << this->errors_pixel_buffer_corrupt();
+    LOG4CPLUS_INFO(pxarCoreLogger, "Decoding statistics:");
+    LOG4CPLUS_INFO(pxarCoreLogger, "  General information:");
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t 16bit words read:         " << this->info_words_read());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t valid events total:       " << this->info_events_total());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t empty events:             " << this->info_events_empty());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t valid events with pixels: " << this->info_events_valid());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t valid pixel hits:         " << this->info_pixels_valid());
+    LOG4CPLUS_INFO(pxarCoreLogger, "  Event errors: \t           " << this->errors_event());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t start marker:             " << this->errors_event_start());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t stop marker:              " << this->errors_event_stop());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t overflow:                 " << this->errors_event_overflow());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t invalid 5bit words:       " << this->errors_event_invalid_words());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t invalid XOR eye diagram:  " << this->errors_event_invalid_xor());
+    LOG4CPLUS_INFO(pxarCoreLogger, "  TBM errors: \t\t           " << this->errors_tbm());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t flawed TBM headers:       " << this->errors_tbm_header());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t flawed TBM trailers:      " << this->errors_tbm_trailer());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t event ID mismatches:      " << this->errors_tbm_eventid_mismatch());
+    LOG4CPLUS_INFO(pxarCoreLogger, "  ROC errors: \t\t           " << this->errors_roc());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t missing ROC header(s):    " << this->errors_roc_missing());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t misplaced readback start: " << this->errors_roc_readback());
+    LOG4CPLUS_INFO(pxarCoreLogger, "  Pixel decoding errors:\t   " << this->errors_pixel());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t pixel data incomplete:    " << this->errors_pixel_incomplete());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t pixel address:            " << this->errors_pixel_address());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t pulse height fill bit:    " << this->errors_pixel_pulseheight());
+    LOG4CPLUS_INFO(pxarCoreLogger, "\t buffer corruption:        " << this->errors_pixel_buffer_corrupt());
   }
 
   void statistics::clear() {
