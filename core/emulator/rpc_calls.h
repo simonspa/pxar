@@ -13,7 +13,7 @@ class CRpcError {
  CRpcError(errorId e) : error(e) {}
   void SetFunction(unsigned int cmdId) { functionId = cmdId; }
   const char *GetMsg();
-  void What() {};
+  std::string What() { return "None."; }
 };
 
 class CTestboard {

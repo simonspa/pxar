@@ -4,7 +4,7 @@
 #include "rpc_calls.h"
 
 
-const char *CRpcError::GetMsg()
+const std::string CRpcError::GetMsg()
 {
   switch (error)
     {
@@ -32,15 +32,15 @@ const char *CRpcError::GetMsg()
 }
 
 
-void CRpcError::What()
-{
-	if (functionId >= 0)
-	{
-		std::string fname(CTestboard::rpc_cmdName[functionId]);
-		std::string fname_pretty;
-		rpc_TranslateCallName(fname, fname_pretty);
-		printf("\n%s\nERROR: %s\n", fname_pretty.c_str(), GetMsg());
-	}
-	else
-		printf("ERROR: %s\n", GetMsg());
+std::string CRpcError::What() {
+  
+  if (functionId >= 0) {
+    std::string fname(CTestboard::rpc_cmdName[functionId]);
+    std::string fname_pretty;
+    rpc_TranslateCallName(fname, fname_pretty);
+    return std::string(fname_pretty + "\nERROR: " + GetMsg());
+  }
+  else {
+    return std::string("ERROR: " + GetMsg());
+  }
 }

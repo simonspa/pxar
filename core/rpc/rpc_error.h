@@ -35,6 +35,6 @@ public:
 	CRpcError() : error(CRpcError::OK), functionId(-1) {}
 	CRpcError(errorId e) : error(e) {}
 	void SetFunction(unsigned int cmdId) { functionId = cmdId; }
-	const char *GetMsg();
-	void What();
+	const std::string GetMsg();
+	std::string What();
 };
