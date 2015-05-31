@@ -3,7 +3,6 @@
  */
 
 #include "api.h"
-#include "log.h"
 #include "dictionaries.h"
 #include "helper.h"
 #include <vector>
@@ -15,28 +14,28 @@ using namespace pxar;
 
 void dut::info() {
   if (status()) {
-    LOG(logINFO) << "The DUT currently contains the following objects:";
+    LOG4CPLUS_INFO(pxarCoreLogger, "The DUT currently contains the following objects:");
 
-    LOG(logINFO) << std::setw(2) << tbm.size() << " TBM Cores (" << getNEnabledTbms() 
-		 << " ON)";
+    LOG4CPLUS_INFO(pxarCoreLogger, std::setw(2) << tbm.size() << " TBM Cores (" << getNEnabledTbms() 
+		   << " ON)");
 
     for(std::vector<tbmConfig>::iterator tbmIt = tbm.begin(); tbmIt != tbm.end(); tbmIt++) {
-      LOG(logINFO) << "\tTBM Core " 
-		   << ((tbmIt-tbm.begin())%2 == 0 ? "alpha" : "beta " )
-		   << " (" << static_cast<int>(tbmIt - tbm.begin()) << "): " 
-		   << (*tbmIt).dacs.size() << " registers set";
+      LOG4CPLUS_INFO(pxarCoreLogger, "\tTBM Core " 
+		     << ((tbmIt-tbm.begin())%2 == 0 ? "alpha" : "beta " )
+		     << " (" << static_cast<int>(tbmIt - tbm.begin()) << "): " 
+		     << (*tbmIt).dacs.size() << " registers set");
     }
 
     // We currently hide the possibility to enable pixels on some ROCs only,
     // so looking at ROC 0 as default is safe:
-    LOG(logINFO) << std::setw(2) << roc.size() << " ROCs (" << getNEnabledRocs() 
-		 << " ON) with " << roc.at(0).pixels.size() << " pixelConfigs";
+    LOG4CPLUS_INFO(pxarCoreLogger, std::setw(2) << roc.size() << " ROCs (" << getNEnabledRocs() 
+		   << " ON) with " << roc.at(0).pixels.size() << " pixelConfigs");
 
     for(std::vector<rocConfig>::iterator rocIt = roc.begin(); rocIt != roc.end(); rocIt++) {
-      LOG(logINFO) << "\tROC " << static_cast<int>(rocIt-roc.begin()) << ": " 
-		   << (*rocIt).dacs.size() << " DACs set, Pixels: " 
-		   << getNMaskedPixels(static_cast<int>(rocIt-roc.begin())) << " masked, "
-		   << getNEnabledPixels(static_cast<int>(rocIt-roc.begin())) << " active.";
+      LOG4CPLUS_INFO(pxarCoreLogger, "\tROC " << static_cast<int>(rocIt-roc.begin()) << ": " 
+		     << (*rocIt).dacs.size() << " DACs set, Pixels: " 
+		     << getNMaskedPixels(static_cast<int>(rocIt-roc.begin())) << " masked, "
+		     << getNEnabledPixels(static_cast<int>(rocIt-roc.begin())) << " active.");
     }
   }
 }
@@ -370,10 +369,10 @@ void dut::printDACs(size_t rocId) {
     RegisterDictionary * _dict = RegisterDictionary::getInstance();
 
 
-    LOG(logINFO) << "Printing current DAC settings for ROC " << rocId << ":";
+    LOG4CPLUS_INFO(pxarCoreLogger, "Printing current DAC settings for ROC " << rocId << ":");
     for(std::map< uint8_t,uint8_t >::iterator it = roc.at(rocId).dacs.begin(); 
 	it != roc.at(rocId).dacs.end(); ++it) {
-      LOG(logINFO) << "DAC " << _dict->getName(it->first,ROC_REG) << " (" << static_cast<int>(it->first) << ") = " << static_cast<int>(it->second);
+      LOG4CPLUS_INFO(pxarCoreLogger, "DAC " << _dict->getName(it->first,ROC_REG) << " (" << static_cast<int>(it->first) << ") = " << static_cast<int>(it->second));
     }
   }
 }
@@ -407,7 +406,7 @@ void dut:: maskPixel(uint8_t column, uint8_t row, bool mask) {
       if(it != rocit->pixels.end()) {
 	it->setMask(mask);
       } else {
-	LOG(logWARNING) << "Pixel at column " << static_cast<int>(column) << " and row " << static_cast<int>(row) << " not found for ROC " << static_cast<int>(rocit - roc.begin()) << "!" ;
+	LOG4CPLUS_WARN(pxarCoreLogger, "Pixel at column " << static_cast<int>(column) << " and row " << static_cast<int>(row) << " not found for ROC " << static_cast<int>(rocit - roc.begin()) << "!");
       }
     }
   }
@@ -424,7 +423,7 @@ void dut:: maskPixel(uint8_t column, uint8_t row, bool mask, uint8_t rocid) {
     if(it != roc.at(rocid).pixels.end()){
       it->setMask(mask);
     } else {
-      LOG(logWARNING) << "Pixel at column " << static_cast<int>(column) << " and row " << static_cast<int>(row) << " not found for ROC " << static_cast<int>(rocid)<< "!" ;
+      LOG4CPLUS_WARN(pxarCoreLogger, "Pixel at column " << static_cast<int>(column) << " and row " << static_cast<int>(row) << " not found for ROC " << static_cast<int>(rocid)<< "!");
     }
   }
 }
@@ -442,7 +441,7 @@ void dut::testPixel(uint8_t column, uint8_t row, bool enable) {
       if(it != rocit->pixels.end()) {
 	it->setEnable(enable);
       } else {
-	LOG(logWARNING) << "Pixel at column " << static_cast<int>(column) << " and row " << static_cast<int>(row) << " not found for ROC " << static_cast<int>(rocit - roc.begin())<< "!" ;
+	LOG4CPLUS_WARN(pxarCoreLogger, "Pixel at column " << static_cast<int>(column) << " and row " << static_cast<int>(row) << " not found for ROC " << static_cast<int>(rocit - roc.begin())<< "!");
       }
     }
   }
@@ -459,7 +458,7 @@ void dut::testPixel(uint8_t column, uint8_t row, bool enable, uint8_t rocid) {
     if(it != roc.at(rocid).pixels.end()){
       it->setEnable(enable);
     } else {
-      LOG(logWARNING) << "Pixel at column " << static_cast<int>(column) << " and row " << static_cast<int>(row) << " not found for ROC " << static_cast<int>(rocid)<< "!" ;
+      LOG4CPLUS_WARN(pxarCoreLogger, "Pixel at column " << static_cast<int>(column) << " and row " << static_cast<int>(row) << " not found for ROC " << static_cast<int>(rocid)<< "!");
     }
   }
 }
@@ -467,7 +466,7 @@ void dut::testPixel(uint8_t column, uint8_t row, bool enable, uint8_t rocid) {
 void dut::maskAllPixels(bool mask) {
 
   if(status()) {
-    LOG(logDEBUGAPI) << "Set mask bit to " << static_cast<int>(mask) << " for all pixels on all ROCs.";
+    LOG4CPLUS_DEBUG(pxarCoreLogger, "Set mask bit to " << static_cast<int>(mask) << " for all pixels on all ROCs.");
     // Loop over all ROCs
     for (std::vector<rocConfig>::iterator rocit = roc.begin() ; rocit != roc.end(); ++rocit){
       // loop over all pixel, set enable according to parameter
@@ -481,7 +480,7 @@ void dut::maskAllPixels(bool mask) {
 void dut::maskAllPixels(bool mask, uint8_t rocid) {
 
   if(status() && rocid < roc.size()) {
-    LOG(logDEBUGAPI) << "Set mask bit to " << static_cast<int>(mask) << " for all pixels on ROC " << static_cast<int>(rocid);
+    LOG4CPLUS_DEBUG(pxarCoreLogger, "Set mask bit to " << static_cast<int>(mask) << " for all pixels on ROC " << static_cast<int>(rocid));
     // loop over all pixel, set enable according to parameter
     for (std::vector<pixelConfig>::iterator pixelit = roc.at(rocid).pixels.begin() ; pixelit != roc.at(rocid).pixels.end(); ++pixelit){
       pixelit->setMask(mask);
@@ -492,7 +491,7 @@ void dut::maskAllPixels(bool mask, uint8_t rocid) {
 void dut::testAllPixels(bool enable, uint8_t rocid) {
 
   if(status() && rocid < roc.size()) {
-    LOG(logDEBUGAPI) << "Set enable bit to " << static_cast<int>(enable) << " for all pixels on ROC " << static_cast<int>(rocid);
+    LOG4CPLUS_DEBUG(pxarCoreLogger, "Set enable bit to " << static_cast<int>(enable) << " for all pixels on ROC " << static_cast<int>(rocid));
     // loop over all pixel, set enable according to parameter
     for (std::vector<pixelConfig>::iterator pixelit = roc.at(rocid).pixels.begin() ; pixelit != roc.at(rocid).pixels.end(); ++pixelit){
       pixelit->setEnable(enable);
@@ -503,7 +502,7 @@ void dut::testAllPixels(bool enable, uint8_t rocid) {
 void dut::testAllPixels(bool enable) {
 
   if(status()) {
-    LOG(logDEBUGAPI) << "Set enable bit to " << static_cast<int>(enable) << " for all pixels on all ROCs";
+    LOG4CPLUS_DEBUG(pxarCoreLogger, "Set enable bit to " << static_cast<int>(enable) << " for all pixels on all ROCs");
     // Loop over all ROCs
     for (std::vector<rocConfig>::iterator rocit = roc.begin() ; rocit != roc.end(); ++rocit){
       // loop over all pixel, set enable according to parameter
@@ -571,7 +570,7 @@ bool dut::updateTrimBits(std::vector<pixelConfig> trimming, uint8_t rocid) {
 bool dut::status() {
 
   if(!_initialized || !_programmed) {
-    LOG(logERROR) << "DUT structure not initialized/programmed yet!";
+    LOG4CPLUS_ERROR(pxarCoreLogger, "DUT structure not initialized/programmed yet!");
   }
 
   return (_initialized && _programmed);
