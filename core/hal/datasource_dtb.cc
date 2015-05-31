@@ -1,6 +1,5 @@
 #include "datasource_dtb.h"
 #include "helper.h"
-#include "log.h"
 #include "constants.h"
 #include "exceptions.h"
 #include "rpc_calls.h"
@@ -18,15 +17,15 @@ namespace pxar {
       }
     } while (buffer.size() == 0);
 
-    LOG(logDEBUGPIPES) << "-------------------------";
-    LOG(logDEBUGPIPES) << "Channel " << static_cast<int>(channel)
-		       << " (" << static_cast<int>(chainlength) << " ROCs)"
-		       << (envelopetype == TBM_NONE ? " DESER160 " : (envelopetype == TBM_EMU ? " SOFTTBM " : " DESER400 "));
-    LOG(logDEBUGPIPES) << "Remaining " << static_cast<int>(dtbRemainingSize);
-    LOG(logDEBUGPIPES) << "-------------------------";
-    LOG(logDEBUGPIPES) << "FULL RAW DATA BLOB:";
-    LOG(logDEBUGPIPES) << listVector(buffer,true);
-    LOG(logDEBUGPIPES) << "-------------------------";
+    LOG4CPLUS_DEBUG(decodingLogger, "-------------------------");
+    LOG4CPLUS_DEBUG(decodingLogger, "Channel " << static_cast<int>(channel)
+		    << " (" << static_cast<int>(chainlength) << " ROCs)"
+		    << (envelopetype == TBM_NONE ? " DESER160 " : (envelopetype == TBM_EMU ? " SOFTTBM " : " DESER400 ")));
+    LOG4CPLUS_DEBUG(decodingLogger, "Remaining " << static_cast<int>(dtbRemainingSize));
+    LOG4CPLUS_DEBUG(decodingLogger, "-------------------------");
+    LOG4CPLUS_DEBUG(decodingLogger, "FULL RAW DATA BLOB:");
+    LOG4CPLUS_DEBUG(decodingLogger, listVector(buffer,true));
+    LOG4CPLUS_DEBUG(decodingLogger, "-------------------------");
 
     return lastSample = buffer[pos++];
   }
