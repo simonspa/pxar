@@ -2,8 +2,8 @@ import ROOT
 import numpy
 import array
 
-class Plotter(object):
 
+class Plotter(object):
     @staticmethod
     def create_th1(data, minimum, maximum, name, x_title, y_title):
         th1 = ROOT.TH1F(name, name, len(data), minimum, maximum)
@@ -13,19 +13,21 @@ class Plotter(object):
         th1.SetDrawOption('HIST')
         th1.SetLineWidth(2)
         for ix, x in enumerate(data):
-            th1.SetBinContent(ix,x)
+            th1.SetBinContent(ix, x)
         return th1
 
     @staticmethod
-    def create_tgraph(data, name, x_title, y_title, minimum = None, maximum = None):
-#        xdata = list(xrange(len(data)))
-        xdata = []
-        for i in range(len(data)):
-            xdata.append(minimum+i)
+    def create_tgraph(data, name, x_title, y_title, data_x=-1, minimum=None):
+        #        xdata = list(xrange(len(data)))
+        xdata = data_x
+        if data_x == -1:
+            xdata = []
+            for i in range(len(data)):
+                xdata.append(minimum + i)
         x = array.array('d', xdata)
         y = array.array('d', data)
-        gr = ROOT.TGraph(len(x),x,y)
-        #gr.SetDirectory(0)
+        gr = ROOT.TGraph(len(x), x, y)
+        # gr.SetDirectory(0)
         gr.SetTitle(name)
         gr.SetLineColor(4)
         gr.SetMarkerColor(2)
@@ -33,29 +35,11 @@ class Plotter(object):
         gr.SetMarkerStyle(34)
         gr.GetXaxis().SetTitle(x_title)
         gr.GetYaxis().SetTitle(y_title)
-        gr.SetDrawOption('Acp')
+        gr.GetYaxis().SetTitleOffset(1.4)
+        gr.SetDrawOption('ALP')
         gr.SetLineWidth(2)
         return gr
 
-    @staticmethod
-    def create_mygraph(data, name, x_title, y_title, x_min):
-        xdata = []
-        for i in range(len(data)):
-            xdata.append(x_min+i)
-        x = array.array('d', xdata)
-        y = array.array('d', data)
-        gr = ROOT.TGraph(len(x),x,y)
-        #gr.SetDirectory(0)
-        gr.SetTitle(name)
-        gr.SetLineColor(1)
-        gr.SetMarkerColor(1)
-        gr.SetMarkerSize(2)
-        gr.SetMarkerStyle(34)
-        gr.GetXaxis().SetTitle(x_title)
-        gr.GetYaxis().SetTitle(y_title)
-        gr.SetDrawOption('COLZ')
-        gr.SetLineWidth(2)
-        return gr
 
     @staticmethod
     def create_th2(data, x_min, x_max, y_min, y_max, name, x_title, y_title, z_title):
