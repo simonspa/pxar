@@ -93,12 +93,6 @@ namespace pxar {
      Get();
    }
    Get();
-   /**fix for eudaq*/
-   //Get();
-   //record.Add(GetLast());
-
-   // Else keep reading and adding samples until we find any trailer marker.
-   /**BUGFIX TBM emu */
    uint16_t index(1);
    while ( (Get() & 0xe000) != 0xe000 ){
      // Check if the last read sample has Event end marker:
@@ -113,23 +107,6 @@ namespace pxar {
      else record.SetOverflow();
      index++;
    }
-   /**need to add 4 more values (5 for myscript 4 for eudaq)*/
-   /**adding e-trailer*/
-//   if (index == 1){
-//        Get();
-//        for (uint16_t i(0); i<6; i++) {//i<3 for one ROC
-//            if (record.GetSize() < 40000) record.Add(Get());
-//            else record.SetOverflow();
-//        }
-//   }
-//   else{
-//        if (record.GetSize() < 40000) record.Add(GetLast());
-//        else record.SetOverflow();
-//        for (uint16_t i(0); i<4; i++) {//i<4 for CLI i<3 for eudaq
-//            if (record.GetSize() < 40000) record.Add(Get());
-//            else record.SetOverflow();
-//        }
-//    }
 
    LOG(logDEBUGPIPES) << "-------------------------";
    LOG(logDEBUGPIPES) << listVector(record.data,true);
@@ -349,7 +326,6 @@ namespace pxar {
         else if (&variable == &black){
             sumB += translateDataword;
             meanB = float(sumB)/counter;
-       //     meanB = -2; /**@radical declaration... */
         }
         variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+5);
     }
@@ -360,18 +336,9 @@ namespace pxar {
         }
         else if (&variable == &black){
            meanB = (float(windowSize)-1)/windowSize*meanB + float(1)/windowSize*translateDataword ;
-         //   meanB = -2; /**@radical declaration */
         }
         variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+5);
     }
-    /**output to check*/
-//    if (&variable == &black){
-//        if (bla < 1000){
-//            cout << bla << "\t" << meanUB << "\t" << translateDataword  << " " << meanB << "\n" ;
-//            bla++;
-//        }
-//    }
-
   }
 
   Event* dtbEventDecoder::DecodeAnalog() {
