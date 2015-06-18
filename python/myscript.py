@@ -1566,18 +1566,18 @@ class PxarCoreCmd(cmd.Cmd):
         data = []
         d = zeros((417 if module else 53, 161 if module else 81))
         nTriggers = 0
-        t1 = time.time()
+        t1 = time()
         while nTriggers < maxTriggers:
             print "\r#events:", '{0:06d}'.format(nTriggers),
             if nTriggers < windowsize:
-                mean = nTriggers / (time.time() - t1)
+                mean = nTriggers / (time() - t1)
                 print 'rate: {0:03.0f} Hz'.format(mean),
-                if nTriggers == 90: t2 = time.time()
+                if nTriggers == 90: t2 = time()
             elif nTriggers > before and nTriggers % 10 == 0:
                 mean = float(windowsize - 5) / windowsize * mean + float(windowsize - 95) / windowsize * 10 / (
-                    time.time() - t2)
+                    time() - t2)
                 print 'rate: {0:03.0f} Hz'.format(mean),
-                t2 = time.time()
+                t2 = time()
             sys.stdout.flush()
             before = nTriggers
             try:
