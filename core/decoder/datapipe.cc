@@ -184,7 +184,7 @@ namespace pxar {
     if((sample->data.at(size-2) & 0xe000) != 0xe000
        || (sample->data.at(size-1) & 0xe000) != 0xc000) { decodingStats.m_errors_tbm_trailer++; }
     // Store the two trailer words:
-    roc_Event.trailer = ((sample->data.at(size-2) & 0x00ff) << 8) 
+    roc_Event.trailer = ((sample->data.at(size-2) & 0x00ff) << 8)
       + (sample->data.at(size-1) & 0x00ff);
 
     LOG(logDEBUGPIPES) << "TBM " << static_cast<int>(GetChannel()) << " Trailer:";
@@ -234,14 +234,14 @@ namespace pxar {
 	  decodingStats.m_errors_pixel_incomplete++;
 	  break;
 	}
-	
+
 	// FIXME optional check:
 	// (*word) >> 13 == 0
 	// (*(word+1) >> 13 == 1
 
 	uint32_t raw = (((*word) & 0x0fff) << 12) + ((*(++word)) & 0x0fff);
 	try {
-	  // Check if this is just fill bits of the TBM09 data stream 
+	  // Check if this is just fill bits of the TBM09 data stream
 	  // accounting for the other channel:
 	  if(GetTokenChainLength() == 4 && (raw&0xffffff) == 0xffffff) {
 	    LOG(logDEBUGPIPES) << "Empty hit detected (TBM09 data streams). Skipping.";
@@ -287,65 +287,67 @@ namespace pxar {
     // Loop over the full data:
     for(std::vector<uint16_t>::iterator word = sample->data.begin(); word != sample->data.end(); word++) {
 
-      // Not enough data for anything, stop here - and assume it was half a pixel hit:
-      if((sample->data.end() - word < 2)) { 
-	decodingStats.m_errors_pixel_incomplete++;
-	break;
-      }
 
-      // Check if we have another ROC header (UB and B levels):
-      // Here we have to assume the first two words are a ROC header because we rely on
-      // its Ultrablack and Black level as initial values for auto-calibration:
-      int16_t levelS = (black - ultrablack)/8;
+        // Not enough data for anything, stop here - and assume it was half a pixel hit:
+        if((sample->data.end() - word < 2)) {
+            decodingStats.m_errors_pixel_incomplete++;
+            break;
+        }
 
-      if(roc_n < 0 || 
-	 // Ultrablack level:
-	 ((ultrablack-levelS < expandSign((*word) & 0x0fff) && ultrablack+levelS > expandSign((*word) & 0x0fff))
-	  // Black level:
-	  && (black-levelS < expandSign((*(word+1)) & 0x0fff) && black+levelS > expandSign((*(word+1)) & 0x0fff)))) {
+        // Check if we have another ROC header (UB and B levels):
+        // Here we have to assume the first two words are a ROC header because we rely on
+        // its Ultrablack and Black level as initial values for auto-calibration:
+        int16_t levelS = (black - ultrablack)/8;
 
-	roc_n++;
-	// Save the lastDAC value:
-	evalLastDAC(roc_n, (*(word+2)) & 0x0fff);
+        if(roc_n < 0 ||
+        // Ultrablack level:
+        /** little fix if the UB in the telescope is too small --> levelS*3 */
+        ((ultrablack-levelS < expandSign((*word) & 0x0fff) && ultrablack+levelS*2 > expandSign((*word) & 0x0fff))
+        // Black level:
+        && (black-levelS < expandSign((*(word+1)) & 0x0fff) && black+levelS > expandSign((*(word+1)) & 0x0fff)))) {
 
-	// Iterate to improve ultrablack and black measurement:
-	AverageAnalogLevel(ultrablack, (*word) & 0x0fff);
-	AverageAnalogLevel(black, (*(word+1)) & 0x0fff);
+            roc_n++;
+            // Save the lastDAC value:
+            evalLastDAC(roc_n, (*(word+2)) & 0x0fff);
 
-	LOG(logDEBUGPIPES) << "ROC Header: "
-			   << expandSign((*word) & 0x0fff) << " (avg. " << ultrablack << ") (UB) "
-			   << expandSign((*(word+1)) & 0x0fff) << " (avg. " << black << ") (B) "
-			   << expandSign((*(word+2)) & 0x0fff) << " (lastDAC) ";
-	// Advance iterator:
-	word +=  2;
-      }
-      // We have a pixel hit:
-      else {
-	// Not enough data for a new pixel hit (six words):
-	if(sample->data.end() - word < 6) {
-	  decodingStats.m_errors_pixel_incomplete++;
-	  break;
-	}
+            // Iterate to improve ultrablack and black measurement:
+            AverageAnalogLevel(ultrablack, (*word) & 0x0fff);
+            AverageAnalogLevel(black, (*(word+1)) & 0x0fff);
 
-	std::vector<uint16_t> data;
-	data.push_back((*word) & 0x0fff);
-	for(size_t i = 0; i < 5; i++) { data.push_back((*(++word)) & 0x0fff); }
- 
-	try{
-	  LOG(logDEBUGPIPES) << "Trying to decode pixel: " << listVector(data,false,true);
-	  pixel pix(data,roc_n,ultrablack,black);
-	  roc_Event.pixels.push_back(pix);
-	  decodingStats.m_info_pixels_valid++;
-	}
-	catch(DataDecodingError /*&e*/){
-	  // decoding of raw address lead to invalid address
-	  decodingStats.m_errors_pixel_address++;
-	}
-      }
+            LOG(logDEBUGPIPES) << "ROC Header: "
+                       << expandSign((*word) & 0x0fff) << " (avg. " << ultrablack << ") (UB) "
+                       << expandSign((*(word+1)) & 0x0fff) << " (avg. " << black << ") (B) "
+                       << expandSign((*(word+2)) & 0x0fff) << " (lastDAC) ";
+            // Advance iterator:
+            word +=  2;
+        }
+        // We have a pixel hit:
+        else {
+            // Not enough data for a new pixel hit (six words):
+            if(sample->data.end() - word < 6) {
+              decodingStats.m_errors_pixel_incomplete++;
+              break;
+            }
+
+            std::vector<uint16_t> data;
+            data.push_back((*word) & 0x0fff);
+            for(size_t i = 0; i < 5; i++) { data.push_back((*(++word)) & 0x0fff); }
+
+            try{
+                LOG(logDEBUGPIPES) << "Trying to decode pixel: " << listVector(data,false,true);
+                pixel pix(data,roc_n,ultrablack,black);
+                roc_Event.pixels.push_back(pix);
+                decodingStats.m_info_pixels_valid++;
+            }
+            catch(DataDecodingError /*&e*/){
+                // decoding of raw address lead to invalid address
+                decodingStats.m_errors_pixel_address++;
+            }
+        }
     }
 
     // Check event validity (empty, missing ROCs...):
-    CheckEventValidity(roc_n);
+    CheckEventValidity(roc_n, sample);
   }
 
   void dtbEventDecoder::DecodeDeser160(rawEvent * sample) {
@@ -418,7 +420,7 @@ namespace pxar {
 
     // Check if TBM event ID matches with expectation:
     if(roc_Event.triggerCount() != (eventID%256)) {
-      LOG(logERROR) << "   Event ID mismatch:  local ID (" << static_cast<int>(eventID) 
+      LOG(logERROR) << "   Event ID mismatch:  local ID (" << static_cast<int>(eventID)
 		    << ") !=  TBM ID (" << static_cast<int>(roc_Event.triggerCount()) << ")";
       decodingStats.m_errors_tbm_eventid_mismatch++;
       // To continue readout, set event ID to the currently decoded one:
@@ -429,12 +431,19 @@ namespace pxar {
     eventID = (eventID%256) + 1;
   }
 
-  void dtbEventDecoder::CheckEventValidity(int16_t roc_n) {
+  void dtbEventDecoder::CheckEventValidity(int16_t roc_n, rawEvent * sample) {
 
     // Check that we found all expected ROC headers:
     // If the number of ROCs does not correspond to what we expect
     // clear the event and return:
     if(roc_n+1 != GetTokenChainLength()) {
+    for (uint16_t i(0); i< sample->GetSize(); i++)
+            std::cout << (*sample)[i] << " ";
+        std::cout << "\n";
+        for (uint16_t i(0); i< sample->GetSize(); i++)
+            std::cout << expandSign((*sample)[i] & 0x0fff) << " ";
+        std::cout << "\n";
+        std::cout << black << " " << ultrablack << "\n";
       LOG(logERROR) << "Number of ROCs (" << static_cast<int>(roc_n+1)
 		    << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
       decodingStats.m_errors_roc_missing++;
@@ -442,7 +451,7 @@ namespace pxar {
       roc_Event.Clear();
     }
     // Count empty events
-    else if(roc_Event.pixels.empty()) { 
+    else if(roc_Event.pixels.empty()) {
       decodingStats.m_info_events_empty++;
       LOG(logDEBUGPIPES) << "Event is empty.";
     }
@@ -468,7 +477,6 @@ namespace pxar {
       else if (&variable == &black){
 	sumB += translateDataword;
 	meanB = float(sumB)/counter;
-	//     meanB = -2; /**@radical declaration... */
       }
       variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+6);
     }
@@ -479,11 +487,9 @@ namespace pxar {
       }
       else if (&variable == &black){
 	meanB = (float(windowSize)-1)/windowSize*meanB + float(1)/windowSize*translateDataword ;
-	//   meanB = -2; /**@radical declaration */
       }
       variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+6);
     }
-
   }
 
   void dtbEventDecoder::evalLastDAC(uint8_t roc, uint16_t val) {
@@ -539,7 +545,7 @@ namespace pxar {
     }
   }
 
-  statistics dtbEventDecoder::getStatistics() { 
+  statistics dtbEventDecoder::getStatistics() {
     // Automatically clear the statistics after it was read out:
     statistics tmp = decodingStats;
     decodingStats.clear();

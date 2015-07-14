@@ -54,6 +54,6 @@ class Plotter(object):
                 th2.SetBinContent(ix, iy, y)
         return th2
 
-    def matrix_to_th2(self, matrix, name, x_title, y_title):
+    def matrix_to_th2(d, name, x_title, y_title):
         dim = matrix.shape
         return self.create_th2(matrix, dim[0], dim[1], name, x_title, y_title)

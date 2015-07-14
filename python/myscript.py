@@ -26,7 +26,8 @@ except ImportError:
 import cmd  # for command interface and parsing
 import os  # for file system cmds
 import sys
-from time import time
+from time import time, sleep
+import array
 
 
 # set up the DAC and probe dictionaries
@@ -242,8 +243,8 @@ class PxarCoreCmd(cmd.Cmd):
         # sets all the delays to the right value if you want to change clk
         self.api.setTestboardDelays({"clk": value})
         self.api.setTestboardDelays({"ctr": value})
-        self.api.setTestboardDelays({"sda": value + 15})
-        self.api.setTestboardDelays({"tin": value + 5})
+        self.api.setTestboardDelays({"sda": value + 11})
+        self.api.setTestboardDelays({"tin": value + 2})
 
     def getAddressLevels(self):
         event = self.convertRawEvent(verbose=False)
@@ -381,6 +382,12 @@ class PxarCoreCmd(cmd.Cmd):
     def elapsed_time(self, start):
         print 'elapsed time:', '{0:0.2f}'.format(time() - start), 'seconds'
 
+    def enable_pix(self, row=5, col=12, roc=0):
+        self.api.testAllPixels(0, roc)
+        self.api.maskAllPixels(1, roc)
+        self.api.testPixel(row, col, 1, roc)
+        self.api.maskPixel(row, col, 0, roc)
+
     # ==============================================
     # CMD LINE INTERFACE FUNCTIONS
     # ==============================================
@@ -389,9 +396,18 @@ class PxarCoreCmd(cmd.Cmd):
         """getTBia: returns analog DTB current"""
         print "Analog Current: ", (self.api.getTBia() * 1000), " mA"
 
-    def complete_getTBia(self, text, line, start_index, end_index):
+    def complete_getTBia(self):
         # return help for the cmd
         return [self.do_getTBia.__doc__, '']
+
+    @arity(0, 0, [])
+    def do_getTBid(self):
+        """getTBia: returns analog DTB current"""
+        print "Digital Current: ", (self.api.getTBid() * 1000), " mA"
+
+    def complete_getTBid(self):
+        # return help for the cmd
+        return [self.do_getTBid.__doc__, '']
 
     @arity(2, 2, [str, str])
     def do_SignalProbe(self, probe, name):
@@ -721,9 +737,90 @@ class PxarCoreCmd(cmd.Cmd):
         print "TB delays clk and ctr set to: ", value
         self.setClock(value)
 
-    def complete_setClockDelays(self, text, line, start_index, end_index):
+    def complete_setClockDelays(self):
         # return help for the cmd
         return [self.do_setClockDelays.__doc__, '']
+
+    @arity(0, 4, [int, int, int, int])
+    def do_find_clk_delay(self, col=5, row=12, min_val=0, max_val=25):
+        """find the best clock delay setting """
+        # self.enable_pix(0, 37)  # 0 0 2 2 2
+        # self.enable_pix(1, 16)  # 0 0 3 3 3
+        # self.enable_pix(0, 8)   # 0 0 4 0 0
+        # self.enable_pix(0, 26)   # 0 0 3 0 0
+        self.enable_pix(col, row)
+        cols = [4, 16, 28, 40]
+        rows = [79, 79, 79, 79]
+        aver = 100
+        x = []
+        level = []
+        for i in range(len(cols)):
+            level.append([])
+        for k in range(len(cols)):
+            self.enable_pix(cols[k], rows[k])
+            for clk in range(min_val, max_val):
+                mean = 0
+                if not k:
+                    x.append(clk)
+                self.setClock(clk)
+                self.api.daqStart()
+                self.api.daqTrigger(aver, 500)
+                for j in range(aver):
+                    event = self.convertedRaw()
+                    if len(event) > 8:
+                        mean += event[4]
+                    else:
+                        mean = 0
+                        break
+                level[k].append(mean / float(aver))
+                print k, clk, event[4] if len(event) > 5 else 0, event, mean
+                self.api.daqStop()
+        # self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
+        c = ROOT.TCanvas('c', 'c', 800, 800)
+        c.Update()
+        c.cd()
+        gr0 = Plotter.create_tgraph(level[0], "0", "clk", "lvl", x)
+        gr1 = Plotter.create_tgraph(level[1], "1", "clk", "lvl", x)
+        gr2 = Plotter.create_tgraph(level[2], "2", "clk", "lvl", x)
+        gr3 = Plotter.create_tgraph(level[3], "3", "clk", "lvl", x)
+        mg = ROOT.TMultiGraph('mg', 'mg')
+        gr1.SetLineColor(3)
+        gr2.SetLineColor(5)
+        gr3.SetLineColor(6)
+        mg.Add(gr0)
+        mg.Add(gr1)
+        mg.Add(gr2)
+        mg.Add(gr3)
+        mg.Draw("apl")
+        c.Update()
+        sleep(0.1)
+        c.Update()
+        c.SaveAs("bla.root")
+        # mg.Add(gr4)
+        # mg.Add(gr5)
+        # self.window.histos.append(c)
+        # self.window.update()
+
+
+    def complete_find_clk_delay(self):
+        # return help for the cmd
+        return [self.do_find_clk_delay.__doc__, '']
+
+    @arity(0, 3, [str, int, int])
+    def do_vary_tb_delay(self, delay="clk", min_val=0, max_val=20):
+        """find the best clock delay setting """
+        for value in range(min_val, max_val):
+            self.api.setTestboardDelays({delay: value})
+            self.api.daqStart()
+            self.api.daqTrigger(1,500)
+            sleep(0.1)
+            event = self.convertedRaw()
+            print value, event
+            self.api.daqStop()
+
+    def complete_vary_tb_delay(self):
+        # return help for the cmd
+        return [self.do_vary_tb_delay.__doc__, '']
 
     @arity(0, 0, [])
     def do_daqRawEvent(self):
@@ -1024,12 +1121,8 @@ class PxarCoreCmd(cmd.Cmd):
         """varyClk [start] [end]: plots addresslevelscans for clk delay settings between [start] and [end] and varies all other delays accordingly"""
         self.api.maskAllPixels(1)
         self.api.testAllPixels(0)
-        self.api.testPixel(25, 25, 1)
-        self.api.maskPixel(25, 25, 0)
-        self.api.testPixel(50, 50, 1)
-        self.api.maskPixel(50, 50, 0)
-        self.api.testPixel(10, 70, 1)
-        self.api.maskPixel(10, 70, 0)
+        self.api.testPixel(5, 12, 1)
+        self.api.maskPixel(5, 12, 0)
         for value in range(start, end + 1):
             print "prints the histo for clk = " + str(value) + "..."
             self.setClock(value)
@@ -1039,7 +1132,7 @@ class PxarCoreCmd(cmd.Cmd):
             self.window.histos.append(plot)
             self.window.update()
 
-    def complete_varyClk(self, text, line, start_index, end_index):
+    def complete_varyClk(self):
         # return help for the cmd
         return [self.do_varyClk.__doc__, '']
 
@@ -1157,12 +1250,12 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.pixelTest.__doc__, '']
 
     @arity(0, 1, [int])
-    def do_Test(self, n_trigger=10000):
+    def do_test(self, n_trigger=10000):
         self.api.setDAC("wbc", 126, 3)
         self.api.setTestboardDelays({"tindelay": 23, "toutdelay": 3})
         self.api.daqTriggerSource("extern")
         self.api.daqStart()
-        time.sleep(0.1)
+        sleep(0.1)
 
         # creating the matrix
         matrix = []
@@ -1232,7 +1325,7 @@ class PxarCoreCmd(cmd.Cmd):
             for row in range(len(matrix)):
                 for col in range(len(matrix[row])):
                     if matrix[row][col] > 0:
-                        px = Pixel()
+                        # px = Pixel()
                         value = self.codeEvent(row, col, matrix[row][col])
                         px = Pixel(value, 0)
                         data.append(px)
@@ -1251,99 +1344,64 @@ class PxarCoreCmd(cmd.Cmd):
             #            except RuntimeError:
             #                pass
 
-    def complete_Test(self, text, line, start_index, end_index):
+    def complete_test(self):
         # return help for the cmd
-        return [self.Test.__doc__, '']
+        return [self.do_test.__doc__, '']
 
     @arity(0, 3, [int, int, int])
-    def do_wbcScan(self, minWBC=90, maxTriggers=50, maxWBC=130):
-        """do_wbcScan [minimal WBC] [number of events] [maximal WBC]: \nsets wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches maxWBC (default [90] [100] [130])"""
+    def do_wbcScan(self, min_wbc=90, max_triggers=50, max_wbc=130):
+        """do_wbcScan [minimal WBC] [number of events] [maximal WBC]: \n
+        sets wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches maxWBC \n
+        (default [90] [100] [130])"""
 
         self.api.daqTriggerSource("extern")
-        wbcScan = []
+        wbc_scan = []
         print "wbc \tyield"
 
         # loop over wbc
-        for wbc in range(minWBC, maxWBC):
+        for wbc in range(min_wbc, max_wbc):
             self.api.setDAC("wbc", wbc)
             self.api.daqStart()
-            nHits = 0
-            nTriggers = 0
+            hits = 0
+            triggers = 0
 
             # loop until you find nTriggers
-            while nTriggers < maxTriggers:
+            while triggers < max_triggers:
                 try:
                     data = self.api.daqGetEvent()
                     if len(data.pixels) > 0:
-                        nHits += 1
-                    nTriggers += 1
+                        hits += 1
+                    triggers += 1
                 except RuntimeError:
                     pass
 
-            hitYield = 100 * nHits / maxTriggers
-            wbcScan.append(hitYield)
-            print '{0:03d}'.format(wbc), "\t", '{0:3.0f}%'.format(hitYield)
+            hit_yield = 100 * hits / max_triggers
+            wbc_scan.append(hit_yield)
+            print '{0:03d}'.format(wbc), "\t", '{0:3.0f}%'.format(hit_yield)
 
             # stopping criterion
-            if wbc > 3 + minWBC:
-                if wbcScan[-4] > 90:
+            if wbc > 3 + min_wbc:
+                if wbc_scan[-4] > 90:
                     print "Set DAC wbc to", wbc - 3
                     self.api.setDAC("wbc", wbc - 3)
                     break
 
             # Clear the buffer:
             try:
-                data = self.api.daqGetEventBuffer()
+                self.api.daqGetEventBuffer()
             except RuntimeError:
                 pass
 
         self.api.daqStop()
 
         self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
-        plot = Plotter.create_tgraph(wbcScan, "wbc scan", "wbc", "evt/trig [%]", minWBC)
+        plot = Plotter.create_tgraph(wbc_scan, "wbc scan", "wbc", "evt/trig [%]", min_wbc)
         self.window.histos.append(plot)
         self.window.update()
 
-    def complete_wbcScan(self, text, line, start_index, end_index):
+    def complete_wbcScan(self):
         # return help for the cmd
         return [self.do_wbcScan.__doc__, '']
-
-    #    @arity(0,3,[int, int, int])
-    #        print "wbc \t#Events \texample Event"
-    #        maxWBC = 255
-    #        wbcScan = []
-    #        for wbc in range (minWBC,maxWBC):
-    #            self.convertedRaw()
-    #            self.api.setDAC("wbc", wbc)
-    #            self.api.daqStart()
-    #            time.sleep(tim/100)
-    #            nEvents     = 0
-    #            it          = 0
-    #            exEvent     = []
-    #            for j in range(nTrigger):
-    #                data = self.convertedRaw()
-    #                if len(data) > 12:   #and data[0] < -100 (might add this as well if tindelay is set correctly)
-    #                    if(it==0):
-    #                        exEvent = data
-    #                        it +=1
-    #                    nEvents += 1
-    #            nEvents = 100*nEvents/nTrigger
-    #            wbcScan.append(nEvents)
-    #            if wbc>3+minWBC:
-    #                if wbcScan[-3] > 90:
-    #                    print "Set wbc to", wbc-2
-    #                    self.api.setDAC("wbc", wbc-2)
-    #                    self.api.daqStop()
-    #                    break
-    #            print '{0:03d}'.format(wbc),"\t", '{0:3.0f}%'.format(nEvents),"\t\t", exEvent
-    #            self.api.daqStop()
-    #
-    #        self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
-    ##        plot = Plotter.create_th1(wbcScan, minWBC, maxWBC, "wbc scan", "wbc", "%")
-    #        plot = Plotter.create_mygraph(wbcScan, "wbc scan", "wbc", "evt/trig [%]", minWBC)
-    #        self.window.histos.append(plot)
-    #        self.window.update()
-
 
     @arity(0, 0, [])
     def do_readMaskFile(self):
@@ -1354,52 +1412,53 @@ class PxarCoreCmd(cmd.Cmd):
         for l in f.readlines():
             if l[0] != '#' and l[0] != ' ' and len(l) > 1:
                 mask.append(l.split())
-        f.close
+        f.close()
         for line in mask:
             if line[0] == 'roc':
-                nRoc = int(line[1])
-                print "masking ROC:", nRoc
-                self.api.maskAllPixels(1, nRoc)
+                n_rocs = int(line[1])
+                print "masking ROC:", n_rocs
+                self.api.maskAllPixels(1, n_rocs)
             elif line[0] == 'pix':
-                nRoc = int(line[1])
-                nCol = int(line[2])
-                nRow = int(line[3])
-                print "masking Pixel:\t", '{0:02d}'.format(nCol), '{0:02d}'.format(nRow), "\tof ROC", nRoc
-                self.api.maskPixel(nCol, nRow, 1, nRoc)
+                n_rocs = int(line[1])
+                col = int(line[2])
+                row = int(line[3])
+                print "masking Pixel:\t", '{0:02d}'.format(col), '{0:02d}'.format(row), "\tof ROC", n_rocs
+                self.api.maskPixel(col, row, 1, n_rocs)
             elif line[0] == 'col':
-                nRoc = int(line[1])
-                nMinCol = int(line[2])
+                n_rocs = int(line[1])
+                min_col = int(line[2])
                 if len(line) <= 3:
-                    print "masking col:\t", nMinCol, "\tof ROC", nRoc
+                    print "masking col:\t", min_col, "\tof ROC", n_rocs
                     for row in range(80):
-                        self.api.maskPixel(nMinCol, row, 1, nRoc)
+                        self.api.maskPixel(min_col, row, 1, n_rocs)
                 if len(line) > 3:
-                    nMaxCol = int(line[3])
-                    print "masking col:\t", str(nMinCol) + '-' + str(nMaxCol), "\tof ROC", nRoc
-                    for col in range(nMinCol, nMaxCol + 1):
+                    max_col = int(line[3])
+                    print "masking col:\t", str(min_col) + '-' + str(max_col), "\tof ROC", n_rocs
+                    for col in range(min_col, max_col + 1):
                         for row in range(80):
-                            self.api.maskPixel(col, row, 1, nRoc)
+                            self.api.maskPixel(col, row, 1, n_rocs)
             elif line[0] == 'row':
-                nRoc = int(line[1])
-                nMinRow = int(line[2])
+                n_rocs = int(line[1])
+                min_row = int(line[2])
                 if len(line) <= 3:
-                    print "masking row:\t", nMinRow, "\tof ROC", nRoc
+                    print "masking row:\t", min_row, "\tof ROC", n_rocs
                     for col in range(52):
-                        self.api.maskPixel(col, nMinRow, 1, nRoc)
+                        self.api.maskPixel(col, min_row, 1, n_rocs)
                 if len(line) > 3:
-                    nMaxRow = int(line[3])
-                    print "masking row:\t", str(nMinRow) + '-' + str(nMaxRow), "\tof ROC", nRoc
-                    for row in range(nMinRow, nMaxRow + 1):
+                    max_row = int(line[3])
+                    print "masking row:\t", str(min_row) + '-' + str(max_row), "\tof ROC", n_rocs
+                    for row in range(min_row, max_row + 1):
                         for col in range(52):
-                            self.api.maskPixel(col, row, 1, nRoc)
+                            self.api.maskPixel(col, row, 1, n_rocs)
 
-    def complete_readMaskFile(self, text, line, start_index, end_index):
+    def complete_readMaskFile(self):
         # return help for the cmd
         return [self.do_readMaskFile.__doc__, '']
 
     @arity(0, 1, [int])
-    def do_averageLevel(self, test=50):
-        """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
+    def do_average_level(self, test=50):
+        """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC
+        until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
         #        self.api.daqTriggerSource("extern")
         #        self.api.daqStop()
         #        wbc = 115
@@ -1427,26 +1486,26 @@ class PxarCoreCmd(cmd.Cmd):
             if len(data) > 10:
                 print data
 
-    def complete_averageLevel(self, text, line, start_index, end_index):
+    def complete_average_lvel(self):
         # return help for the cmd
-        return [self.do_averageLevel.__doc__, '']
+        return [self.do_average_level.__doc__, '']
 
     @arity(1, 3, [str, int, int])
-    def do_check_tbsettings(self, name, minValue=0, maxValue=20):
-        """ do_checkTBsettings [minWBC] [nTrigger]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
+    def do_check_tbsettings(self, name, min_value=0, max_value=20):
+        """ do_checkTBsettings [setting] [min] [max]: default: [0,20]"""
 
         self.api.testAllPixels(0)
         self.api.testPixel(15, 59, 1)
-        t = time.time()
-        for delay in range(minValue, maxValue):
+        t = time()
+        for delay in range(min_value, max_value):
             self.api.setTestboardDelays({name: delay})
-            time.sleep(1)
+            sleep(1)
             i = 0
             self.api.setDAC("vana", 70 + i)
             i += 1
             #            self.api.daqStart()
             #            self.api.daqTrigger(21,500)
-            time.sleep(1)
+            sleep(1)
             # sumData = [0, 0, 0]
             # levels = [0, 0, 0, 0, 0]
             #            for i in range (20):
@@ -1467,7 +1526,7 @@ class PxarCoreCmd(cmd.Cmd):
             #            print
             print self.api.getTBia() * 1000
         # self.api.daqStop()
-        print "test took: ", round(time.time() - t, 2), "s"
+        print "test took: ", round(time() - t, 2), "s"
 
     def complete_check_tbsettings(self):
         # return help for the cmd
@@ -1702,9 +1761,9 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0, 0, [])
     def do_probes(self):
         self.api.SignalProbe("a1", "sdata1")
-        self.api.SignalProbe("a2", "ctr")
+        self.api.SignalProbe("a2", "tout")
         self.api.SignalProbe("d1", "tin")
-        self.api.SignalProbe("d2", "tout")
+        self.api.SignalProbe("d2", "ctr")
 
     def complete_probes(self):
         # return help for the cmd

@@ -311,7 +311,6 @@ namespace pxar {
 
   void dtbEventDecoder::AverageAnalogLevel(int32_t &variable, int16_t dataword) {
 
-
     /**translate the measurement to a meaningful level*/
     int16_t translateDataword = expandSign(dataword & 0x0fff);
 
