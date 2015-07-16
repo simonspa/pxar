@@ -752,40 +752,51 @@ class PxarCoreCmd(cmd.Cmd):
         n_rocs = 1
         clk_x = []
         levels_y = []
+        mean_value = []
 
         print "get level splitting: "
         for roc in range(n_rocs):
             self.api.maskAllPixels(1, roc)
             self.api.testAllPixels(0, roc)
             levels_y.append([])
+            mean_value.append([])
             for i in range(len(cols)):
                 levels_y[roc].append([])
-                # activate all split pixels
+                mean_value.append(0)
                 self.api.testPixel(cols[i], rows[i], 1, roc)
                 self.api.maskPixel(cols[i], rows[i], 0, roc)
 
             for clk in range(min_val, max_val):
+                # clear mean values
+                for i in range(n_levels):
+                    mean_value[roc][i] = 0
                 if not roc:
                     clk_x.append(clk)
                 self.setClock(clk)
                 self.api.daqStart()
                 self.api.daqTrigger(n_triggers, 500)
-                for j in range(len(cols)):
-                    mean_value = 0
-                    for k in range(n_triggers):
-                        event = self.convertedRaw()
+                for k in range(n_triggers):
+                    event = self.convertedRaw()
+                    if not k:
+                        print event
+                    stop_loop = False
+                    for j in range(len(cols)):
                         try:
-                            mean_value += event[5 + j * 6]
+                            mean_value[roc][j] += event[5 + j * 6]
                         except IndexError:
-                            mean_value = 0
+                            mean_value[roc][j] = 0
+                            stop_loop = True
                             break
-                    print event
-                    levels_y[roc][j].append(mean_value / float(n_triggers))
+                    if stop_loop:
+                        break
+                for i in range(n_levels):
+                    levels_y[roc][i].append(mean_value[roc][i] / float(n_triggers))
                 print '\rclk-delay:', "{0:2d}".format(clk),
                 sys.stdout.flush()
                 self.api.daqStop()
         print
         print levels_y[0][0]
+        print levels_y[0][1]
 
         # look for black level
         print "check black level spread"
