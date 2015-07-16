@@ -795,10 +795,21 @@ class PxarCoreCmd(cmd.Cmd):
                 # spread_black.append(sum_spread / float(n_triggers))
                 # print '\r', clk, "{0:2.2f}".format(spread_black[clk]),
                 # averaging over n_triggers
+                sum_spread = 0
                 for k in range(n_triggers):
                     event = self.convertedRaw()
                     if not k:
                         print event
+                    # black level spread
+                    spread_j = 0
+                    for j in range(5):
+                        try:
+                            spread_j += abs(event[1] - event[3 + k])
+                        except IndexError:
+                            spread_j = 99
+                            break
+                    sum_spread += spread_j / 5
+                    # level split
                     stop_loop = False
                     for j in range(len(cols)):
                         try:
@@ -809,6 +820,7 @@ class PxarCoreCmd(cmd.Cmd):
                             break
                     if stop_loop:
                         break
+                spread_black[roc].append(sum_spread / float(n_triggers))
                 for i in range(n_levels):
                     levels_y[roc][i].append(mean_value[roc][i] / float(n_triggers))
                 print '\rclk-delay:', "{0:2d}".format(clk),
