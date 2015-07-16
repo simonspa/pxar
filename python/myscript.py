@@ -762,7 +762,7 @@ class PxarCoreCmd(cmd.Cmd):
             mean_value.append([])
             for i in range(len(cols)):
                 levels_y[roc].append([])
-                mean_value.append(0)
+                mean_value[roc].append(0)
                 self.api.testPixel(cols[i], rows[i], 1, roc)
                 self.api.maskPixel(cols[i], rows[i], 0, roc)
 
@@ -775,6 +775,7 @@ class PxarCoreCmd(cmd.Cmd):
                 self.setClock(clk)
                 self.api.daqStart()
                 self.api.daqTrigger(n_triggers, 500)
+                # averaging over n_triggers
                 for k in range(n_triggers):
                     event = self.convertedRaw()
                     if not k:
