@@ -741,19 +741,16 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_setClockDelays.__doc__, '']
 
-    @arity(0, 4, [int, int, int, int])
-    def do_find_clk_delay(self, col=5, row=12, min_val=0, max_val=25):
+    @arity(0, 2, [int, int])
+    def do_find_clk_delay(self, min_val=0, max_val=25):
         """find the best clock delay setting """
-        # self.enable_pix(0, 37)  # 0 0 2 2 2
-        # self.enable_pix(1, 16)  # 0 0 3 3 3
-        # self.enable_pix(0, 8)   # 0 0 4 0 0
-        # self.enable_pix(0, 26)   # 0 0 3 0 0
-        self.enable_pix(col, row)
-        cols = [4, 16, 28, 40]
-        rows = [79, 79, 79, 79]
+        # save all the level settings
+        cols = [0, 2, 4, 6, 8, 10]
+        rows = [44, 41, 38, 35, 32, 29]
         aver = 100
         x = []
         level = []
+        print "get level splitting: "
         for i in range(len(cols)):
             level.append([])
         for k in range(len(cols)):
@@ -768,43 +765,112 @@ class PxarCoreCmd(cmd.Cmd):
                 for j in range(aver):
                     event = self.convertedRaw()
                     if len(event) > 8:
-                        mean += event[4]
+                        mean += event[5]
                     else:
                         mean = 0
                         break
                 level[k].append(mean / float(aver))
-                print k, clk, event[4] if len(event) > 5 else 0, event, mean
+                print '\rpixel: ', k, 'clk-delay: ',  "{0:2d}".format(clk),
+                sys.stdout.flush()
                 self.api.daqStop()
-        # self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
-        c = ROOT.TCanvas('c', 'c', 800, 800)
-        c.Update()
-        c.cd()
-        gr0 = Plotter.create_tgraph(level[0], "0", "clk", "lvl", x)
-        gr1 = Plotter.create_tgraph(level[1], "1", "clk", "lvl", x)
-        gr2 = Plotter.create_tgraph(level[2], "2", "clk", "lvl", x)
-        gr3 = Plotter.create_tgraph(level[3], "3", "clk", "lvl", x)
-        mg = ROOT.TMultiGraph('mg', 'mg')
-        gr1.SetLineColor(3)
-        gr2.SetLineColor(5)
-        gr3.SetLineColor(6)
-        mg.Add(gr0)
-        mg.Add(gr1)
-        mg.Add(gr2)
-        mg.Add(gr3)
-        mg.Draw("apl")
-        c.Update()
-        sleep(0.1)
-        c.Update()
-        c.SaveAs("bla.root")
-        # mg.Add(gr4)
-        # mg.Add(gr5)
-        # self.window.histos.append(c)
-        # self.window.update()
+        print
+        # look for black level
+        print "check black level spread"
+        self.enable_pix(15, 59)
+        spread_black = []
+        for clk in range(min_val, max_val):
+            self.setClock(clk)
+            self.api.daqStart()
+            self.api.daqTrigger(aver, 500)
+            sum_spread = 0
+            for j in range(aver):
+                event = self.convertedRaw()
+                spread_j = 0
+                for k in range(5):
+                    if len(event) > 8:
+                        spread_j += abs(event[1] - event[3 + k])
+                    else:
+                        spread_j = 99
+                sum_spread += spread_j / 5
+            spread_black.append(sum_spread / float(aver))
+            print '\r', clk, "{0:2.2f}".format(spread_black[clk]),
+            sys.stdout.flush()
+            self.api.daqStop()
+        print
+
+        # find the best phase
+        spread = []
+        n_levels = len(level)
+        for i in range(len(level[0])):
+            sum_level = 0
+            sum_spread = 0
+            for j in range(n_levels):
+                sum_level += level[j][i]
+            for j in range(n_levels):
+                if level[j][i] != 0:
+                    sum_spread += abs(sum_level / n_levels - level[j][i])
+                else:
+                    sum_spread = 99 * n_levels
+                    break
+            spread.append(sum_spread / n_levels)
+        # print 'spread: ',
+        # for spd in spread:
+        #     print "{0:2.2f}".format(spd),
+        # print
+        best_clk = 99
+        min_spread = 99
+        for i in range(len(spread)):
+            if spread[i] < min_spread:
+                min_spread = spread[i]
+                best_clk = x[i]
+        print
+        print 'best clk: ', best_clk
+        print 'black level spread: ', best_clk, spread_black[best_clk], best_clk + 1, spread_black[best_clk + 1],
+        print best_clk - 1, spread_black[best_clk - 1]
+        self.setClock(best_clk)
+
+        # save the data
+        f = open('levels1.txt', 'w')
+        for i in range(len(cols)):
+            for j in level[i]:
+                f.write(str(j) + ' ')
+            f.write("\n")
+        for i in x:
+            f.write(str(i) + ' ')
+        f.close()
+
+        self.enable_pix(5, 12)
+        self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
+        plotdata = self.addressLevelScan()
+        plot = Plotter.create_th1(plotdata, -512, +512, "Address Levels", "ADC", "#")
+        self.window.histos.append(plot)
+        self.window.update()
+
+        Plotter.mg = ROOT.TMultiGraph()
+        Plotter.mg.Draw("APL")
+
 
 
     def complete_find_clk_delay(self):
         # return help for the cmd
         return [self.do_find_clk_delay.__doc__, '']
+
+    @arity(0, 2, [int, int])
+    def do_vary_clk(self, min_val=0, max_val=25):
+        """vary clock"""
+        self.enable_pix(5, 12)
+        for clk in range(min_val, max_val):
+            self.setClock(clk)
+            self.api.daqStart()
+            self.api.daqTrigger(1, 500)
+            event =  self.convertedRaw()
+            print clk, event
+            self.api.daqStop()
+        print
+
+    def complete_vary_clk(self):
+        # return help for the cmd
+        return [self.do_vary_clk.__doc__, '']
 
     @arity(0, 3, [str, int, int])
     def do_vary_tb_delay(self, delay="clk", min_val=0, max_val=20):
