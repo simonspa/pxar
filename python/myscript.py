@@ -796,7 +796,7 @@ class PxarCoreCmd(cmd.Cmd):
                     stop_loop = False
                     for j in range(len(cols)):
                         try:
-                            mean_value[roc][j] += event[5 + j * 6]
+                            mean_value[roc][j] += event[5 + roc * 3 + j * 6]
                         except IndexError:
                             mean_value[roc][j] = 0
                             stop_loop = True
