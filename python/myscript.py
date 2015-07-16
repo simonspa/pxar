@@ -742,14 +742,13 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_set_clock_delays.__doc__, '']
 
     @arity(0, 2, [int, int])
-    def do_find_clk_delay(self, min_val=0, max_val=25):
+    def do_find_clk_delay(self, n_rocs=0, min_val=0, max_val=25):
         """find the best clock delay setting """
         # variable declarations
         cols = [0, 2, 4, 6, 8, 10]
         rows = [44, 41, 38, 35, 32, 29]     # special pixel setting for splitting
         n_triggers = 100
         n_levels = len(cols)
-        n_rocs = 1
         clk_x = []
         levels_y = []
         mean_value = []
@@ -790,7 +789,7 @@ class PxarCoreCmd(cmd.Cmd):
                     spread_j = 0
                     for j in range(5):
                         try:
-                            spread_j += abs(event[1] - event[3 + n_levels * 6 + j])
+                            spread_j += abs(event[1 + roc * 3] - event[3 + roc * 3 + n_levels * 6 + j])
                         except IndexError:
                             spread_j = 99
                             break
@@ -812,6 +811,8 @@ class PxarCoreCmd(cmd.Cmd):
                 print '\rclk-delay:', "{0:2d}".format(clk), 'black lvl spread: ', "{0:2.2f}".format(spread_black[roc][clk]),
                 sys.stdout.flush()
                 self.api.daqStop()
+            self.api.maskAllPixels(1, roc)
+            self.api.testAllPixels(0, roc)
         print
 
         # find the best phase
