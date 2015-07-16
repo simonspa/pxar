@@ -744,7 +744,7 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0, 2, [int, int])
     def do_find_clk_delay(self, min_val=0, max_val=25):
         """find the best clock delay setting """
-        # save all the level settings
+        # variable declarations
         cols = [0, 2, 4, 6, 8, 10]
         rows = [44, 41, 38, 35, 32, 29]     # special pixel setting for splitting
         n_triggers = 100
@@ -753,18 +753,24 @@ class PxarCoreCmd(cmd.Cmd):
         clk_x = []
         levels_y = []
         mean_value = []
+        spread_black = []
 
+        # find the address levels
         print "get level splitting: "
         for roc in range(n_rocs):
             self.api.maskAllPixels(1, roc)
             self.api.testAllPixels(0, roc)
             levels_y.append([])
             mean_value.append([])
+            spread_black.append([])
             for i in range(len(cols)):
                 levels_y[roc].append([])
                 mean_value[roc].append(0)
                 self.api.testPixel(cols[i], rows[i], 1, roc)
                 self.api.maskPixel(cols[i], rows[i], 0, roc)
+            # active pixel for black level spread
+            self.api.testPixel(15, 59 , 1, roc)
+            self.api.maskPixel(15, 59 , 0, roc)
 
             for clk in range(min_val, max_val):
                 # clear mean values
@@ -775,6 +781,19 @@ class PxarCoreCmd(cmd.Cmd):
                 self.setClock(clk)
                 self.api.daqStart()
                 self.api.daqTrigger(n_triggers, 500)
+                # black level spread
+                # sum_spread = 0
+                # for j in range(n_triggers):
+                #     event = self.convertedRaw()
+                #     spread_j = 0
+                #     for k in range(5):
+                #         if len(event) > 8:
+                #             spread_j += abs(event[1] - event[3 + k])
+                #         else:
+                #             spread_j = 99
+                #     sum_spread += spread_j / 5
+                # spread_black.append(sum_spread / float(n_triggers))
+                # print '\r', clk, "{0:2.2f}".format(spread_black[clk]),
                 # averaging over n_triggers
                 for k in range(n_triggers):
                     event = self.convertedRaw()
@@ -837,10 +856,6 @@ class PxarCoreCmd(cmd.Cmd):
                     sum_spread = 99 * n_levels
                     break
             spread.append(sum_spread / n_levels)
-        # print 'spread: ',
-        # for spd in spread:
-        #     print "{0:2.2f}".format(spd),
-        # print
         best_clk = 99
         min_spread = 99
         for i in range(len(spread)):
@@ -853,18 +868,23 @@ class PxarCoreCmd(cmd.Cmd):
         print best_clk - 1, spread_black[best_clk - 1]
         self.setClock(best_clk)
 
-        # save the data
-        file_name = 'levels2.txt'
-        f = open(file_name, 'w')
-        for i in range(len(cols)):
-            for j in levels_y[i]:
-                f.write(str(j) + ' ')
-            f.write("\n")
-        for i in clk_x:
-            f.write(str(i) + ' ')
-        f.close()
-        print 'saved the levels to file', file_name
+        # save the data to file (optional)
+        file_name = []
+        for i_roc in range(n_rocs):
+            file_name.append('levels_roc' + str(i_roc) + '.txt')
+            f = open(file_name[i_roc], 'w')
+            for i in range(n_levels):
+                for j in levels_y[i_roc][i]:
+                    f.write(str(j) + ' ')
+                f.write("\n")
+            for i in clk_x:
+                f.write(str(i) + ' ')
+            f.close()
+        print 'saved the levels to file(s)'
+        for name in file_name:
+            print name
 
+        # plot address levels
         self.enable_pix(5, 12)
         self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
         plotdata = self.addressLevelScan()
@@ -872,8 +892,8 @@ class PxarCoreCmd(cmd.Cmd):
         self.window.histos.append(plot)
         self.window.update()
 
-        Plotter.mg = ROOT.TMultiGraph()
-        Plotter.mg.Draw("APL")
+        # Plotter.mg = ROOT.TMultiGraph()
+        # Plotter.mg.Draw("APL")
 
 
 
