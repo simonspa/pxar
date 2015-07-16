@@ -823,7 +823,7 @@ class PxarCoreCmd(cmd.Cmd):
                 spread_black[roc].append(sum_spread / float(n_triggers))
                 for i in range(n_levels):
                     levels_y[roc][i].append(mean_value[roc][i] / float(n_triggers))
-                print '\rclk-delay:', "{0:2d}".format(clk), 'black lvl spread: ', "{0:2.2f}".format(spread_black[clk]),
+                print '\rclk-delay:', "{0:2d}".format(clk), 'black lvl spread: ', "{0:2.2f}".format(spread_black[roc][clk]),
                 sys.stdout.flush()
                 self.api.daqStop()
         print
