@@ -781,20 +781,6 @@ class PxarCoreCmd(cmd.Cmd):
                 self.setClock(clk)
                 self.api.daqStart()
                 self.api.daqTrigger(n_triggers, 500)
-                # black level spread
-                # sum_spread = 0
-                # for j in range(n_triggers):
-                #     event = self.convertedRaw()
-                #     spread_j = 0
-                #     for k in range(5):
-                #         if len(event) > 8:
-                #             spread_j += abs(event[1] - event[3 + k])
-                #         else:
-                #             spread_j = 99
-                #     sum_spread += spread_j / 5
-                # spread_black.append(sum_spread / float(n_triggers))
-                # print '\r', clk, "{0:2.2f}".format(spread_black[clk]),
-                # averaging over n_triggers
                 sum_spread = 0
                 for k in range(n_triggers):
                     event = self.convertedRaw()
@@ -826,32 +812,6 @@ class PxarCoreCmd(cmd.Cmd):
                 print '\rclk-delay:', "{0:2d}".format(clk), 'black lvl spread: ', "{0:2.2f}".format(spread_black[roc][clk]),
                 sys.stdout.flush()
                 self.api.daqStop()
-        print
-        print levels_y[0][0]
-        print levels_y[0][1]
-
-        # look for black level
-        print "check black level spread"
-        self.enable_pix(15, 59)
-        spread_black = []
-        for clk in range(min_val, max_val):
-            self.setClock(clk)
-            self.api.daqStart()
-            self.api.daqTrigger(n_triggers, 500)
-            sum_spread = 0
-            for j in range(n_triggers):
-                event = self.convertedRaw()
-                spread_j = 0
-                for k in range(5):
-                    if len(event) > 8:
-                        spread_j += abs(event[1] - event[3 + k])
-                    else:
-                        spread_j = 99
-                sum_spread += spread_j / 5
-            spread_black.append(sum_spread / float(n_triggers))
-            print '\r', clk, "{0:2.2f}".format(spread_black[clk]),
-            sys.stdout.flush()
-            self.api.daqStop()
         print
 
         # find the best phase
