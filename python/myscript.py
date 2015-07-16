@@ -748,6 +748,7 @@ class PxarCoreCmd(cmd.Cmd):
         cols = [0, 2, 4, 6, 8, 10]
         rows = [44, 41, 38, 35, 32, 29]     # special pixel setting for splitting
         n_triggers = 100
+        n_levels = len(cols)
         n_rocs = 1
         clk_x = []
         levels_y = []
@@ -809,15 +810,14 @@ class PxarCoreCmd(cmd.Cmd):
 
         # find the best phase
         spread = []
-        n_levels = len(levels_y)
-        for i in range(len(levels_y[0])):
+        for i in range(len(levels_y[0][0])):
             sum_level = 0
             sum_spread = 0
             for j in range(n_levels):
-                sum_level += levels_y[j][i]
+                sum_level += levels_y[0][j][i]
             for j in range(n_levels):
-                if levels_y[j][i] != 0:
-                    sum_spread += abs(sum_level / n_levels - levels_y[j][i])
+                if levels_y[0][j][i] != 0:
+                    sum_spread += abs(sum_level / n_levels - levels_y[0][j][i])
                 else:
                     sum_spread = 99 * n_levels
                     break
