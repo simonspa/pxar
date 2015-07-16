@@ -779,10 +779,13 @@ class PxarCoreCmd(cmd.Cmd):
                         except IndexError:
                             mean_value = 0
                             break
+                    print event
                     levels_y[roc][j].append(mean_value / float(n_triggers))
-                print '\rclk-delay: ',  "{0:2d}".format(clk),
+                print '\rclk-delay:', "{0:2d}".format(clk),
                 sys.stdout.flush()
                 self.api.daqStop()
+        print
+        print levels_y[0][0]
 
         # look for black level
         print "check black level spread"
@@ -839,7 +842,8 @@ class PxarCoreCmd(cmd.Cmd):
         self.setClock(best_clk)
 
         # save the data
-        f = open('levels1.txt', 'w')
+        file_name = 'levels2.txt'
+        f = open(file_name, 'w')
         for i in range(len(cols)):
             for j in levels_y[i]:
                 f.write(str(j) + ' ')
@@ -847,6 +851,7 @@ class PxarCoreCmd(cmd.Cmd):
         for i in clk_x:
             f.write(str(i) + ' ')
         f.close()
+        print 'saved the levels to file', file_name
 
         self.enable_pix(5, 12)
         self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
