@@ -742,7 +742,7 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_set_clock_delays.__doc__, '']
 
     @arity(0, 2, [int, int])
-    def do_find_clk_delay(self, n_rocs=0, min_val=0, max_val=25):
+    def do_find_clk_delay(self, n_rocs=1, min_val=0, max_val=25):
         """find the best clock delay setting """
         # variable declarations
         cols = [0, 2, 4, 6, 8, 10]
@@ -783,8 +783,6 @@ class PxarCoreCmd(cmd.Cmd):
                 sum_spread = 0
                 for k in range(n_triggers):
                     event = self.convertedRaw()
-                    if not k:
-                        print event
                     # black level spread
                     spread_j = 0
                     for j in range(5):
@@ -837,8 +835,8 @@ class PxarCoreCmd(cmd.Cmd):
                 best_clk = clk_x[i]
         print
         print 'best clk: ', best_clk
-        print 'black level spread: ', best_clk, spread_black[best_clk], best_clk + 1, spread_black[best_clk + 1],
-        print best_clk - 1, spread_black[best_clk - 1]
+        print 'black level spread: ', best_clk, spread_black[0][best_clk], best_clk + 1, spread_black[0][best_clk + 1],
+        print best_clk - 1, spread_black[0][best_clk - 1]
         self.setClock(best_clk)
 
         # save the data to file (optional)
