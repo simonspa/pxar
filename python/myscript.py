@@ -727,53 +727,62 @@ class PxarCoreCmd(cmd.Cmd):
         print "set toutdelay to: ", tout
         self.api.setTestboardDelays({"tindelay": tin, "toutdelay": tout})
 
-    def complete_setTinTout(self, text, line, start_index, end_index):
+    def complete_setTinTout(self):
         # return help for the cmd
         return [self.do_setTinTout.__doc__, '']
 
     @arity(1, 1, [int])
-    def do_setClockDelays(self, value):
+    def do_set_clock_delays(self, value):
         """SetClockDelays [value of clk and ctr]: sets the two TB delays clk and ctr """
         print "TB delays clk and ctr set to: ", value
         self.setClock(value)
 
-    def complete_setClockDelays(self):
+    def complete_set_clock_delays(self):
         # return help for the cmd
-        return [self.do_setClockDelays.__doc__, '']
+        return [self.do_set_clock_delays.__doc__, '']
 
     @arity(0, 2, [int, int])
     def do_find_clk_delay(self, min_val=0, max_val=25):
         """find the best clock delay setting """
         # save all the level settings
         cols = [0, 2, 4, 6, 8, 10]
-        rows = [44, 41, 38, 35, 32, 29]
-        aver = 100
-        x = []
-        level = []
+        rows = [44, 41, 38, 35, 32, 29]     # special pixel setting for splitting
+        n_triggers = 100
+        n_rocs = 1
+        clk_x = []
+        levels_y = []
+
         print "get level splitting: "
-        for i in range(len(cols)):
-            level.append([])
-        for k in range(len(cols)):
-            self.enable_pix(cols[k], rows[k])
+        for roc in range(n_rocs):
+            self.api.maskAllPixels(1, roc)
+            self.api.testAllPixels(0, roc)
+            levels_y.append([])
+            for i in range(len(cols)):
+                levels_y[roc].append([])
+                # activate all split pixels
+                self.api.testPixel(cols[i], rows[i], 1, roc)
+                self.api.maskPixel(cols[i], rows[i], 0, roc)
+
             for clk in range(min_val, max_val):
-                mean = 0
-                if not k:
-                    x.append(clk)
+                if not roc:
+                    clk_x.append(clk)
                 self.setClock(clk)
                 self.api.daqStart()
-                self.api.daqTrigger(aver, 500)
-                for j in range(aver):
-                    event = self.convertedRaw()
-                    if len(event) > 8:
-                        mean += event[5]
-                    else:
-                        mean = 0
-                        break
-                level[k].append(mean / float(aver))
-                print '\rpixel: ', k, 'clk-delay: ',  "{0:2d}".format(clk),
+                self.api.daqTrigger(n_triggers, 500)
+                for j in range(len(cols)):
+                    mean_value = 0
+                    for k in range(n_triggers):
+                        event = self.convertedRaw()
+                        try:
+                            mean_value += event[5 + j * 6]
+                        except IndexError:
+                            mean_value = 0
+                            break
+                    levels_y[roc][j].append(mean_value / float(n_triggers))
+                print '\rclk-delay: ',  "{0:2d}".format(clk),
                 sys.stdout.flush()
                 self.api.daqStop()
-        print
+
         # look for black level
         print "check black level spread"
         self.enable_pix(15, 59)
@@ -781,9 +790,9 @@ class PxarCoreCmd(cmd.Cmd):
         for clk in range(min_val, max_val):
             self.setClock(clk)
             self.api.daqStart()
-            self.api.daqTrigger(aver, 500)
+            self.api.daqTrigger(n_triggers, 500)
             sum_spread = 0
-            for j in range(aver):
+            for j in range(n_triggers):
                 event = self.convertedRaw()
                 spread_j = 0
                 for k in range(5):
@@ -792,7 +801,7 @@ class PxarCoreCmd(cmd.Cmd):
                     else:
                         spread_j = 99
                 sum_spread += spread_j / 5
-            spread_black.append(sum_spread / float(aver))
+            spread_black.append(sum_spread / float(n_triggers))
             print '\r', clk, "{0:2.2f}".format(spread_black[clk]),
             sys.stdout.flush()
             self.api.daqStop()
@@ -800,15 +809,15 @@ class PxarCoreCmd(cmd.Cmd):
 
         # find the best phase
         spread = []
-        n_levels = len(level)
-        for i in range(len(level[0])):
+        n_levels = len(levels_y)
+        for i in range(len(levels_y[0])):
             sum_level = 0
             sum_spread = 0
             for j in range(n_levels):
-                sum_level += level[j][i]
+                sum_level += levels_y[j][i]
             for j in range(n_levels):
-                if level[j][i] != 0:
-                    sum_spread += abs(sum_level / n_levels - level[j][i])
+                if levels_y[j][i] != 0:
+                    sum_spread += abs(sum_level / n_levels - levels_y[j][i])
                 else:
                     sum_spread = 99 * n_levels
                     break
@@ -822,7 +831,7 @@ class PxarCoreCmd(cmd.Cmd):
         for i in range(len(spread)):
             if spread[i] < min_spread:
                 min_spread = spread[i]
-                best_clk = x[i]
+                best_clk = clk_x[i]
         print
         print 'best clk: ', best_clk
         print 'black level spread: ', best_clk, spread_black[best_clk], best_clk + 1, spread_black[best_clk + 1],
@@ -832,10 +841,10 @@ class PxarCoreCmd(cmd.Cmd):
         # save the data
         f = open('levels1.txt', 'w')
         for i in range(len(cols)):
-            for j in level[i]:
+            for j in levels_y[i]:
                 f.write(str(j) + ' ')
             f.write("\n")
-        for i in x:
+        for i in clk_x:
             f.write(str(i) + ' ')
         f.close()
 
@@ -1921,7 +1930,7 @@ class PxarCoreCmd(cmd.Cmd):
     do_vad = do_varyAllDelays
     do_dre = do_daqRawEvent
     do_de = do_daqEvent
-    do_sc = do_setClockDelays
+    do_sc = do_set_clock_delays
     do_vc = do_varyClk
     do_arm1 = do_enableOnePixel
     do_arm = do_enablePixel
