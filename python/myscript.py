@@ -3,31 +3,32 @@
 Simple Example Python Script Using the Pxar API.
 """
 
+
 # ==============================================
 # IMPORTS
 # ==============================================
-
 from PyPxarCore import Pixel, PixelConfig, PyPxarCore, PyRegisterDictionary, PyProbeDictionary
-from numpy import zeros  # set_printoptions, nan
+from numpy import zeros
 from pxar_helpers import *  # arity decorator, PxarStartup, PxarConfigFile, PxarParametersFile and others
 
 # Try to import ROOT:
-guiAvailable = True
+gui_available = True
 try:
     import ROOT
-
-    ROOT.PyConfig.IgnoreCommandLineOptions = True
+except ImportError:
+    gui_available = False
+    pass
+if gui_available:
+    from ROOT import gClient, PyConfig
+    PyConfig.IgnoreCommandLineOptions = True
     from pxar_gui import PxarGui
     from pxar_plotter import Plotter
-except ImportError:
-    guiAvailable = False
-    pass
+
 
 import cmd  # for command interface and parsing
-import os  # for file system cmds
+import os   # for file system cmds
 import sys
 from time import time, sleep
-import array
 
 
 # set up the DAC and probe dictionaries
@@ -37,29 +38,28 @@ probedict = PyProbeDictionary()
 
 class PxarCoreCmd(cmd.Cmd):
     """Simple command processor for the pxar core API."""
-    test = 0
 
     # ==============================================
     # GLOBAL FUNCTIONS
     # ==============================================
-    def __init__(self, api, gui, dir):
+    def __init__(self, api, gui, conf_dir):
         cmd.Cmd.__init__(self)
         self.fullOutput = False
         self.prompt = "pxarCore =>> "
         self.intro = "Welcome to the pxar core console!"  # defaults to None
         self.api = api
-        self.dir = dir
+        self.dir = conf_dir
         self.window = None
-        if (gui and guiAvailable):
-            self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
-        elif (gui and not guiAvailable):
+        if gui and gui_available:
+            self.window = PxarGui(gClient.GetRoot(), 800, 800)
+        elif gui and not gui_available:
             print "No GUI available (missing ROOT library)"
 
     def plot_eventdisplay(self, data):
         pixels = list()
         # Multiple events:
-        if (isinstance(data, list)):
-            if (not self.window):
+        if isinstance(data, list):
+            if not self.window:
                 for evt in data:
                     print evt
                 return
@@ -67,7 +67,7 @@ class PxarCoreCmd(cmd.Cmd):
                 for px in evt.pixels:
                     pixels.append(px)
         else:
-            if (not self.window):
+            if not self.window:
                 print data
                 return
             for px in data.pixels:
@@ -75,7 +75,7 @@ class PxarCoreCmd(cmd.Cmd):
         self.plot_map(pixels, 'Event Display', True)
 
     def plot_map(self, data, name, count=False):
-        if (not self.window):
+        if not self.window:
             print data
             return
 
@@ -101,23 +101,23 @@ class PxarCoreCmd(cmd.Cmd):
         self.window.histos.append(plot)
         self.window.update()
 
-    def plot_1d(self, data, name, dacname, min, max):
-        if (not self.window):
-            print_data(self.fullOutput, data, (max - min) / len(data))
+    def plot_1d(self, data, name, dacname, min_val, max_val):
+        if not self.window:
+            print_data(self.fullOutput, data, (max_val - min_val) / len(data))
             return
 
         # Prepare new numpy matrix:
         d = zeros(len(data))
         for idac, dac in enumerate(data):
-            if (dac):
+            if dac:
                 d[idac] = dac[0].value
 
-        plot = Plotter.create_th1(d, min, max, name, dacname, name)
+        plot = Plotter.create_th1(d, min_val, max_val, name, dacname, name)
         self.window.histos.append(plot)
         self.window.update()
 
     def plot_2d(self, data, name, dac1, step1, min1, max1, dac2, step2, min2, max2):
-        if (not self.window):
+        if not self.window:
             for idac, dac in enumerate(data):
                 dac1 = min1 + (idac / ((max2 - min2) / step2 + 1)) * step1
                 dac2 = min2 + (idac % ((max2 - min2) / step2 + 1)) * step2
@@ -133,7 +133,7 @@ class PxarCoreCmd(cmd.Cmd):
         d = zeros((bins1, bins2))
 
         for idac, dac in enumerate(data):
-            if (dac):
+            if dac:
                 bin1 = (idac / ((max2 - min2) / step2 + 1))
                 bin2 = (idac % ((max2 - min2) / step2 + 1))
                 d[bin1][bin2] = dac[0].value
@@ -142,89 +142,78 @@ class PxarCoreCmd(cmd.Cmd):
         self.window.histos.append(plot)
         self.window.update()
 
-    def do_gui(self, line):
+    def do_gui(self):
         """Open the ROOT results browser"""
-        if not guiAvailable:
+        if not gui_available:
             print "No GUI available (missing ROOT library)"
             return
         if self.window:
             return
         self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
 
-    def varyDelays(self, tindelay, toutdelay, verbose=False):
-        self.api.setTestboardDelays({"tindelay": tindelay, "toutdelay": toutdelay})
+    def daq_converted_raw(self, verbose=False):
         self.api.daqStart()
         self.api.daqTrigger(1, 500)
-        rawEvent = []
-
-        try:
-            rawEvent = self.api.daqGetRawEvent()
-        except RuntimeError:
-            pass
-
-        if verbose: print "raw Event:\t\t", rawEvent
-        nCount = 0
-        for i in rawEvent:
-            i = i & 0x0fff
-            if i & 0x0800:
-                i -= 4096
-            rawEvent[nCount] = i
-            nCount += 1
-        if verbose: print "converted Event:\t", rawEvent
+        event = self.converted_raw_event(verbose)
         self.api.daqStop()
-        return rawEvent
+        return event
 
-    def convertRawEvent(self, verbose=False):
-
-        self.api.daqStart()
-        self.api.daqTrigger(1, 500)
-        rawEvent = []
-        try:
-            rawEvent = self.api.daqGetRawEvent()
-        except RuntimeError:
-            pass
-        self.api.daqStop()
-        if verbose: print "raw Event:\t\t", rawEvent
-        nCount = 0
-        for i in rawEvent:
-            i = i & 0x0fff
-            if i & 0x0800:
-                i -= 4096
-            rawEvent[nCount] = i
-            nCount += 1
-        if verbose: print "converted Event:\t", rawEvent
-        return rawEvent
-
-    def convertedRaw(self):
-
+    def converted_raw_event(self, verbose=False):
         event = []
         try:
             event = self.api.daqGetRawEvent()
-        except RuntimeError:
+        except RuntimeError, err:
+            print err
             pass
-        nCount = 0
+        if verbose:
+            print "raw Event:\t\t", event
+        count = 0
         for i in event:
-            i = i & 0x0fff
+            i &= 0x0fff
             if i & 0x0800:
                 i -= 4096
-            event[nCount] = i
-            nCount += 1
+            event[count] = i
+            count += 1
+        if verbose:
+            print "converted Event:\t", event
         return event
 
-    def addressLevelScan(self):
+    def translate_levels(self):
+        event = self.converted_raw_event()
+        hits = len(event) / 6
+        addresses = []
+        for hit in range(hits):
+            levels = []
+            for level in range(3, 8):
+                y = self.translate_level(event[level + 6 * hit], event)
+                levels.append(y)
+            addresses[hit].append(self.get_addresses(levels))
+            addresses[hit].append(event[8 + 6 * hit])
+            print 'Hit:', "{0:2d}".format(hit), addresses[hit]
+        return addresses
+
+    def get_levels(self, convert_header=False):
+        event = self.converted_raw_event()
+        hits = len(event) / 6
+        for hit in range(hits):
+            for level in range(3, 8):
+                event[level + 6 * hit] = self.translate_level(event[level + 6 * hit], event)
+        if convert_header:
+            event[0], event[1] = self.translate_level(event[0], event), self.translate_level(event[1], event)
+        return event
+
+    def address_level_scan(self):
         self.api.daqStart()
         self.api.daqTrigger(1000, 500)  # choose here how many triggers you want to send (crucial for the time it takes)
         plotdata = zeros(1024)
         try:
 
             while True:
-                s = ""
-                p = ""
                 pos = -3
                 dat = self.api.daqGetRawEvent()
                 for i in dat:
                     # REMOVE HEADER
-                    i = i & 0x0fff
+                    i &= 0x0fff
                     # Remove PH from hits:
                     if pos == 5:
                         pos = 0
@@ -239,32 +228,102 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.daqStop()
         return plotdata
 
-    def setClock(self, value):
+    def set_clock(self, value):
         # sets all the delays to the right value if you want to change clk
         self.api.setTestboardDelays({"clk": value})
         self.api.setTestboardDelays({"ctr": value})
         self.api.setTestboardDelays({"sda": value + 11})
         self.api.setTestboardDelays({"tin": value + 2})
 
-    def getAddressLevels(self):
-        event = self.convertRawEvent(verbose=False)
+    def get_address_levels(self):
+        event = self.daq_converted_raw(verbose=False)
         length = len(event)
-        nEvent = (length - 3) / 6  # number of single events
+        n_events = (length - 3) / 6  # number of single events
         addresses = []
-        for i in range(5 * nEvent):  # fill the list with an many zero as we got addresslevels
+        for i in range(5 * n_events):  # fill the list with an many zero as we got addresslevels
             addresses.append(0)
         pos = 0
-        addressIndex = 0
-        for eventIndex in range(5 * nEvent + nEvent):
+        address_index = 0
+        for eventIndex in range(5 * n_events + n_events):
             if pos == 5:
                 pos = 0
                 continue
-            addresses[addressIndex] = int(round(float(event[3 + eventIndex]) / 50, 0))
-            addressIndex += 1
+            addresses[address_index] = int(round(float(event[3 + eventIndex]) / 50, 0))
+            address_index += 1
             pos += 1
         return addresses
 
-    def codeEvent(self, row, col, number):
+    def get_averaged_level(self, it):
+        levels = [0, 0, 0, 0, 0]
+        header = [0, 0]
+        self.api.daqStart()
+        self.api.daqTrigger(30, 500)
+        data = []
+        for i in range(it):
+            data = self.converted_raw_event()
+            if len(data) == 3:
+                for j in range(2):
+                    header[j] += data[j]
+            elif len(data) == 9:
+                for j in range(5):
+                    levels[j] += data[j + 3]
+        if len(data) == 3:
+            for j in range(2):
+                header[j] = round(header[j] / float(it), 1)
+            print header
+        elif len(data) == 9:
+            for j in range(5):
+                levels[j] = round(levels[j] / float(it), 1)
+            print levels
+        self.api.daqStop()
+
+    def rate(self, duration):
+        self.api.daqStart()
+        t = time()
+        t1 = 0
+        all_trig = 0
+        while t1 < duration:
+            trig_time = time()
+            triggers = 0
+            while triggers < 5:
+                try:
+                    self.api.daqGetEvent()
+                    triggers += 1
+                    all_trig += 1
+                except RuntimeError:
+                    pass
+            print '\r{0:02.2f}'.format(triggers / (time() - trig_time)),
+            sys.stdout.flush()
+            t1 = time() - t
+        print "complete rate", '{0:02.2f}'.format(all_trig / (time() - t))
+        # print time.time()-t
+        self.api.daqStop()
+
+    def enable_pix(self, row=5, col=12, roc=0):
+        self.api.testAllPixels(0, roc)
+        self.api.maskAllPixels(1, roc)
+        self.api.testPixel(row, col, 1, roc)
+        self.api.maskPixel(row, col, 0, roc)
+
+    @staticmethod
+    def translate_level(level, event):
+        y = level - event[1]
+        y += (event[1] - event[0]) / 8
+        y /= (event[1] - event[0]) / 4
+        return y + 1
+
+    @staticmethod
+    def get_addresses(levels):
+        col = levels[0 + h] * 12 + levels[1] * 2 + levels[4] % 2
+        row = 80 - (levels[2] * 18 + levels[3] * 3 + levels[4] / 2)
+        return [col, row]
+
+    @staticmethod
+    def elapsed_time(start):
+        print 'elapsed time:', '{0:0.2f}'.format(time() - start), 'seconds'
+
+    @staticmethod
+    def code_event(row, col, number):
         vec = []
         for i in range(27):
             vec.append(0)
@@ -275,7 +334,8 @@ class PxarCoreCmd(cmd.Cmd):
             if number % pow(2, i + 1) != 0:
                 number -= pow(2, i)
                 vec[-pos - 1] = 1
-            if pos == 3: pos += 1
+            if pos == 3:
+                pos += 1
             pos += 1
 
         # row convertion
@@ -318,75 +378,6 @@ class PxarCoreCmd(cmd.Cmd):
             dec += int(i) * pow(2, length - 1)
             length -= 1
         return dec
-
-    def getRawEvent(self):
-        data = []
-        try:
-            data = self.api.daqGetRawEvent()
-            nCount = 0
-            for i in data:
-                i = i & 0x0fff
-                if i & 0x0800:
-                    i -= 4096
-                data[nCount] = int(round(float(i - 10) / 50, 0)) + 1
-                nCount += 1
-        except RuntimeError:
-            pass
-        return data
-
-    def averagedLevel(self, it):
-        levels = [0, 0, 0, 0, 0]
-        header = [0, 0]
-        self.api.daqStart()
-        self.api.daqTrigger(30, 500)
-        for i in range(it):
-            data = self.convertedRaw()
-            if len(data) == 3:
-                for j in range(2):
-                    header[j] += data[j]
-            elif len(data) == 9:
-                for j in range(5):
-                    levels[j] += data[j + 3]
-        if len(data) == 3:
-            for j in range(2):
-                header[j] = round(header[j] / float(it), 1)
-            print header
-        elif len(data) == 9:
-            for j in range(5):
-                levels[j] = round(levels[j] / float(it), 1)
-            print levels
-        self.api.daqStop()
-
-    def rate(self, duration):
-        self.api.daqStart()
-        t = time.time()
-        t1 = 0
-        allTrig = 0
-        while t1 < duration:
-            tTrig = time.time()
-            nTriggers = 0
-            while nTriggers < 5:
-                try:
-                    data = self.api.daqGetEvent()
-                    nTriggers += 1
-                    allTrig += 1
-                except RuntimeError:
-                    pass
-            print '\r{0:02.2f}'.format(nTriggers / (time.time() - tTrig)),
-            sys.stdout.flush()
-            t1 = time.time() - t
-        print "complete rate", '{0:02.2f}'.format(allTrig / (time.time() - t))
-        # print time.time()-t
-        self.api.daqStop()
-
-    def elapsed_time(self, start):
-        print 'elapsed time:', '{0:0.2f}'.format(time() - start), 'seconds'
-
-    def enable_pix(self, row=5, col=12, roc=0):
-        self.api.testAllPixels(0, roc)
-        self.api.maskAllPixels(1, roc)
-        self.api.testPixel(row, col, 1, roc)
-        self.api.maskPixel(row, col, 0, roc)
 
     # ==============================================
     # CMD LINE INTERFACE FUNCTIONS
@@ -662,16 +653,16 @@ class PxarCoreCmd(cmd.Cmd):
     def do_daqGetRawEvent(self, convert=1):
         """daqGetRawEvent [convert]: read one converted event from the event buffer, for convert = 0 it will print the addresslevels"""
         if convert == 1:
-            data = self.convertedRaw()
+            data = self.converted_raw_event()
             print data
         elif convert == 2:
-            data = self.getRawEvent()
+            data = self.get_levels(True)
             print data
         elif convert == 0:
             data = self.api.daqGetRawEvent()
             print data
         elif convert == 3:
-            data = self.convertedRaw()
+            data = self.converted_raw_event()
             print "UB", data[0], "\tlength", len(data)
 
     def complete_daqGetRawEvent(self, text, line, start_index, end_index):
@@ -710,32 +701,35 @@ class PxarCoreCmd(cmd.Cmd):
     # ==============================================
     # ADDITIONAL TEST FUNCTIONS FOR CLI
     # ==============================================
+
+    # ==============================================
+    # Test Board Delays
     @arity(2, 2, [str, int])
-    def do_setTBdelay(self, dacname, value):
-        """setTBdelays: returns analog DTB current"""
+    def do_set_tb_delay(self, dacname, value):
+        """setTBdelays [delay] [value]: sets a single test board delay to a certain value"""
         print "set TB DACs: ", dacname, value
         self.api.setTestboardDelays({dacname: value})
 
-    def complete_setTBdelay(self, text, line, start_index, end_index):
+    def complete_set_tb_delay(self):
         # return help for the cmd
-        return [self.do_setTBdelay.__doc__, '']
+        return [self.do_set_tb_delay.__doc__, '']
 
     @arity(0, 2, [int, int])
-    def do_setTinTout(self, tin=14, tout=8):
+    def do_set_tin_tout(self, tin=14, tout=8):
         """setTinTout [tin] [tout]: sets tindelay to value tin and toutdelay to tout"""
         print "set tindelay to: ", tin
         print "set toutdelay to: ", tout
         self.api.setTestboardDelays({"tindelay": tin, "toutdelay": tout})
 
-    def complete_setTinTout(self):
+    def complete_set_tin_tout(self):
         # return help for the cmd
-        return [self.do_setTinTout.__doc__, '']
+        return [self.do_set_tin_tout.__doc__, '']
 
     @arity(1, 1, [int])
     def do_set_clock_delays(self, value):
         """SetClockDelays [value of clk and ctr]: sets the two TB delays clk and ctr """
         print "TB delays clk and ctr set to: ", value
-        self.setClock(value)
+        self.set_clock(value)
 
     def complete_set_clock_delays(self):
         # return help for the cmd
@@ -746,7 +740,7 @@ class PxarCoreCmd(cmd.Cmd):
         """find the best clock delay setting """
         # variable declarations
         cols = [0, 2, 4, 6, 8, 10]
-        rows = [44, 41, 38, 35, 32, 29]     # special pixel setting for splitting
+        rows = [44, 41, 38, 35, 32, 29]  # special pixel setting for splitting
         n_triggers = 100
         n_levels = len(cols)
         clk_x = []
@@ -768,8 +762,8 @@ class PxarCoreCmd(cmd.Cmd):
                 self.api.testPixel(cols[i], rows[i], 1, roc)
                 self.api.maskPixel(cols[i], rows[i], 0, roc)
             # active pixel for black level spread
-            self.api.testPixel(15, 59 , 1, roc)
-            self.api.maskPixel(15, 59 , 0, roc)
+            self.api.testPixel(15, 59, 1, roc)
+            self.api.maskPixel(15, 59, 0, roc)
 
             for clk in range(min_val, max_val):
                 # clear mean values
@@ -777,12 +771,12 @@ class PxarCoreCmd(cmd.Cmd):
                     mean_value[roc][i] = 0
                 if not roc:
                     clk_x.append(clk)
-                self.setClock(clk)
+                self.set_clock(clk)
                 self.api.daqStart()
                 self.api.daqTrigger(n_triggers, 500)
                 sum_spread = 0
                 for k in range(n_triggers):
-                    event = self.convertedRaw()
+                    event = self.converted_raw_event()
                     # black level spread
                     spread_j = 0
                     for j in range(5):
@@ -806,7 +800,8 @@ class PxarCoreCmd(cmd.Cmd):
                 spread_black[roc].append(sum_spread / float(n_triggers))
                 for i in range(n_levels):
                     levels_y[roc][i].append(mean_value[roc][i] / float(n_triggers))
-                print '\rclk-delay:', "{0:2d}".format(clk), 'black lvl spread: ', "{0:2.2f}".format(spread_black[roc][clk]),
+                print '\rclk-delay:', "{0:2d}".format(clk), 'black lvl spread: ', "{0:2.2f}".format(
+                    spread_black[roc][clk]),
                 sys.stdout.flush()
                 self.api.daqStop()
             self.api.maskAllPixels(1, roc)
@@ -837,7 +832,7 @@ class PxarCoreCmd(cmd.Cmd):
         print 'best clk: ', best_clk
         print 'black level spread: ', best_clk, spread_black[0][best_clk], best_clk + 1, spread_black[0][best_clk + 1],
         print best_clk - 1, spread_black[0][best_clk - 1]
-        self.setClock(best_clk)
+        self.set_clock(best_clk)
 
         # save the data to file (optional)
         file_name = []
@@ -857,16 +852,11 @@ class PxarCoreCmd(cmd.Cmd):
 
         # plot address levels
         self.enable_pix(5, 12)
-        self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
-        plotdata = self.addressLevelScan()
+        self.window = PxarGui(gClient.GetRoot(), 800, 800)
+        plotdata = self.address_level_scan()
         plot = Plotter.create_th1(plotdata, -512, +512, "Address Levels", "ADC", "#")
         self.window.histos.append(plot)
         self.window.update()
-
-        # Plotter.mg = ROOT.TMultiGraph()
-        # Plotter.mg.Draw("APL")
-
-
 
     def complete_find_clk_delay(self):
         # return help for the cmd
@@ -874,13 +864,13 @@ class PxarCoreCmd(cmd.Cmd):
 
     @arity(0, 2, [int, int])
     def do_vary_clk(self, min_val=0, max_val=25):
-        """vary clock"""
+        """varies the clk settings and all other correlated delays accordingly"""
         self.enable_pix(5, 12)
         for clk in range(min_val, max_val):
-            self.setClock(clk)
+            self.set_clock(clk)
             self.api.daqStart()
             self.api.daqTrigger(1, 500)
-            event =  self.convertedRaw()
+            event = self.converted_raw_event()
             print clk, event
             self.api.daqStop()
         print
@@ -890,21 +880,27 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_vary_clk.__doc__, '']
 
     @arity(0, 3, [str, int, int])
-    def do_vary_tb_delay(self, delay="clk", min_val=0, max_val=20):
-        """find the best clock delay setting """
+    def do_scan_tb_delay(self, delay="all", min_val=0, max_val=20):
+        """vary_tb_delay [delay] [min] [max]: scans one test board delay and leaves the others constant"""
+        self.enable_pix(5, 12)
         for value in range(min_val, max_val):
-            self.api.setTestboardDelays({delay: value})
+            if delay == 'all':
+                self.set_clock(value)
+            else:
+                self.api.setTestboardDelays({delay: value})
             self.api.daqStart()
-            self.api.daqTrigger(1,500)
+            self.api.daqTrigger(1, 500)
             sleep(0.1)
-            event = self.convertedRaw()
+            event = self.converted_raw_event()
             print value, event
             self.api.daqStop()
 
-    def complete_vary_tb_delay(self):
+    def complete_scan_tb_delay(self):
         # return help for the cmd
-        return [self.do_vary_tb_delay.__doc__, '']
+        return [self.do_scan_tb_delay.__doc__, '']
 
+    # ==============================================
+    # Read Output
     @arity(0, 0, [])
     def do_daqRawEvent(self):
         """analogLevelScan: plots the raw and converted event"""
@@ -962,7 +958,7 @@ class PxarCoreCmd(cmd.Cmd):
     def do_analogLevelScan(self):
         """analogLevelScan: scan the ADC levels of an analog ROC\nTo see all six address levels it is sufficient to activate Pixel 5 12"""
         self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
-        plotdata = self.addressLevelScan()
+        plotdata = self.address_level_scan()
         x = 0
         for i in range(1024):
             if plotdata[i] != 0:
@@ -1064,106 +1060,38 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_PixelActive.__doc__, '']
 
-    @arity(1, 1, [int])
-    def do_varyAllDelays(self, filenumber):
-        """varyAllDelays [filenumber] : writes rawEvent data for both delays varied between 0 and 20 to file (rawfile+filenumber)"""
-        number = '{0:03d}'.format(filenumber)
-        f = open('rawfile' + str(number), 'w')
-        for tin in range(20):
-            for tout in range(20):
-                if (tin - tout < 8):
-                    rawEvent = self.varyDelays(tin, tout, verbose=False)
-                    print tin, "; ", tout, "; ", rawEvent
-                    f.write(str(tin) + ';' + str(tout) + '; ' + str(rawEvent) + '\n')
-        f.close
-
-    def complete_varyAllDelays(self, text, line, start_index, end_index):
-        # return help for the cmd
-        return [self.do_varyAllDelays.__doc__, '']
-
-    @arity(2, 2, [int, int])
-    def do_varyDelays(self, tindelay, toutdelay):
-        """varDelays [value of tinelay] [value of toutdelay] : sets the two delays to the desired values and prints a histogram of the rawfile"""
-        self.varyDelays(tindelay, toutdelay, verbose=True)
-
-    def complete_varyDelays(self, text, line, start_index, end_index):
-        # return help for the cmd
-        return [self.do_varyDelays.__doc__, '']
-
-    #    @arity(0,0,[])
-    #    def do_findAnalogueTBDelays(self):
-    #        """findAnalogueTBDelays: configures tindelay and toutdelay"""
-    #        print ""
-    #        bestTin = 10    #default value if algorithm should fail
-    #        print "scan tindelay:"
-    #        print "tindelay\ttoutdelay\trawEvent[0]"
-    #        for tin in range(5,20):
-    #            rawEvent = self.varyDelays(tin, 20,verbose=False)
-    #            print str(tin)+"\t\t20\t\t"+str(rawEvent[0])
-    #            if (rawEvent[0] < -100):    #triggers for UB, the first one should always be UB
-    #                bestTin = tin
-    #                break
-    #        print ""
-    #        bestTout = 20   #default value if algorithm should fail
-    #        tout = bestTin+5
-    #        print "scan toutdelay"
-    #        print "tindelay\ttoutdelay\trawEvent[-1]"
-    #        for i in range (15):
-    #            rawEvent = self.varyDelays(bestTin, tout,verbose=False)
-    #            print str(bestTin)+"\t\t"+str(tout)+"\t\t"+str(rawEvent[-1])
-    #            if rawEvent[-1] > 20:   #triggers for PH, the last one should always be a pos PH
-    #                bestTout = tout
-    #                break
-    #            tout -= 1
-    #        print ""
-    #        self.api.setTestboardDelays({"tindelay":bestTin,"toutdelay":bestTout})
-    #        print "set tindelay to:  ", bestTin
-    #        print "set toutdelay to: ", bestTout
-    #    def complete_FindTBDelays(self, text, line, start_index, end_index):
-    #        # return help for the cmd
-    #        return [self.do_FindTBDelays.__doc__, '']
-
-    @arity(0, 1, [str])
-    def do_findAnalogueTBDelays(self, triggerSource="intern"):
+    @arity(0, 0, [])
+    def do_findAnalogueTBDelays(self):
         """findAnalogueTBDelays: configures tindelay and toutdelay"""
-        print ""
-        bestTin = 10  # default value if algorithm should fail
-        bestTout = 20  # default value if algorithm should fail
-        print "scan tindelay:"
-        print "tindelay\ttoutdelay\trawEvent[0]"
+        best_tin = 10    # default value if algorithm should fail
+        best_tout = 20   # default value if algorithm should fail
 
+        # find tindelay
+        print "\nscan tindelay:\ntindelay\ttoutdelay\trawEvent[0]"
         for tin in range(5, 20):
-            if triggerSource == "intern":
-                event = self.varyDelays(tin, 20, verbose=False)
-            elif triggerSource == "extern":
-                self.api.setTestboardDelays({"tindelay": tin})
-                self.api.daqStart()
-                event = self.convertedRaw()
-                self.api.daqStop()
+            self.api.setTestboardDelays({"tindelay": tin, "toutdelay": 20})
+            event = self.daq_converted_raw()
             print str(tin) + "\t\t20\t\t" + str(event[0])
             if (event[0] < -100):  # triggers for UB, the first one should always be UB
-                bestTin = tin
+                best_tin = tin
                 break
 
-        print ""
-        tout = 20
-        print "scan toutdelay"
-        print "tindelay\ttoutdelay\trawEvent[-1]"
-        for i in range(tout):
-            rawEvent = self.varyDelays(bestTin, tout, verbose=False)
-            print str(bestTin) + "\t\t" + str(tout) + "\t\t" + str(rawEvent[-1])
-            if rawEvent[-1] > 20:  # triggers for PH, the last one should always be a pos PH
-                bestTout = tout
+        # find toutdelay
+        print "\nscan toutdelay:\ntindelay\ttoutdelay\trawEvent[-1]"
+        for i in range(20,-1,-1):
+            self.api.setTestboardDelays({"tindelay": best_tin, "toutdelay": i})
+            event = self.daq_converted_raw()
+            print str(best_tin) + "\t\t" + str(i) + "\t\t" + str(event[-1])
+            if event[-1] > 20:  # triggers for PH, the last one should always be a pos PH
+                best_tout = i
                 break
-            tout -= 1
-        print ""
-        self.api.setTestboardDelays({"tindelay": bestTin, "toutdelay": bestTout})
-        print "set tindelay to:  ", bestTin
-        print "set toutdelay to: ", bestTout
 
-    def complete_FindTBDelays(self, text, line, start_index, end_index):
+        print "set tindelay to:  ", best_tin
+        print "set toutdelay to: ", best_tout
+
+    def complete_FindTBDelays(self):
         # return help for the cmd
-        return [self.do_FindTBDelays.__doc__, '']
+        return [self.do_findAnalogueTBDelays.__doc__, '']
 
     @arity(0, 2, [int, int])
     def do_findDelays(self, start=10, end=16):
@@ -1175,7 +1103,7 @@ class PxarCoreCmd(cmd.Cmd):
             self.api.daqStart()
             time.sleep(0.1)
             print tin,
-            data = self.getRawEvent()
+            data = self.get_levels()
             print len(data), data
             self.api.daqStop()
 
@@ -1208,9 +1136,9 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.maskPixel(5, 12, 0)
         for value in range(start, end + 1):
             print "prints the histo for clk = " + str(value) + "..."
-            self.setClock(value)
+            self.set_clock(value)
             self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
-            plotdata = self.addressLevelScan()
+            plotdata = self.address_level_scan()
             plot = Plotter.create_th1(plotdata, -512, +512, "Address Levels for clk = " + str(value), "ADC", "#")
             self.window.histos.append(plot)
             self.window.update()
@@ -1225,7 +1153,7 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0, 0, [])
     def do_maddressDecoder(self, verbose=False):
         """do_maddressDecoder: decodes the address of the activated pixel"""
-        addresses = self.getAddressLevels()
+        addresses = self.get_address_levels()
         print addresses
         nAddresses = len(addresses) / 5
         print "There are", nAddresses, "pixel activated"
@@ -1235,7 +1163,7 @@ class PxarCoreCmd(cmd.Cmd):
             for col in range(52):
                 matrix[row].append(0)
         for j in range(10):
-            addresses = self.getAddressLevels()
+            addresses = self.get_address_levels()
             for i in range(len(addresses)):  # norm the lowest level to zero
                 addresses[i] += 1
             print str(j + 1) + ". measurement"
@@ -1271,7 +1199,7 @@ class PxarCoreCmd(cmd.Cmd):
                 for col in range(len(matrix[row])):
                     if matrix[row][col] > 0:
                         px = Pixel()
-                        value = self.codeEvent(row, col, matrix[row][col])
+                        value = self.code_event(row, col, matrix[row][col])
                         px = Pixel(value, 0)
                         data.append(px)
             for i in data:
@@ -1294,7 +1222,7 @@ class PxarCoreCmd(cmd.Cmd):
                 self.api.testAllPixels(0)
                 self.api.maskPixel(column, row, 0)
                 self.api.testPixel(column, row, 1)
-                addresses = self.getAddressLevels()
+                addresses = self.get_address_levels()
                 print '{0:02d}'.format(column) + "\t" + '{0:02d}'.format(row) + "\t" + str(addresses)
                 f.write(str('{0:02d}'.format(column)) + ';' + str('{0:02d}'.format(row)) + '; ' + str(addresses) + '\n')
         f.close
@@ -1352,8 +1280,7 @@ class PxarCoreCmd(cmd.Cmd):
             if i % 100 == 0:
                 print '{0:5.2f}%\r'.format(i * 100. / n_trigger),
                 sys.stdout.flush()
-            # data = self.getRawEvent()
-            event = self.getRawEvent()
+            event = self.get_levels()
             #            print event, self.convertedRaw()
             length = len(event)
             nEvent = (length - 3) / 6  # number of single events
@@ -1409,7 +1336,7 @@ class PxarCoreCmd(cmd.Cmd):
                 for col in range(len(matrix[row])):
                     if matrix[row][col] > 0:
                         # px = Pixel()
-                        value = self.codeEvent(row, col, matrix[row][col])
+                        value = self.code_event(row, col, matrix[row][col])
                         px = Pixel(value, 0)
                         data.append(px)
                         #            for i in data:
@@ -1565,7 +1492,7 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.setDAC("wbc", wbc)
         self.api.setDAC("wbc", wbc, 1)
         for i in range(test):
-            data = self.getRawEvent()
+            data = self.get_levels()
             if len(data) > 10:
                 print data
 
@@ -1621,37 +1548,37 @@ class PxarCoreCmd(cmd.Cmd):
             from minWBC until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
 
         print "header\t",
-        self.averagedLevel(it)
+        self.get_averaged_level(it)
 
         print "-1\t",
         self.api.testAllPixels(0)
         self.api.testPixel(0, 79, 1)
-        self.averagedLevel(it)
+        self.get_averaged_level(it)
 
         print "0\t",
         self.api.testAllPixels(0)
         self.api.testPixel(15, 59, 1)
-        self.averagedLevel(it)
+        self.get_averaged_level(it)
 
         print "1\t",
         self.api.testAllPixels(0)
         self.api.testPixel(28, 37, 1)
-        self.averagedLevel(it)
+        self.get_averaged_level(it)
 
         print "2\t",
         self.api.testAllPixels(0)
         self.api.testPixel(43, 16, 1)
-        self.averagedLevel(it)
+        self.get_averaged_level(it)
 
         print "03033\t",
         self.api.testAllPixels(0)
         self.api.testPixel(20, 48, 1)
-        self.averagedLevel(it)
+        self.get_averaged_level(it)
 
         print "04044\t",
         self.api.testAllPixels(0)
         self.api.testPixel(23, 45, 1)
-        self.averagedLevel(it)
+        self.get_averaged_level(it)
 
     def complete_do_levelCheck(self, text, line, start_index, end_index):
         # return help for the cmd
@@ -1787,7 +1714,7 @@ class PxarCoreCmd(cmd.Cmd):
         high_range = [30, 50, 70, 90, 200]
         points = []
         for i in low_range:
-            points.append(i/7)
+            points.append(i / 7)
         for i in high_range:
             points.append(i)
         ph_y = []
@@ -1797,7 +1724,7 @@ class PxarCoreCmd(cmd.Cmd):
             sum_ph = 0
             for i in range(average):
                 self.api.daqTrigger(1, 500)
-                data = self.convertedRaw()
+                data = self.converted_raw_event()
                 if len(data) < 8:
                     sum_ph = 0
                     break
@@ -1829,7 +1756,7 @@ class PxarCoreCmd(cmd.Cmd):
         sum1 = 0
         sum2 = 0
         for trig in range(trigger):
-            data = self.convertedRaw()
+            data = self.converted_raw_event()
             if len(data) > 3:
                 sum1 += 1
             if len(data) > 9:
@@ -1859,7 +1786,7 @@ class PxarCoreCmd(cmd.Cmd):
         trig = 0
         while trig < trigger:
             try:
-                data = self.convertedRaw()
+                data = self.converted_raw_event()
                 if len(data) == 3:
                     empty += 1
                 trig += 1
@@ -1878,7 +1805,7 @@ class PxarCoreCmd(cmd.Cmd):
         stack = 0
         trig = 0
         while trig < trigger:
-            data = self.convertedRaw()
+            data = self.converted_raw_event()
             if len(data) > 1:
                 if data[-1] > 1:
                     stack += 1
@@ -1906,14 +1833,14 @@ class PxarCoreCmd(cmd.Cmd):
             #                    trigger += 1
             #            except RuntimeError:
             #                pass
-            data = self.convertedRaw()
+            data = self.converted_raw_event()
             if 23 > len(data) > 16:
                 if data[10] < -80:
                     pions += data[10]
                     trigger += 1
         trigger = 0
         while trigger < max_trigger:
-            data = self.convertedRaw()
+            data = self.converted_raw_event()
             if 23 > len(data) > 16:
                 if data[10] > -80:
                     protons += data[10]
@@ -1933,7 +1860,7 @@ class PxarCoreCmd(cmd.Cmd):
     # shortcuts
     do_q = do_quit
     do_a = do_analogLevelScan
-    do_sd = do_setTinTout
+    do_sd = do_set_tin_tout
     do_vd = do_varyDelays
     do_vad = do_varyAllDelays
     do_dre = do_daqRawEvent
@@ -1973,7 +1900,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     print '\n================================================='
-    print '# Extended pXarCore Program'
+    print '# Extended pXarCore Command Line Interface'
     print '=================================================\n'
 
     api = PxarStartup(args.dir, args.verbosity)
@@ -1986,6 +1913,7 @@ def main(argv=None):
         prompt.do_run(args.run)
     # start user interaction
     prompt.cmdloop()
+
 
 if __name__ == "__main__":
     sys.exit(main())
