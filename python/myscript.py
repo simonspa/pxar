@@ -1907,7 +1907,7 @@ class PxarCoreCmd(cmd.Cmd):
                 spread_j = 0
                 for j in range(5):
                     try:
-                        spread_j += abs(event[1 + roc * 3] - event[3 + roc * 3 + n_levels * 6 + j])
+                        spread_j += abs(event[1 + roc * 3] - event[3 + roc * 6 + j])
                     except IndexError:
                         spread_j = 99
                         break
