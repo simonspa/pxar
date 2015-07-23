@@ -204,8 +204,9 @@ class PxarCoreCmd(cmd.Cmd):
         for hit in range(hits):
             for level in range(3, 8):
                 event[level + 6 * hit] = self.translate_level(event[level + 6 * hit], event)
-        if convert_header:
-            event[0], event[1] = self.translate_level(event[0], event), self.translate_level(event[1], event)
+        for i in range(len(event)):
+            if convert_header and event[i] < event[0] * 3 / 4:
+                event[i], event[i + 1] = self.translate_level(event[i], event), self.translate_level(event[i + 1], event)
         return event
 
     def address_level_scan(self):
