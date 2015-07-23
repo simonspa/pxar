@@ -44,6 +44,7 @@ class PxarCoreCmd(cmd.Cmd):
     # ==============================================
     # GLOBAL FUNCTIONS
     # ==============================================
+    # region Globals
     def __init__(self, api, gui, conf_dir):
         cmd.Cmd.__init__(self)
         self.fullOutput = False
@@ -392,6 +393,7 @@ class PxarCoreCmd(cmd.Cmd):
             dec += int(i) * pow(2, length - 1)
             length -= 1
         return dec
+    # endregion
 
     # ==============================================
     # CMD LINE INTERFACE FUNCTIONS
@@ -932,7 +934,7 @@ class PxarCoreCmd(cmd.Cmd):
     # endregion
 
     # ==============================================
-    # Read Out
+    # region Read Out
     @arity(0, 0)
     def do_get_event(self):
         """get_event: plot the hits"""
@@ -990,7 +992,10 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_daqEvent(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_daqEvent.__doc__, '']
+    # endregion
 
+    # ==============================================
+    # region Miscellaneous
     @arity(0, 0, [])
     def do_analogLevelScan(self):
         """analogLevelScan: scan the ADC levels of an analog ROC\nTo see all six address levels it is sufficient to activate Pixel 5 12"""
@@ -1617,36 +1622,32 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_do_levelCheck(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_do_levelCheck.__doc__, '']
+    # endregion
 
     @arity(0, 2, [int, float])
-    def do_triggerLoop(self, rate=10, duration=1):
+    def do_trigger_loop(self, rate=10, duration=1):
         """ do_triggerLoop [rate] [duration]: sends triggers with rate for duration"""
-
-        #        for delay in range(min, max):
-        #            self.api.setTestboardDelays({"sda": delay})
-        #            print self.api.getTBia()*1000, " mA"
         self.api.daqStart()
-        nTrig = int(60 * duration) * rate
-        print "number of triggers:", nTrig
-        for i in range(nTrig):
+        triggers = int(60 * duration) * rate
+        print "number of triggers:", triggers
+        for i in range(triggers):
             self.api.daqTrigger(1, 500)
-            time.sleep(float(1) / rate)
+            sleep(float(1) / rate)
             #            print self.convertedRaw()
             #            print "", '\r{0:4.2f}%'.format(100*(float(i)/nTrig)), "\r",
-            sec = (nTrig - i) / float(rate) % 60
-            min = (nTrig - i) / rate / 60
-            print "", '\r{0:02d}:'.format(min), '\b{0:02d}:'.format(int(sec)), '\b{0:02.0f}'.format(
+            sec = (triggers - i) / float(rate) % 60
+            min_val = (triggers - i) / rate / 60
+            print "", '\r{0:02d}:'.format(min_val), '\b{0:02d}:'.format(int(sec)), '\b{0:02.0f}'.format(
                 100 * (sec - int(sec))),
             sys.stdout.flush()
         print
         self.api.daqStop()
 
-    def complete_triggerLoop(self, text, line, start_index, end_index):
-        # return help for the cmd
-        return [self.triggerLoop.__doc__, '']
+    def complete_trigger_loop(self):
+        return [self.do_trigger_loop.__doc__, '']
 
     @arity(0, 1, [int])
-    def do_hit_map(self, maxTriggers=1000):
+    def do_hit_map(self, max_triggers=1000):
         """ do_hitMap [maxTriggers] [wbc]: collects a certain amount triggers and plots a hitmap ... hopefully^^"""
         #        self.api.setDAC("wbc", wbc)
         #        self.api.daqTriggerSource("extern")
@@ -1666,30 +1667,33 @@ class PxarCoreCmd(cmd.Cmd):
             except RuntimeError:
                 pass
 
-        data = []
         d = zeros((417 if module else 53, 161 if module else 81))
-        nTriggers = 0
+        triggers = 0
         t1 = time()
-        while nTriggers < maxTriggers:
-            print "\r#events:", '{0:06d}'.format(nTriggers),
-            if nTriggers < windowsize:
-                mean = nTriggers / (time() - t1)
+        before = None
+        mean = None
+        t2 = time()
+        while triggers < max_triggers:
+            print "\r#events:", '{0:06d}'.format(triggers),
+            if triggers < windowsize:
+                mean = triggers / (time() - t1)
                 print 'rate: {0:03.0f} Hz'.format(mean),
-                if nTriggers == 90: t2 = time()
-            elif nTriggers > before and nTriggers % 10 == 0:
+                if triggers == 90:
+                    t2 = time()
+            elif triggers > before and triggers % 10 == 0:
                 mean = float(windowsize - 5) / windowsize * mean + float(windowsize - 95) / windowsize * 10 / (
                     time() - t2)
                 print 'rate: {0:03.0f} Hz'.format(mean),
                 t2 = time()
             sys.stdout.flush()
-            before = nTriggers
+            before = triggers
             try:
                 data = self.api.daqGetEvent()
                 #                if len(data.pixels)>0:
                 #                    nTriggers += 1
                 #                    for px in data.pixels:
                 if len(data.pixels) > 1:
-                    nTriggers += 1
+                    triggers += 1
                     for i in range(len(data.pixels) - 1):
                         px = data.pixels[i]
                         xoffset = 52 * (px.roc % 8) if module else 0
@@ -1885,6 +1889,31 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_measure_ph(self):
         # return help for the cmd
         return [self.do_measure_ph.__doc__, '']
+
+    @arity(0, 0)
+    def do_find_phscale(self):
+        """ None """
+        self.enable_pix(15, 59)
+        triggers = 100
+        spread = []
+        for dac in range(20, 255, 10):
+            spread.append(0)
+            for k in range(triggers):
+                event = self.converted_raw_event()
+                spread_j = 0
+                for j in range(5):
+                    try:
+                        spread_j += abs(event[1 + roc * 3] - event[3 + roc * 3 + n_levels * 6 + j])
+                    except IndexError:
+                        spread_j = 99
+                        break
+                spread[dac] += spread_j / 5
+            spread[dac] /= triggers
+            print dac, spread[dac]
+
+    def complete_find_phscale(self):
+        # return help for the cmd
+        return [self.do_find_phscale.__doc__, '']
 
     @staticmethod
     def do_quit(q=1):
