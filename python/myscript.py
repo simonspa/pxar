@@ -1903,7 +1903,7 @@ class PxarCoreCmd(cmd.Cmd):
         """ None """
         self.enable_pix(5, 12, 0)
         self.api.daqStart()
-        self.api.daqTrigger(averaging * 2, 500)
+        self.api.daqTrigger(averaging, 500)
         averaged_event = [[],[]]
         for i in range(9):
             averaged_event[0].append(0)
@@ -1915,6 +1915,7 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.maskAllPixels(1)
         self.api.testAllPixels(0)
         self.enable_pix(5, 12, 1)
+        self.api.daqTrigger(averaging, 500)
         for i in range(averaging):
             event = self.converted_raw_event()
             for j in range(3, 12):
