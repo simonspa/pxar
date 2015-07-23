@@ -1890,18 +1890,19 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_measure_ph.__doc__, '']
 
-    @arity(0, 0)
-    def do_find_phscale(self):
+    @arity(0, 1, [int])
+    def do_find_phscale(self, step=10):
         """ None """
         self.enable_pix(15, 59)
         triggers = 100
         spread = []
         roc = 0
         self.api.daqStart()
-        self.api.daqTrigger(triggers, 500)
-        for dac, i in zip(range(20, 255, 10), range(255)):
-            print i
+        for dac, i in zip(range(20, 255, step), range(255)):
+            self.api.setDAC('phscale', dac)
+            self.api.daqTrigger(triggers, 500)
             spread.append(0)
+            event = None
             for k in range(triggers):
                 event = self.converted_raw_event()
                 spread_j = 0
@@ -1912,8 +1913,8 @@ class PxarCoreCmd(cmd.Cmd):
                         spread_j = 99
                         break
                 spread[i] += spread_j / 5
-            spread[i] /= triggers
-            print dac, spread[i]
+            spread[i] /= float(triggers)
+            print dac, "{0:2.1f}".format(spread[i]), event
         self.api.daqStop()
 
     def complete_find_phscale(self):
