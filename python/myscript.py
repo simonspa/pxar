@@ -164,8 +164,7 @@ class PxarCoreCmd(cmd.Cmd):
         event = []
         try:
             event = self.api.daqGetRawEvent()
-        except RuntimeError, err:
-            print err
+        except RuntimeError:
             pass
         if verbose:
             print "raw Event:\t\t", event
