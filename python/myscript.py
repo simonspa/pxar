@@ -763,6 +763,7 @@ class PxarCoreCmd(cmd.Cmd):
         levels_y = []
         mean_value = []
         spread_black = []
+        header = [0, 0]
 
         # find the address levels
         print "get level splitting: "
@@ -793,6 +794,9 @@ class PxarCoreCmd(cmd.Cmd):
                 sum_spread = 0
                 for k in range(n_triggers):
                     event = self.converted_raw_event()
+                    # header
+                    header[0] += event[0]
+                    header[1] += event[1]
                     # black level spread
                     spread_j = 0
                     for j in range(5):
@@ -822,6 +826,8 @@ class PxarCoreCmd(cmd.Cmd):
                 self.api.daqStop()
             self.api.maskAllPixels(1, roc)
             self.api.testAllPixels(0, roc)
+        header[0] /= n_triggers * n_rocs * (max_val - min_val)
+        header[1] /= n_triggers
         print
 
         # find the best phase
@@ -851,6 +857,9 @@ class PxarCoreCmd(cmd.Cmd):
         self.set_clock(best_clk)
 
         # save the data to file (optional)
+        f = open('levels_header.txt', 'w')
+        f.write(str(header[0]) + "\n" + str(header[1]))
+        f.close()
         file_name = []
         for i_roc in range(n_rocs):
             file_name.append('levels_roc' + str(i_roc) + '.txt')
