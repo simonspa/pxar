@@ -1901,17 +1901,20 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0, 1, [int])
     def do_averaged_levels(self, averaging=1000):
         """ None """
-        self.enable_pix(5, 12, 0)
+        self.enable_pix(5, 12)
         self.api.daqStart()
         self.api.daqTrigger(averaging, 500)
         averaged_event = [[],[]]
         for i in range(9):
             averaged_event[0].append(0)
             averaged_event[1].append(0)
+        sleep(0.1)
         for i in range(averaging):
             event = self.converted_raw_event()
             for j in range(9):
                 averaged_event[0][j] += event[j]
+        self.api.daqStop()
+        self.api.daqStart()
         self.api.maskAllPixels(1)
         self.api.testAllPixels(0)
         self.enable_pix(5, 12, 1)
