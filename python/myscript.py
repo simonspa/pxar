@@ -328,7 +328,7 @@ class PxarCoreCmd(cmd.Cmd):
 
     @staticmethod
     def get_addresses(levels):
-        col = levels[0 + h] * 12 + levels[1] * 2 + levels[4] % 2
+        col = levels[0] * 12 + levels[1] * 2 + levels[4] % 2
         row = 80 - (levels[2] * 18 + levels[3] * 3 + levels[4] / 2)
         return [col, row]
 
@@ -518,7 +518,7 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_daqStop.__doc__, '']
 
-    @arity(1, 2, [int, int])
+    @arity(0, 2, [int, int])
     def do_daqTrigger(self, ntrig=5, period=500):
         """daqTrigger [ntrig] [period = 0]: sends ntrig patterns to the device"""
         self.api.daqTrigger(ntrig, period)
