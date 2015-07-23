@@ -321,9 +321,10 @@ class PxarCoreCmd(cmd.Cmd):
 
     @staticmethod
     def translate_level(level, event, roc=0):
+        offset = 7
         y = level - event[roc + 1]
-        y += (event[roc + 1] - event[roc + 0]) / 8
-        y /= (event[roc + 1] - event[roc + 0]) / 4
+        y += (event[roc + 1] - event[roc + 0] + offset) / 8
+        y /= (event[roc + 1] - event[roc + 0] + offset) / 4
         return y + 1
 
     @staticmethod
