@@ -7,6 +7,7 @@ Simple Example Python Script Using the Pxar API.
 # ==============================================
 # IMPORTS
 # ==============================================
+# region imports
 from PyPxarCore import Pixel, PixelConfig, PyPxarCore, PyRegisterDictionary, PyProbeDictionary
 from numpy import zeros
 from pxar_helpers import *  # arity decorator, PxarStartup, PxarConfigFile, PxarParametersFile and others
@@ -19,7 +20,7 @@ except ImportError:
     gui_available = False
     pass
 if gui_available:
-    from ROOT import gClient, PyConfig
+    from ROOT import PyConfig
     PyConfig.IgnoreCommandLineOptions = True
     from pxar_gui import PxarGui
     from pxar_plotter import Plotter
@@ -34,6 +35,7 @@ from time import time, sleep
 # set up the DAC and probe dictionaries
 dacdict = PyRegisterDictionary()
 probedict = PyProbeDictionary()
+# endregion
 
 
 class PxarCoreCmd(cmd.Cmd):
@@ -51,7 +53,7 @@ class PxarCoreCmd(cmd.Cmd):
         self.dir = conf_dir
         self.window = None
         if gui and gui_available:
-            self.window = PxarGui(gClient.GetRoot(), 800, 800)
+            self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
         elif gui and not gui_available:
             print "No GUI available (missing ROOT library)"
 
@@ -382,6 +384,7 @@ class PxarCoreCmd(cmd.Cmd):
     # ==============================================
     # CMD LINE INTERFACE FUNCTIONS
     # ==============================================
+    # region interface functions
     @arity(0, 0, [])
     def do_getTBia(self):
         """getTBia: returns analog DTB current"""
@@ -697,6 +700,7 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_daqStatus(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_daqStatus.__doc__, '']
+    # endregion
 
     # ==============================================
     # ADDITIONAL TEST FUNCTIONS FOR CLI
