@@ -1915,14 +1915,16 @@ class PxarCoreCmd(cmd.Cmd):
                 averaged_event[0][j] += event[j]
         self.api.daqStop()
         self.api.daqStart()
-        self.api.maskAllPixels(1)
-        self.api.testAllPixels(0)
+        self.api.maskAllPixels(1, 0)
+        self.api.testAllPixels(0, 0)
         self.enable_pix(5, 12, 1)
         self.api.daqTrigger(averaging, 500)
         for i in range(averaging):
             event = self.converted_raw_event()
+            if not i: print event 
             for j in range(3, 12):
                 averaged_event[1][j - 3] += event[j]
+        self.api.daqStop()
         for i in range(9):
             averaged_event[0][i] /= averaging
             averaged_event[1][i] /= averaging
