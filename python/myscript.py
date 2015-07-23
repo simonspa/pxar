@@ -207,7 +207,7 @@ class PxarCoreCmd(cmd.Cmd):
                 event[level + 6 * hit] = self.translate_level(event[level + 6 * hit], event)
         for i in range(len(event)):
             if convert_header and event[i] < ub * 3 / 4:
-                event[i], event[i + 1] = self.translate_level(event[i], event), self.translate_level(event[i + 1], event)
+                event[i], event[i + 1] = self.translate_level(event[i], event, i), self.translate_level(event[i + 1], event, i)
         return event
 
     def address_level_scan(self):
@@ -314,10 +314,10 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.maskPixel(row, col, 0, roc)
 
     @staticmethod
-    def translate_level(level, event):
+    def translate_level(level, event, roc=0):
         y = level - event[1]
-        y += (event[1] - event[0]) / 8
-        y /= (event[1] - event[0]) / 4
+        y += (event[roc + 1] - event[roc + 0]) / 8
+        y /= (event[roc + 1] - event[roc + 0]) / 4
         return y + 1
 
     @staticmethod
