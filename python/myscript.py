@@ -1896,7 +1896,11 @@ class PxarCoreCmd(cmd.Cmd):
         self.enable_pix(15, 59)
         triggers = 100
         spread = []
-        for dac in range(20, 255, 10):
+        roc = 0
+        self.api.daqStart()
+        self.api.daqTrigger(triggers, 500)
+        for dac, i in zip(range(20, 255, 10), range(255)):
+            print i
             spread.append(0)
             for k in range(triggers):
                 event = self.converted_raw_event()
@@ -1907,9 +1911,10 @@ class PxarCoreCmd(cmd.Cmd):
                     except IndexError:
                         spread_j = 99
                         break
-                spread[dac] += spread_j / 5
-            spread[dac] /= triggers
-            print dac, spread[dac]
+                spread[i] += spread_j / 5
+            spread[i] /= triggers
+            print dac, spread[i]
+        self.api.daqStop()
 
     def complete_find_phscale(self):
         # return help for the cmd
