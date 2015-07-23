@@ -794,14 +794,14 @@ class PxarCoreCmd(cmd.Cmd):
                 sum_spread = 0
                 for k in range(n_triggers):
                     event = self.converted_raw_event()
-                    # header
-                    header[0] += event[0]
-                    header[1] += event[1]
                     # black level spread
                     spread_j = 0
                     for j in range(5):
                         try:
                             spread_j += abs(event[1 + roc * 3] - event[3 + roc * 3 + n_levels * 6 + j])
+                            # header
+                            header[0] += event[0]
+                            header[1] += event[1]
                         except IndexError:
                             spread_j = 99
                             break
