@@ -1894,14 +1894,14 @@ class PxarCoreCmd(cmd.Cmd):
     def do_find_phscale(self, step=10):
         """ None """
         self.enable_pix(15, 59)
-        triggers = 100
+        triggers = 1000
         spread = []
         roc = 0
         self.api.daqStart()
         for dac, i in zip(range(20, 255, step), range(255)):
             self.api.setDAC('phscale', dac)
             self.api.daqTrigger(triggers, 500)
-            spread.append(0)
+            spread.append([0])
             event = None
             for k in range(triggers):
                 event = self.converted_raw_event()
@@ -1912,10 +1912,21 @@ class PxarCoreCmd(cmd.Cmd):
                     except IndexError:
                         spread_j = 99
                         break
-                spread[i] += spread_j / 5
-            spread[i] /= float(triggers)
-            print dac, "{0:2.1f}".format(spread[i]), event
+                spread[i][0] += spread_j / 5
+            spread[i][0] /= float(triggers)
+            spread[i].append(dac)
+            print dac, "{0:2.1f}".format(spread[i][0]), event
         self.api.daqStop()
+        # find best phscale
+        min_phscale = 100
+        best_phscale = 120
+        for i in spread:
+            if i[0] < min_phscale:
+                min_phscale = i[0]
+                best_phscale = i[1]
+        print 'set phscale to:', best_phscale
+        self.api.setDAC('phscale', best_phscale)
+
 
     def complete_find_phscale(self):
         # return help for the cmd
