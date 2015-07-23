@@ -196,7 +196,11 @@ class PxarCoreCmd(cmd.Cmd):
 
     def get_levels(self, convert_header=False):
         event = self.converted_raw_event()
-        hits = len(event) / 6
+        rocs = 0
+        for i in event:
+            if i < event[0] * 3 / 4:
+                rocs += 1
+        hits = (len(event) - rocs * 3) / 6
         for hit in range(hits):
             for level in range(3, 8):
                 event[level + 6 * hit] = self.translate_level(event[level + 6 * hit], event)
