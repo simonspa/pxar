@@ -713,7 +713,7 @@ class PxarCoreCmd(cmd.Cmd):
     # ==============================================
 
     # ==============================================
-    # Test Board Delays
+    # region Test Board Delays
     @arity(2, 2, [str, int])
     def do_set_tb_delay(self, dacname, value):
         """setTBdelays [delay] [value]: sets a single test board delay to a certain value"""
@@ -908,10 +908,15 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_scan_tb_delay(self):
         # return help for the cmd
         return [self.do_scan_tb_delay.__doc__, '']
+    # endregion
 
     # ==============================================
-    # Read Output
-    @arity(0, 0, [])
+    # Read Out
+    @arity(0, 0)
+    def do_get_event(self):
+        self.translate_levels()
+
+    @arity(0, 0)
     def do_daqRawEvent(self):
         """analogLevelScan: plots the raw and converted event"""
         self.api.daqStart()
