@@ -799,9 +799,6 @@ class PxarCoreCmd(cmd.Cmd):
                     for j in range(5):
                         try:
                             spread_j += abs(event[1 + roc * 3] - event[3 + roc * 3 + n_levels * 6 + j])
-                            # header
-                            header[0] += event[0]
-                            header[1] += event[1]
                         except IndexError:
                             spread_j = 99
                             break
@@ -826,8 +823,6 @@ class PxarCoreCmd(cmd.Cmd):
                 self.api.daqStop()
             self.api.maskAllPixels(1, roc)
             self.api.testAllPixels(0, roc)
-        header[0] /= n_triggers * n_rocs * (max_val - min_val)
-        header[1] /= n_triggers
         print
 
         # find the best phase
@@ -855,6 +850,17 @@ class PxarCoreCmd(cmd.Cmd):
         print 'black level spread: ', best_clk, spread_black[0][best_clk], best_clk + 1, spread_black[0][best_clk + 1],
         print best_clk - 1, spread_black[0][best_clk - 1]
         self.set_clock(best_clk)
+
+        # get an averaged header for the lvl margins
+        self.api.daqStart()
+        self.api.daqTrigger(n_triggers, 500)
+        for i in range(n_triggers):
+            event = self.converted_raw_event()
+            header[0] += event[0]
+            header[1] += event[1]
+        self.api.daqStop()
+        header[0] /= n_triggers
+        header[1] /= n_triggers
 
         # save the data to file (optional)
         f = open('levels_header.txt', 'w')
