@@ -1134,10 +1134,7 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(2, 2, [int, int])
     def do_varyClk(self, start, end):
         """varyClk [start] [end]: plots addresslevelscans for clk delay settings between [start] and [end] and varies all other delays accordingly"""
-        self.api.maskAllPixels(1)
-        self.api.testAllPixels(0)
-        self.api.testPixel(5, 12, 1)
-        self.api.maskPixel(5, 12, 0)
+        self.enable_pix(5, 12)
         for value in range(start, end + 1):
             print "prints the histo for clk = " + str(value) + "..."
             self.set_clock(value)
@@ -1865,8 +1862,6 @@ class PxarCoreCmd(cmd.Cmd):
     do_q = do_quit
     do_a = do_analogLevelScan
     do_sd = do_set_tin_tout
-    do_vd = do_varyDelays
-    do_vad = do_varyAllDelays
     do_dre = do_daqRawEvent
     do_de = do_daqEvent
     do_sc = do_set_clock_delays
