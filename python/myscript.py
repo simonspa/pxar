@@ -1504,40 +1504,6 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_readMaskFile.__doc__, '']
 
-    @arity(0, 1, [int])
-    def do_average_level(self, test=50):
-        """ do_wbcScan [minWBC] [nTrigger]: sets the values of wbc from minWBC
-        until it finds the wbc which has more than 90% filled events or it reaches 200 (default minWBC 90)"""
-        #        self.api.daqTriggerSource("extern")
-        #        self.api.daqStop()
-        #        wbc = 115
-        #        self.api.setDAC("wbc", wbc)
-        #        self.api.setDAC("wbc", wbc, 1)
-        #        self.api.daqStart()
-        #        matrix = []
-        #        for i in range(50):
-        #            matrix.append(0)
-        #        for i in range(test):
-        #            data = self.convertedRaw()
-        #            index = 0
-        #            for j in data:
-        #                matrix[index] += j
-        #                index +=1
-        #        for i in range(50):
-        #            matrix[i] /= test
-        #        print matrix
-
-        wbc = 115
-        self.api.setDAC("wbc", wbc)
-        self.api.setDAC("wbc", wbc, 1)
-        for i in range(test):
-            data = self.get_levels()
-            if len(data) > 10:
-                print data
-
-    def complete_average_lvel(self):
-        # return help for the cmd
-        return [self.do_average_level.__doc__, '']
 
     @arity(1, 3, [str, int, int])
     def do_check_tbsettings(self, name, min_value=0, max_value=20):
@@ -1931,6 +1897,37 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_find_phscale(self):
         # return help for the cmd
         return [self.do_find_phscale.__doc__, '']
+
+    @arity(0, 1, [int])
+    def do_averaged_levels(self, averaging=1000):
+        """ None """
+        self.enable_pix(5, 12, 0)
+        self.api.daqStart()
+        self.api.daqTrigger(averaging * 2, 500)
+        averaged_event = [[],[]]
+        for i in range(9):
+            averaged_event[0].append(0)
+            averaged_event[1].append(0)
+        for i in range(averaging):
+            event = self.converted_raw_event()
+            for j in range(9):
+                averaged_event[0][j] += event[j]
+        self.api.maskAllPixels(1)
+        self.api.testAllPixels(0)
+        self.enable_pix(5, 12, 1)
+        for i in range(averaging):
+            event = self.converted_raw_event()
+            for j in range(3, 12):
+                averaged_event[1][j - 3] += event[j]
+        for i in range(9):
+            averaged_event[0][i] /= averaging
+            averaged_event[1][i] /= averaging
+        print averaged_event[0]
+        print averaged_event[1]
+
+    def complete_averaged_levels(self):
+        # return help for the cmd
+        return [self.do_averaged_levels.__doc__, '']
 
     @staticmethod
     def do_quit(q=1):
