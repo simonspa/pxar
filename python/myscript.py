@@ -182,7 +182,11 @@ class PxarCoreCmd(cmd.Cmd):
 
     def translate_levels(self):
         event = self.converted_raw_event()
-        hits = len(event) / 6
+        rocs = 0
+        for i in event:
+            if i < event[0] * 3 / 4:
+                rocs += 1
+        hits = (len(event) - rocs * 3) / 6
         addresses = []
         for hit in range(hits):
             levels = []
