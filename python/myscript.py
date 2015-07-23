@@ -869,7 +869,7 @@ class PxarCoreCmd(cmd.Cmd):
 
         # plot address levels
         self.enable_pix(5, 12)
-        self.window = PxarGui(gClient.GetRoot(), 800, 800)
+        self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
         plotdata = self.address_level_scan()
         plot = Plotter.create_th1(plotdata, -512, +512, "Address Levels", "ADC", "#")
         self.window.histos.append(plot)
