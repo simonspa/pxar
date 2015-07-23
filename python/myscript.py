@@ -187,13 +187,15 @@ class PxarCoreCmd(cmd.Cmd):
             if i < event[0] * 3 / 4:
                 rocs += 1
         hits = (len(event) - rocs * 3) / 6
+        if hits == 0:
+            print 'there was not a single pixel hit'
         addresses = []
         for hit in range(hits):
             levels = []
             for level in range(3, 8):
                 y = self.translate_level(event[level + 6 * hit], event)
                 levels.append(y)
-            addresses[hit].append(self.get_addresses(levels))
+            addresses.append(self.get_addresses(levels))
             addresses[hit].append(event[8 + 6 * hit])
             print 'Hit:', "{0:2d}".format(hit), addresses[hit]
         return addresses
@@ -517,7 +519,7 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_daqStop.__doc__, '']
 
     @arity(1, 2, [int, int])
-    def do_daqTrigger(self, ntrig, period=0):
+    def do_daqTrigger(self, ntrig=5, period=500):
         """daqTrigger [ntrig] [period = 0]: sends ntrig patterns to the device"""
         self.api.daqTrigger(ntrig, period)
 
@@ -918,6 +920,7 @@ class PxarCoreCmd(cmd.Cmd):
     # Read Out
     @arity(0, 0)
     def do_get_event(self):
+        """get_event: plot the hits"""
         self.translate_levels()
 
     @arity(0, 0)
@@ -947,7 +950,7 @@ class PxarCoreCmd(cmd.Cmd):
         print "]"
         self.api.daqStop()
 
-    def complete_daqRawEvent(self, text, line, start_index, end_index):
+    def complete_daqRawEvent(self):
         # return help for the cmd
         return [self.do_daqRawEvent.__doc__, '']
 
