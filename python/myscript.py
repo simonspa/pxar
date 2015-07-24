@@ -1893,7 +1893,6 @@ class PxarCoreCmd(cmd.Cmd):
         print 'set phscale to:', best_phscale
         self.api.setDAC('phscale', best_phscale)
 
-
     def complete_find_phscale(self):
         # return help for the cmd
         return [self.do_find_phscale.__doc__, '']
@@ -1904,8 +1903,8 @@ class PxarCoreCmd(cmd.Cmd):
         self.enable_pix(5, 12)
         self.api.daqStart()
         self.api.daqTrigger(averaging, 500)
-        averaged_event = [[],[]]
-        for i in range(9):
+        averaged_event = [[0], [0]]
+        for i in range(8):
             averaged_event[0].append(0)
             averaged_event[1].append(0)
         sleep(0.1)
@@ -1921,7 +1920,6 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.daqTrigger(averaging, 500)
         for i in range(averaging):
             event = self.converted_raw_event()
-            if not i: print event
             for j in range(3, 12):
                 averaged_event[1][j - 3] += event[j]
         self.api.daqStop()
