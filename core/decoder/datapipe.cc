@@ -299,12 +299,13 @@ namespace pxar {
         // its Ultrablack and Black level as initial values for auto-calibration:
         int16_t levelS = (black - ultrablack)/8;
 
+		//std::cout << black << " " << expandSign((*(word+1)) & 0x0fff) << " " << roc_n << std::endl;
         if(roc_n < 0 ||
         // Ultrablack level:
         /** little fix if the UB in the telescope is too small --> levelS*3 */
-        ((ultrablack-levelS < expandSign((*word) & 0x0fff) && ultrablack+levelS*2 > expandSign((*word) & 0x0fff))
+        ((ultrablack-levelS*2 < expandSign((*word) & 0x0fff) && ultrablack+levelS*2 > expandSign((*word) & 0x0fff))
         // Black level:
-        && (black-levelS < expandSign((*(word+1)) & 0x0fff) && black+levelS > expandSign((*(word+1)) & 0x0fff)))) {
+        && (black - levelS < 20 + expandSign((*(word+1)) & 0x0fff) && black +levelS > 20 + expandSign((*(word+1)) & 0x0fff)))) {
 
             roc_n++;
             // Save the lastDAC value:
@@ -478,7 +479,7 @@ namespace pxar {
 	sumB += translateDataword;
 	meanB = float(sumB)/counter;
       }
-      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+15);
+      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB + 25);
     }
     /**sliding window*/
     else {
@@ -488,7 +489,7 @@ namespace pxar {
       else if (&variable == &black){
 	meanB = (float(windowSize)-1)/windowSize*meanB + float(1)/windowSize*translateDataword ;
       }
-      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB+15);
+      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB + 25);
     }
   }
 

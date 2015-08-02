@@ -124,7 +124,10 @@ bool pxarCore::initDUT(uint8_t hubid,
       LOG(logCRITICAL) << "This cannot end well...";
       throw InvalidConfig("Mismatch between number of I2C addresses and DAC configurations");
     }
-    LOG(logDEBUGAPI) << "I2C addresses for all ROCs are provided as user input.";
+    string i2cstring("");
+    LOG(logDEBUGAPI) << "I2C addresses for all ROCs are provided as user input: "<<i2cstring;
+    for (unsigned int i = 0; i < rocI2Cs.size(); ++i) LOG(logDEBUGAPI)<<i<<" "<<(int)rocI2Cs[i];
+    
   }
   else { LOG(logDEBUGAPI) << "I2C addresses will be automatically generated."; }
 
@@ -272,6 +275,7 @@ bool pxarCore::initDUT(uint8_t hubid,
   }
 
   // Initialize ROCs:
+  LOG(logDEBUGAPI) << "Initialize all "<<rocDACs.size()<<" ROCs";
   for(std::vector<std::vector<std::pair<std::string,uint8_t> > >::iterator rocIt = rocDACs.begin(); rocIt != rocDACs.end(); ++rocIt){
 
     // Prepare a new ROC configuration

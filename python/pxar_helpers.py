@@ -171,8 +171,8 @@ def PxarStartup(directory, verbosity):
             ("PG_RESR",25),
             #("PG_RESR",25),
             ("PG_CAL",pgcal),
-            #("PG_TRG",16),
             ("PG_TRG",16),
+            #("PG_TRG",16),
             ("PG_TOK",0)
             #("PG_RESR",0),
             )

@@ -25,7 +25,7 @@ if gui_available:
     from pxar_gui import PxarGui
     from pxar_plotter import Plotter
 
-
+import math
 import cmd  # for command interface and parsing
 import os   # for file system cmds
 import sys
@@ -202,6 +202,8 @@ class PxarCoreCmd(cmd.Cmd):
 
     def get_levels(self, convert_header=False):
         event = self.converted_raw_event()
+        if len(event) == 0:
+            raise Exception('Empty Event: %s'%event)
         rocs = 0
         ub = event[0]
         for i in event:
@@ -1143,9 +1145,14 @@ class PxarCoreCmd(cmd.Cmd):
         for tin in range(start, end):
             self.api.setTestboardDelays({"tindelay": 14, "toutdelay": tin})
             self.api.daqStart()
-            time.sleep(0.1)
+            sleep(0.1)
             print tin,
-            data = self.get_levels()
+            try:
+                data = self.get_levels()
+            except:
+                print 'Cannot read data'
+                continue
+            
             print len(data), data
             self.api.daqStop()
 
@@ -1158,7 +1165,7 @@ class PxarCoreCmd(cmd.Cmd):
         """ScanVana: finds the best setting for vana so that the analogue current is nearly 24"""
         for vana in range(begin, end):
             self.api.setDAC("vana", vana)
-            time.sleep(0.4)
+            sleep(0.4)
             current = self.api.getTBia() * 1000
             print vana, current
             if (current < 24.5 and current > 23.5):
@@ -1442,7 +1449,6 @@ class PxarCoreCmd(cmd.Cmd):
                 pass
 
         self.api.daqStop()
-
         self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
         plot = Plotter.create_tgraph(wbc_scan, "wbc scan", "wbc", "evt/trig [%]", min_wbc)
         self.window.histos.append(plot)
@@ -1614,12 +1620,10 @@ class PxarCoreCmd(cmd.Cmd):
 
     @arity(0, 1, [int])
     def do_hit_map(self, max_triggers=1000):
-        """ do_hitMap [maxTriggers] [wbc]: collects a certain amount triggers and plots a hitmap ... hopefully^^"""
-        #        self.api.setDAC("wbc", wbc)
-        #        self.api.daqTriggerSource("extern")
+        """ do_hitMap [maxTriggers]: collects a certain amount triggers and plots a hitmap ... hopefully^^"""
 
         windowsize = 100
-        t = time.time()
+        t = time()
         self.api.daqStart()
 
         # check if module is True
@@ -1627,8 +1631,8 @@ class PxarCoreCmd(cmd.Cmd):
         while True:
             try:
                 data = self.api.daqGetEvent()
-                if data.pixels[0].roc == 0:
-                    module = False
+                #if data.pixels[0].roc == 0:
+                    #module = False
                 break
             except RuntimeError:
                 pass
@@ -1932,6 +1936,52 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_averaged_levels(self):
         # return help for the cmd
         return [self.do_averaged_levels.__doc__, '']
+
+    @arity(0, 1, [int])
+    def do_adjust_black(self, rocs=4, avg=100):
+        """ None """
+        self.api.maskAllPixels(1)
+        self.api.testAllPixels(0)
+        self.api.testPixel(15, 59, 1)
+        self.api.maskPixel(15, 59, 0)
+        self.api.daqStart()
+        self.api.daqTrigger(avg, 500)
+        black_dev = []
+        black_dev2=[]
+        black_real=[]
+        for roc in range(rocs):
+            black_dev.append([])
+            black_dev2.append([])
+            black_real.append([])
+
+            for adr in range(5):
+                black_dev[roc].append(0)
+                black_dev2[roc].append(0)
+                black_real[roc].append(0)
+        for i in range(avg):
+            event = self.converted_raw_event()
+            for roc in range(rocs):
+                for adr in range(5):
+                    val = float((event[1] - event[3 + adr + roc * 9]))
+                    black_dev[roc][adr] += val
+                    black_dev2[roc][adr] += val*val
+        for roc in range(rocs):
+            print roc,":",
+            for i in range(len(black_dev[roc])):
+                mean =  black_dev[roc][i] / avg
+                mean2 =  black_dev2[roc][i]/ avg- mean* mean
+                mean2 = math.sqrt(mean2)
+                print mean, # "+/-",mean2,"\t",
+            print
+        # for r in black_real[roc]:
+        #     print r,
+        # print
+
+        self.api.daqStop()
+
+    def complete_do_adjust_black(self):
+        # return help for the cmd
+        return [self.do_do_adjust_black.__doc__, '']
 
     @staticmethod
     def do_quit(q=1):
