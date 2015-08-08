@@ -821,8 +821,7 @@ class PxarCoreCmd(cmd.Cmd):
                 spread_black[roc].append(sum_spread / float(n_triggers))
                 for i in range(n_levels):
                     levels_y[roc][i].append(mean_value[roc][i] / float(n_triggers))
-                print '\rclk-delay:', "{0:2d}".format(clk), 'black lvl spread: ', "{0:2.2f}".format(
-                    spread_black[roc][clk]),
+                print '\rclk-delay:', "{0:2d}".format(clk), 'black lvl spread: ', "{0:2.2f}".format(spread_black[roc][clk]),
                 sys.stdout.flush()
                 self.api.daqStop()
             self.api.maskAllPixels(1, roc)
@@ -848,11 +847,19 @@ class PxarCoreCmd(cmd.Cmd):
         for i in range(len(spread)):
             if spread[i] < min_spread:
                 min_spread = spread[i]
-                best_clk = clk_x[i]
+                best_clk = i
         print
         print 'best clk: ', best_clk
-        print 'black level spread: ', best_clk, spread_black[0][best_clk], best_clk + 1, spread_black[0][best_clk + 1],
-        print best_clk - 1, spread_black[0][best_clk - 1]
+        names = ['clk\t\t\t', 'level spread:\t\t', 'black level spread:\t']
+        infos = [clk_x, spread, spread_black[0]]
+        for i in range(3):
+            print names[i],
+            for j in range(-2, 3):
+                if not i:
+                    print infos[i][best_clk + j], '\t',
+                else:
+                    print '{0:2.2f}'.format(infos[i][best_clk + j]), '\t',
+            print
         self.set_clock(best_clk)
 
         # get an averaged header for the lvl margins
