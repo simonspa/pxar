@@ -316,8 +316,8 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.daqStop()
 
     def enable_pix(self, row=5, col=12, roc=0):
-        self.api.testAllPixels(0, roc)
-        self.api.maskAllPixels(1, roc)
+        self.api.testAllPixels(0)
+        self.api.maskAllPixels(1)
         self.api.testPixel(row, col, 1, roc)
         self.api.maskPixel(row, col, 0, roc)
 
@@ -755,7 +755,7 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_set_clock_delays.__doc__, '']
 
-    @arity(0, 2, [int, int])
+    @arity(0, 3, [int, int, int])
     def do_find_clk_delay(self, n_rocs=1, min_val=0, max_val=25):
         """find the best clock delay setting """
         # variable declarations
@@ -770,7 +770,7 @@ class PxarCoreCmd(cmd.Cmd):
         header = [0, 0]
 
         # find the address levels
-        print "get level splitting: "
+        print "get level splitting:"
         for roc in range(n_rocs):
             self.api.maskAllPixels(1, roc)
             self.api.testAllPixels(0, roc)

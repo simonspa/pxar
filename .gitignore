@@ -32,4 +32,5 @@ usertests/PixUserTestFactory.cc
 pXar.layout
 pXar.cbp
 main/roc
+python/levels_*
 
