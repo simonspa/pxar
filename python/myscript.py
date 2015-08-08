@@ -1404,14 +1404,16 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_test.__doc__, '']
 
-    @arity(0, 3, [int, int, int])
-    def do_wbcScan(self, min_wbc=90, max_triggers=50, max_wbc=130):
+    @arity(0, 4, [int, int, int, int])
+    def do_wbcScan(self, min_wbc=90, max_triggers=50, max_wbc=130, rocs=4):
         """do_wbcScan [minimal WBC] [number of events] [maximal WBC]: \n
         sets wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches maxWBC \n
         (default [90] [100] [130])"""
 
         self.api.daqTriggerSource("extern")
         wbc_scan = []
+        roc_hits = []
+        best_wbc = None
         print "wbc \tyield"
 
         # loop over wbc
@@ -1420,6 +1422,9 @@ class PxarCoreCmd(cmd.Cmd):
             self.api.daqStart()
             hits = 0
             triggers = 0
+            roc_hits.append([])
+            for i in range(rocs):
+                roc_hits[wbc - min_wbc].append(0)
 
             # loop until you find nTriggers
             while triggers < max_triggers:
@@ -1427,6 +1432,14 @@ class PxarCoreCmd(cmd.Cmd):
                     data = self.api.daqGetEvent()
                     if len(data.pixels) > 0:
                         hits += 1
+                    found_roc = []
+                    for i in range(rocs):
+                        found_roc.append(False)
+                    for i in range(len(data.pixels)):
+                        roc = data.pixels.roc
+                        if not found_roc[roc]:
+                            roc_hits[wbc - min_wbc][roc] += 1
+                            found_roc[roc] = True
                     triggers += 1
                 except RuntimeError:
                     pass
@@ -1438,6 +1451,7 @@ class PxarCoreCmd(cmd.Cmd):
             # stopping criterion
             if wbc > 3 + min_wbc:
                 if wbc_scan[-4] > 90:
+                    best_wbc = wbc - 3
                     print "Set DAC wbc to", wbc - 3
                     self.api.setDAC("wbc", wbc - 3)
                     break
@@ -1449,6 +1463,16 @@ class PxarCoreCmd(cmd.Cmd):
                 pass
 
         self.api.daqStop()
+
+        # roc statistics
+        print 'wbc\troc0\troc1\troc2\troc3'
+        for i in range(-1, 2):
+            print best_wbc - min_wbc + i, '\t',
+            for j in range(rocs):
+                print roc_hits[best_wbc - min_wbc + i][j] / max_triggers * 100, '\t',
+            print
+
+        # plot wbc_scan
         self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
         plot = Plotter.create_tgraph(wbc_scan, "wbc scan", "wbc", "evt/trig [%]", min_wbc)
         self.window.histos.append(plot)
@@ -1631,8 +1655,9 @@ class PxarCoreCmd(cmd.Cmd):
         while True:
             try:
                 data = self.api.daqGetEvent()
-                #if data.pixels[0].roc == 0:
-                    #module = False
+                if len(data) > 0:
+                    if data.pixels[0].roc == 0:
+                        module = False
                 break
             except RuntimeError:
                 pass
@@ -1947,8 +1972,8 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.daqStart()
         self.api.daqTrigger(avg, 500)
         black_dev = []
-        black_dev2=[]
-        black_real=[]
+        black_dev2 = []
+        black_real = []
         for roc in range(rocs):
             black_dev.append([])
             black_dev2.append([])
@@ -1966,12 +1991,12 @@ class PxarCoreCmd(cmd.Cmd):
                     black_dev[roc][adr] += val
                     black_dev2[roc][adr] += val*val
         for roc in range(rocs):
-            print roc,":",
+            print roc, ":",
             for i in range(len(black_dev[roc])):
-                mean =  black_dev[roc][i] / avg
-                mean2 =  black_dev2[roc][i]/ avg- mean* mean
-                mean2 = math.sqrt(mean2)
-                print mean, # "+/-",mean2,"\t",
+                mean = black_dev[roc][i] / avg
+                # mean2 = black_dev2[roc][i]/ avg - mean * mean
+                # mean2 = math.sqrt(mean2)
+                print mean
             print
         # for r in black_real[roc]:
         #     print r,
