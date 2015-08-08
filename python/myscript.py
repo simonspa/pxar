@@ -1644,7 +1644,7 @@ class PxarCoreCmd(cmd.Cmd):
 
     @arity(0, 1, [int])
     def do_hit_map(self, max_triggers=1000):
-        """ do_hitMap [maxTriggers]: collects a certain amount triggers and plots a hitmap ... hopefully^^"""
+        """ do_hitMap [maxTriggers]: collects a certain amount triggers and plots a hitmap"""
 
         windowsize = 100
         t = time()
@@ -1684,9 +1684,6 @@ class PxarCoreCmd(cmd.Cmd):
             before = triggers
             try:
                 data = self.api.daqGetEvent()
-                #                if len(data.pixels)>0:
-                #                    nTriggers += 1
-                #                    for px in data.pixels:
                 if len(data.pixels) > 1:
                     triggers += 1
                     for i in range(len(data.pixels) - 1):
