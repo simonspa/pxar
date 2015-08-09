@@ -249,6 +249,9 @@ namespace pxar {
      *
      *  In case of USB communication problems, pxar::UsbConnectionError is thrown.
      */
+
+    void setDecodingOffset(uint8_t offset);
+
     bool initDUT(uint8_t hubId,
 		 std::string tbmtype,
 		 std::vector<std::vector<std::pair<std::string,uint8_t> > > tbmDACs,
