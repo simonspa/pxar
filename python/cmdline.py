@@ -1032,6 +1032,51 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_wbcScan.__doc__, '']
 
+    @arity(0,4,[int, int, int, str])
+    def do_latencyScan(self, minlatency = 50, maxlatency = 100, triggers = 10, triggersignal = "extern"):
+        """ do_latencyScan [min] [max] [triggers] [signal]: scan the trigger latency from min to max with set number of triggers)"""
+
+        self.api.testAllPixels(0,None)
+        self.api.HVon()
+
+        latencyScan = []
+        print "latency \tyield"
+
+        # loop over latency
+        for latency in range (minlatency,maxlatency):
+            delay = {}
+            delay["triggerlatency"] = latency
+            self.api.setTestboardDelays(delay)
+            self.api.daqTriggerSource(triggersignal)
+            self.api.daqStart()
+            nHits       = 0
+            nTriggers   = 0
+
+            #loop until you find maxTriggers
+            while nTriggers < triggers:
+                try:
+                    data = self.api.daqGetEvent()
+                    if len(data.pixels) > 0:
+                       nHits += 1
+                    nTriggers += 1
+                except RuntimeError:
+                    pass
+
+            hitYield = 100*nHits/triggers
+            latencyScan.append(hitYield)
+            print '{0:03d}'.format(latency),"\t", '{0:3.0f}%'.format(hitYield)
+            self.api.daqStop()
+
+        if(self.window):
+            self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
+            plot = Plotter.create_tgraph(latencyScan, "latency scan", "trigger latency", "evt/trig [%]", minlatency)
+            self.window.histos.append(plot)
+            self.window.update()
+
+    def complete_latencyScan(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_latencyScan.__doc__, '']
+
     @arity(0, 3, [int, int, int])
     def do_find_clk_delay(self, n_rocs=1, min_val=0, max_val=25):
         """find the best clock delay setting """

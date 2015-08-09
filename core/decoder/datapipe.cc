@@ -479,7 +479,7 @@ namespace pxar {
 	sumB += translateDataword;
 	meanB = float(sumB)/counter;
       }
-      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB + 25);
+      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB + offsetB);
     }
     /**sliding window*/
     else {
@@ -489,7 +489,7 @@ namespace pxar {
       else if (&variable == &black){
 	meanB = (float(windowSize)-1)/windowSize*meanB + float(1)/windowSize*translateDataword ;
       }
-      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB + 25);
+      variable = (&variable == &ultrablack) ? int(meanUB) : int(meanB + offsetB);
     }
   }
 
