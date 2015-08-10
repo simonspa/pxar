@@ -316,8 +316,8 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.daqStop()
 
     def enable_pix(self, row=5, col=12, roc=0):
-        self.api.testAllPixels(0, roc)
-        self.api.maskAllPixels(1, roc)
+        self.api.testAllPixels(0)
+        self.api.maskAllPixels(1)
         self.api.testPixel(row, col, 1, roc)
         self.api.maskPixel(row, col, 0, roc)
 
@@ -767,7 +767,7 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_set_clock_delays.__doc__, '']
 
-    @arity(0, 2, [int, int])
+    @arity(0, 3, [int, int, int])
     def do_find_clk_delay(self, n_rocs=1, min_val=0, max_val=25):
         """find the best clock delay setting """
         # variable declarations
@@ -782,7 +782,7 @@ class PxarCoreCmd(cmd.Cmd):
         header = [0, 0]
 
         # find the address levels
-        print "get level splitting: "
+        print "get level splitting:"
         for roc in range(n_rocs):
             self.api.maskAllPixels(1, roc)
             self.api.testAllPixels(0, roc)
@@ -833,8 +833,7 @@ class PxarCoreCmd(cmd.Cmd):
                 spread_black[roc].append(sum_spread / float(n_triggers))
                 for i in range(n_levels):
                     levels_y[roc][i].append(mean_value[roc][i] / float(n_triggers))
-                print '\rclk-delay:', "{0:2d}".format(clk), 'black lvl spread: ', "{0:2.2f}".format(
-                    spread_black[roc][clk]),
+                print '\rclk-delay:', "{0:2d}".format(clk), 'black lvl spread: ', "{0:2.2f}".format(spread_black[roc][clk]),
                 sys.stdout.flush()
                 self.api.daqStop()
             self.api.maskAllPixels(1, roc)
@@ -860,11 +859,19 @@ class PxarCoreCmd(cmd.Cmd):
         for i in range(len(spread)):
             if spread[i] < min_spread:
                 min_spread = spread[i]
-                best_clk = clk_x[i]
+                best_clk = i
         print
         print 'best clk: ', best_clk
-        print 'black level spread: ', best_clk, spread_black[0][best_clk], best_clk + 1, spread_black[0][best_clk + 1],
-        print best_clk - 1, spread_black[0][best_clk - 1]
+        names = ['clk\t\t\t', 'level spread:\t\t', 'black level spread:\t']
+        infos = [clk_x, spread, spread_black[0]]
+        for i in range(3):
+            print names[i],
+            for j in range(-2, 3):
+                if not i:
+                    print infos[i][best_clk + j], '\t',
+                else:
+                    print '{0:2.2f}'.format(infos[i][best_clk + j]), '\t',
+            print
         self.set_clock(best_clk)
 
         # get an averaged header for the lvl margins
@@ -1283,7 +1290,7 @@ class PxarCoreCmd(cmd.Cmd):
                 addresses = self.get_address_levels()
                 print '{0:02d}'.format(column) + "\t" + '{0:02d}'.format(row) + "\t" + str(addresses)
                 f.write(str('{0:02d}'.format(column)) + ';' + str('{0:02d}'.format(row)) + '; ' + str(addresses) + '\n')
-        f.close
+        f.close()
 
     def complete_addressDecoding(self, text, line, start_index, end_index):
         # return help for the cmd
@@ -1416,14 +1423,16 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_test.__doc__, '']
 
-    @arity(0, 3, [int, int, int])
-    def do_wbcScan(self, min_wbc=90, max_triggers=50, max_wbc=130):
+    @arity(0, 4, [int, int, int, int])
+    def do_wbcScan(self, min_wbc=90, max_triggers=50, max_wbc=130, rocs=4):
         """do_wbcScan [minimal WBC] [number of events] [maximal WBC]: \n
         sets wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches maxWBC \n
         (default [90] [100] [130])"""
 
         self.api.daqTriggerSource("extern")
         wbc_scan = []
+        roc_hits = []
+        best_wbc = None
         print "wbc \tyield"
 
         # loop over wbc
@@ -1432,6 +1441,9 @@ class PxarCoreCmd(cmd.Cmd):
             self.api.daqStart()
             hits = 0
             triggers = 0
+            roc_hits.append([])
+            for i in range(rocs):
+                roc_hits[wbc - min_wbc].append(0)
 
             # loop until you find nTriggers
             while triggers < max_triggers:
@@ -1439,6 +1451,14 @@ class PxarCoreCmd(cmd.Cmd):
                     data = self.api.daqGetEvent()
                     if len(data.pixels) > 0:
                         hits += 1
+                    found_roc = []
+                    for i in range(rocs):
+                        found_roc.append(False)
+                    for i in range(len(data.pixels)):
+                        roc = data.pixels.roc
+                        if not found_roc[roc]:
+                            roc_hits[wbc - min_wbc][roc] += 1
+                            found_roc[roc] = True
                     triggers += 1
                 except RuntimeError:
                     pass
@@ -1450,6 +1470,7 @@ class PxarCoreCmd(cmd.Cmd):
             # stopping criterion
             if wbc > 3 + min_wbc:
                 if wbc_scan[-4] > 90:
+                    best_wbc = wbc - 3
                     print "Set DAC wbc to", wbc - 3
                     self.api.setDAC("wbc", wbc - 3)
                     break
@@ -1461,6 +1482,16 @@ class PxarCoreCmd(cmd.Cmd):
                 pass
 
         self.api.daqStop()
+
+        # roc statistics
+        print 'wbc\troc0\troc1\troc2\troc3'
+        for i in range(-1, 2):
+            print best_wbc - min_wbc + i, '\t',
+            for j in range(rocs):
+                print roc_hits[best_wbc - min_wbc + i][j] / max_triggers * 100, '\t',
+            print
+
+        # plot wbc_scan
         self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
         plot = Plotter.create_tgraph(wbc_scan, "wbc scan", "wbc", "evt/trig [%]", min_wbc)
         self.window.histos.append(plot)
@@ -1469,6 +1500,51 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_wbcScan(self):
         # return help for the cmd
         return [self.do_wbcScan.__doc__, '']
+
+    @arity(0,4,[int, int, int, str])
+    def do_latencyScan(self, minlatency = 50, maxlatency = 100, triggers = 10, triggersignal = "extern"):
+        """ do_latencyScan [min] [max] [triggers] [signal]: scan the trigger latency from min to max with set number of triggers)"""
+
+        self.api.testAllPixels(0,None)
+        self.api.HVon()
+
+        latencyScan = []
+        print "latency \tyield"
+
+        # loop over latency
+        for latency in range (minlatency,maxlatency):
+            delay = {}
+            delay["triggerlatency"] = latency
+            self.api.setTestboardDelays(delay)
+            self.api.daqTriggerSource(triggersignal)
+            self.api.daqStart()
+            nHits       = 0
+            nTriggers   = 0
+
+            #loop until you find maxTriggers
+            while nTriggers < triggers:
+                try:
+                    data = self.api.daqGetEvent()
+                    if len(data.pixels) > 0:
+                       nHits += 1
+                    nTriggers += 1
+                except RuntimeError:
+                    pass
+
+            hitYield = 100*nHits/triggers
+            latencyScan.append(hitYield)
+            print '{0:03d}'.format(latency),"\t", '{0:3.0f}%'.format(hitYield)
+            self.api.daqStop()
+
+        if(self.window):
+            self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
+            plot = Plotter.create_tgraph(latencyScan, "latency scan", "trigger latency", "evt/trig [%]", minlatency)
+            self.window.histos.append(plot)
+            self.window.update()
+
+    def complete_latencyScan(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_latencyScan.__doc__, '']
 
     @arity(0, 0, [])
     def do_readMaskFile(self):
@@ -1632,7 +1708,7 @@ class PxarCoreCmd(cmd.Cmd):
 
     @arity(0, 1, [int])
     def do_hit_map(self, max_triggers=1000):
-        """ do_hitMap [maxTriggers]: collects a certain amount triggers and plots a hitmap ... hopefully^^"""
+        """ do_hitMap [maxTriggers]: collects a certain amount triggers and plots a hitmap"""
 
         windowsize = 100
         t = time()
@@ -1643,8 +1719,9 @@ class PxarCoreCmd(cmd.Cmd):
         while True:
             try:
                 data = self.api.daqGetEvent()
-                #if data.pixels[0].roc == 0:
-                    #module = False
+                if len(data) > 0:
+                    if data.pixels[0].roc == 0:
+                        module = False
                 break
             except RuntimeError:
                 pass
@@ -1671,9 +1748,6 @@ class PxarCoreCmd(cmd.Cmd):
             before = triggers
             try:
                 data = self.api.daqGetEvent()
-                #                if len(data.pixels)>0:
-                #                    nTriggers += 1
-                #                    for px in data.pixels:
                 if len(data.pixels) > 1:
                     triggers += 1
                     for i in range(len(data.pixels) - 1):
@@ -1717,8 +1791,8 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_rate.__doc__, '']
 
-    @arity(0, 3, [str, int, int])
-    def do_ph_vs_vcal(self, fit="gaus", row=14, column=14, average=10):
+    @arity(0, 4, [int, int, int, int])
+    def do_ph_vs_vcal(self, row=14, column=14, average=10, fit=1):
         start_time = time()
         self.api.testAllPixels(0)
         self.api.maskAllPixels(1)
@@ -1748,13 +1822,13 @@ class PxarCoreCmd(cmd.Cmd):
                 if len(data) < 8:
                     sum_ph = 0
                     break
-                sum_ph += (data[8] if len(data) == 9 else 0)
+                sum_ph += (data[8] if len(data) >= 9 else 0)
             sum_ph /= average
             ph_y.append(sum_ph)
             vcal_x.append(vcal)
+        self.api.daqStop()
         print vcal_x
         print ph_y
-        self.api.daqStop()
 
         # plot ph vs vcal
         self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
@@ -1762,7 +1836,7 @@ class PxarCoreCmd(cmd.Cmd):
         plot.SetMarkerSize(0.5)
         plot.SetMarkerStyle(20)
         # f1 = ROOT.TH1.pol1
-        plot.Fit(fit)
+        # plot.Fit(fit, 'Q')
         self.window.histos.append(plot)
         self.window.update()
         self.elapsed_time(start_time)
@@ -1959,8 +2033,8 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.daqStart()
         self.api.daqTrigger(avg, 500)
         black_dev = []
-        black_dev2=[]
-        black_real=[]
+        black_dev2 = []
+        black_real = []
         for roc in range(rocs):
             black_dev.append([])
             black_dev2.append([])
@@ -1978,12 +2052,12 @@ class PxarCoreCmd(cmd.Cmd):
                     black_dev[roc][adr] += val
                     black_dev2[roc][adr] += val*val
         for roc in range(rocs):
-            print roc,":",
+            print roc, ":",
             for i in range(len(black_dev[roc])):
-                mean =  black_dev[roc][i] / avg
-                mean2 =  black_dev2[roc][i]/ avg- mean* mean
-                mean2 = math.sqrt(mean2)
-                print mean, # "+/-",mean2,"\t",
+                mean = black_dev[roc][i] / avg
+                # mean2 = black_dev2[roc][i]/ avg - mean * mean
+                # mean2 = math.sqrt(mean2)
+                print mean
             print
         # for r in black_real[roc]:
         #     print r,

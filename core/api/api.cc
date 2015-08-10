@@ -60,6 +60,7 @@ bool pxarCore::initTestboard(std::vector<std::pair<std::string,uint8_t> > sig_de
   verifyPatternGenerator(pg_setup);
 
   // Call the HAL to do the job:
+  std::cout << "THIS IS VA: " <<_dut->va << std::endl;
   _hal->initTestboard(_dut->sig_delays,_dut->pg_setup,_dut->pg_sum,_dut->va,_dut->vd,_dut->ia,_dut->id);
   return true;
 }
@@ -73,6 +74,7 @@ void pxarCore::setTestboardDelays(std::vector<std::pair<std::string,uint8_t> > s
   _hal->setTestboardDelays(_dut->sig_delays);
   LOG(logDEBUGAPI) << "Testboard signal delays updated.";
 }
+void pxarCore::setDecodingOffset(uint8_t offset) {  _hal->setOffset(offset); }
 
 void pxarCore::setPatternGenerator(std::vector<std::pair<std::string,uint8_t> > pg_setup) {
   if(!_hal->status()) {
@@ -127,7 +129,7 @@ bool pxarCore::initDUT(uint8_t hubid,
     string i2cstring("");
     LOG(logDEBUGAPI) << "I2C addresses for all ROCs are provided as user input: "<<i2cstring;
     for (unsigned int i = 0; i < rocI2Cs.size(); ++i) LOG(logDEBUGAPI)<<i<<" "<<(int)rocI2Cs[i];
-    
+
   }
   else { LOG(logDEBUGAPI) << "I2C addresses will be automatically generated."; }
 

@@ -162,14 +162,15 @@ def PxarStartup(directory, verbosity):
         rocDacs.append(dacconfig.getAll())
         rocPixels.append(pixels)
 
+
     # set pgcal according to wbc
     pgcal = int(rocDacs[0]['wbc']) + 6 if nrocs else 106
 
     # Pattern Generator for single ROC operation:
     if int(config.get("nTbms")) == 0:
         pg_setup = (
-            ("PG_RESR",25),
             #("PG_RESR",25),
+            ("PG_RESR",25),
             ("PG_CAL",pgcal),
             ("PG_TRG",16),
             #("PG_TRG",16),
@@ -190,9 +191,9 @@ def PxarStartup(directory, verbosity):
     sig_delays = tbparameters.getAll()):
         print "WARNING: could not init DTB -- possible firmware mismatch."
         print "Please check if a new FW version is available"
-        exit
+        exit()
 
-
+    api.setDecodingOffset(config.get('decodingOffset'))
     print "And we have just initialized " + str(len(pixels)) + " pixel configs to be used for every ROC!"
 
     api.initDUT(int(config.get("hubId",31)),config.get("tbmType","tbm08"),tbmDACs,config.get("rocType"),rocDacs,rocPixels, rocI2C)

@@ -79,6 +79,7 @@ void ConfigParameters::initialize() {
   fProbeA2 = "sdata2";
   fProbeD1 = "clk";
   fProbeD2 = "ctr";
+  fOffsetDecoding = 0;
 
   rocZeroAnalogCurrent = 0.0;
   fRocType = "psi46digv21respin";
@@ -195,6 +196,8 @@ bool ConfigParameters::readConfigParameterFile(string file) {
       else if (0 == _name.compare("probeA2")) { fProbeA2 = _value; }
       else if (0 == _name.compare("probeD1")) { fProbeD1 = _value; }
       else if (0 == _name.compare("probeD2")) { fProbeD2 = _value; }
+
+      else if (0 == _name.compare("decodingOffset")) { fOffsetDecoding = _ivalue; }
 
 
       else { LOG(logINFO) << "Did not understand '" << _name << "'."; }

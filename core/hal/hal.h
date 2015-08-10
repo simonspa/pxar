@@ -23,7 +23,7 @@ namespace pxar {
      *  closed and RPC object destroyed.
      */
     ~hal();
-    
+
 
     /** Function to check the status of the HAL
      */
@@ -91,7 +91,7 @@ namespace pxar {
     /** set signal to random output PRBS
      */
     void SigSetPRBS(uint8_t signal, uint8_t speed);
-    
+
     /** select termination for RDA/TOUT to LCDS (for modules)
      */
     void SigSetLCDS();
@@ -134,7 +134,7 @@ namespace pxar {
      */
     bool IsClockPresent();
 
-    /** Set the clock stretch 
+    /** Set the clock stretch
     */
     void SetClockStretch(uint8_t src, uint16_t delay, uint16_t width);
 
@@ -158,26 +158,26 @@ namespace pxar {
 
 
     // Testboard probe channel commands:
-    /** Selects "signal" as output for the DTB probe channel D1 (digital) 
+    /** Selects "signal" as output for the DTB probe channel D1 (digital)
      */
     void SignalProbeD1(uint8_t signal);
 
-    /** Selects "signal" as output for the DTB probe channel D2 (digital) 
+    /** Selects "signal" as output for the DTB probe channel D2 (digital)
      */
     void SignalProbeD2(uint8_t signal);
 
-    /** Selects "signal" as output for the DTB probe channel A1 (analog) 
+    /** Selects "signal" as output for the DTB probe channel A1 (analog)
      */
     void SignalProbeA1(uint8_t signal);
 
-    /** Selects "signal" as output for the DTB probe channel A2 (analog) 
+    /** Selects "signal" as output for the DTB probe channel A2 (analog)
      */
     void SignalProbeA2(uint8_t signal);
 
-    /** Selects input for the ADC 
+    /** Selects input for the ADC
      */
     void SignalProbeADC(uint8_t signal, uint8_t gain);
-    
+
     /** Record data using the DTB ADC. The following parameters are available:
 	analog_probe = signal to be sampled
 	gain = adc gain  (higher values = higher gain but also slower)
@@ -191,11 +191,11 @@ namespace pxar {
 	stop    = not sure, takes nSample samples when stop is 0
       */
     std::vector<uint16_t> daqADC(uint8_t analog_probe, uint8_t gain, uint16_t nSample, uint8_t source, uint8_t start, uint8_t stop = 0);
-    
+
     // TEST COMMANDS
 
     /** Function to return Module maps of calibration pulses
-     *  Public flags contain possibility to route the calibrate pulse via the sensor (FLAG_CALS) and 
+     *  Public flags contain possibility to route the calibrate pulse via the sensor (FLAG_CALS) and
      *  possibility for cross-talk measurement (FLAG_XTALK)
      *
      *  The roci2c vector parameter allows to select ROCs with arbitrary I2C addresses. Usually module
@@ -204,7 +204,7 @@ namespace pxar {
     std::vector<Event*> MultiRocAllPixelsCalibrate(std::vector<uint8_t> roci2cs, std::vector<int32_t> parameter);
 
     /** Function to return ROC maps of calibration pulses
-     *  Public flags contain possibility to route the calibrate pulse via the sensor (FLAG_CALS) and 
+     *  Public flags contain possibility to route the calibrate pulse via the sensor (FLAG_CALS) and
      *  possibility for cross-talk measurement (FLAG_XTALK)
      */
     std::vector<Event*> SingleRocAllPixelsCalibrate(uint8_t roci2c, std::vector<int32_t> parameter);
@@ -295,8 +295,8 @@ namespace pxar {
     void daqTriggerSource(uint16_t source);
 
     /** Send a single signal via the DTB to the DUT. This function
-     *  first configures the trigger source TRG_SEL_SINGLE_DIR 
-     *  (direct sending of signals, no softTBM), then sends the 
+     *  first configures the trigger source TRG_SEL_SINGLE_DIR
+     *  (direct sending of signals, no softTBM), then sends the
      *  signal and finally resets the trigger source to the previous
      *  setting (from hal::_currentTrgSrc)
      */
@@ -389,6 +389,8 @@ namespace pxar {
     /** Get ADC value
      */
     uint16_t GetADC(uint8_t rpc_par1);
+
+    void setOffset(uint8_t offsetDec) { decoder0.setOffset(offsetDec); }
 
   private:
 

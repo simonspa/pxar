@@ -213,6 +213,9 @@ cdef class PyPxarCore:
         for key, value in power_settings.items():
             ps.push_back((key,float(value)))
         self.thisptr.setTestboardPower(ps)
+    def setDecodingOffset(self, offset):
+        cdef uint8_t os = offset
+        self.thisptr.setDecodingOffset(os)
     def setTestboardDelays(self, sig_delays):
         """ Initializer method for the testboard
         Parameters are dictionaries in the form {"name":value}:

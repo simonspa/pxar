@@ -18,7 +18,7 @@ class Plotter(object):
         return th1
 
     @staticmethod
-    def create_tgraph(data, name, x_title, y_title, minimum=None, data_x=-1):
+    def create_tgraph(data, name, x_title, y_title, data_x=-1, minimum=None):
         #        xdata = list(xrange(len(data)))
         xdata = data_x
         if data_x == -1:
