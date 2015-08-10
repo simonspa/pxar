@@ -163,7 +163,7 @@ def PxarStartup(directory, verbosity):
         rocPixels.append(pixels)
 
     # set pgcal according to wbc
-    pgcal = int(rocDacs[0]['wbc']) + 6
+    pgcal = int(rocDacs[0]['wbc']) + 6 if nrocs else 106
 
     # Pattern Generator for single ROC operation:
     if int(config.get("nTbms")) == 0:

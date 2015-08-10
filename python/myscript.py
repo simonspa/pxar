@@ -419,6 +419,18 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_getTBid.__doc__, '']
 
+    @arity(0,1,[int])
+    def do_setExternalClock(self, enable=1):
+        """setExternalClock [enable]: enables the external DTB clock input, switches off the internal clock. Only switches if external clock is present."""
+        if self.api.setExternalClock(enable) is True:
+            print "Switched to " + ("external" if enable else "internal") + " clock."
+        else:
+            print "Could not switch to " + ("external" if enable else "internal") + " clock!"
+
+    def complete_setExternalClock(self):
+        # return help for the cmd
+        return [self.do_setExternalClock.__doc__, '']
+
     @arity(2, 2, [str, str])
     def do_SignalProbe(self, probe, name):
         """SignalProbe [probe] [name]: Switches DTB probe output [probe] to signal [name]"""
