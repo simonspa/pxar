@@ -305,7 +305,7 @@ namespace pxar {
         /** little fix if the UB in the telescope is too small --> levelS*3 */
         ((ultrablack-levelS*2 < expandSign((*word) & 0x0fff) && ultrablack+levelS*2 > expandSign((*word) & 0x0fff))
         // Black level:
-        && (black - levelS < 20 + expandSign((*(word+1)) & 0x0fff) && black +levelS > 20 + expandSign((*(word+1)) & 0x0fff)))) {
+        && (black - levelS < offsetB + expandSign((*(word+1)) & 0x0fff) && black +levelS > offsetB + expandSign((*(word+1)) & 0x0fff)))) {
 
             roc_n++;
             // Save the lastDAC value:

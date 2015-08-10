@@ -60,7 +60,6 @@ bool pxarCore::initTestboard(std::vector<std::pair<std::string,uint8_t> > sig_de
   verifyPatternGenerator(pg_setup);
 
   // Call the HAL to do the job:
-  std::cout << "THIS IS VA: " <<_dut->va << std::endl;
   _hal->initTestboard(_dut->sig_delays,_dut->pg_setup,_dut->pg_sum,_dut->va,_dut->vd,_dut->ia,_dut->id);
   return true;
 }

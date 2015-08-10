@@ -182,7 +182,6 @@ def PxarStartup(directory, verbosity):
             ("PG_RESR",15),
             ("PG_CAL",pgcal),
             ("PG_TRG",0))
-
        # Start an API instance from the core pxar library
     api = PyPxarCore(usbId=config.get("testboardName"),logLevel=verbosity)
     print api.getVersion()
@@ -192,8 +191,7 @@ def PxarStartup(directory, verbosity):
         print "WARNING: could not init DTB -- possible firmware mismatch."
         print "Please check if a new FW version is available"
         exit()
-
-    api.setDecodingOffset(config.get('decodingOffset'))
+    api.setDecodingOffset(int(config.get("decodingOffset", 0)))
     print "And we have just initialized " + str(len(pixels)) + " pixel configs to be used for every ROC!"
 
     api.initDUT(int(config.get("hubId",31)),config.get("tbmType","tbm08"),tbmDACs,config.get("rocType"),rocDacs,rocPixels, rocI2C)

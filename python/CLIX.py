@@ -409,6 +409,15 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_getTBia(self):
         # return help for the cmd
         return [self.do_getTBia.__doc__, '']
+        
+    @arity(0, 1, [int])
+    def do_setOffset(self, os):
+        """setOffset"""
+        self.api.setDecodingOffset(os)
+
+    def complete_setOffset(self):
+        # return help for the cmd
+        return [self.do_setOffset.__doc__, '']
 
     @arity(0, 0, [])
     def do_getTBid(self):
