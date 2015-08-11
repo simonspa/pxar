@@ -1463,11 +1463,11 @@ class PxarCoreCmd(cmd.Cmd):
                     found_roc = []
                     for i in range(rocs):
                         found_roc.append(False)
-                    for i in range(len(data.pixels)):
-                        roc = data.pixels.roc
-                        if not found_roc[roc]:
-                            roc_hits[wbc - min_wbc][roc] += 1
-                            found_roc[roc] = True
+                    #for i in range(len(data.pixels)):
+                        #roc = data.pixels.roc
+                        #if not found_roc[roc]:
+                            #roc_hits[wbc - min_wbc][roc] += 1
+                            #found_roc[roc] = True
                     triggers += 1
                 except RuntimeError:
                     pass
@@ -1493,12 +1493,12 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.daqStop()
 
         # roc statistics
-        print 'wbc\troc0\troc1\troc2\troc3'
-        for i in range(-1, 2):
-            print best_wbc - min_wbc + i, '\t',
-            for j in range(rocs):
-                print roc_hits[best_wbc - min_wbc + i][j] / max_triggers * 100, '\t',
-            print
+        #print 'wbc\troc0\troc1\troc2\troc3'
+        #for i in range(-1, 2):
+            #print best_wbc - min_wbc + i, '\t',
+            #for j in range(rocs):
+                #print roc_hits[best_wbc - min_wbc + i][j] / max_triggers * 100, '\t',
+            #print
 
         # plot wbc_scan
         self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)

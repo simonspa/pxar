@@ -191,7 +191,10 @@ def PxarStartup(directory, verbosity):
         print "WARNING: could not init DTB -- possible firmware mismatch."
         print "Please check if a new FW version is available"
         exit()
-    api.setDecodingOffset(int(config.get("decodingOffset", 0)))
+    try:
+        api.setDecodingOffset(int(config.get("decodingOffset", int(0))))
+    except KeyError:
+        pass
     print "And we have just initialized " + str(len(pixels)) + " pixel configs to be used for every ROC!"
 
     api.initDUT(int(config.get("hubId",31)),config.get("tbmType","tbm08"),tbmDACs,config.get("rocType"),rocDacs,rocPixels, rocI2C)
