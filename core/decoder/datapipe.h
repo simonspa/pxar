@@ -182,7 +182,7 @@ namespace pxar {
 public:
 
     dtbEventDecoder():  decodingStats(), readback(), eventID(-1), ultrablack(0xfff), black(0xfff),
-                        counter(0), sumB(0), sumUB(0), meanB(0), meanUB(0), offsetB(25) {};
+                        counter(0), sumB(0), sumUB(0), meanB(0), meanUB(0), offsetB(20) {};
     void Clear() { decodingStats.clear(); readback.clear(); count.clear(); shiftReg.clear(); eventID = -1; };
     void setOffset(uint8_t decodingOffset) { offsetB = decodingOffset; }
 
