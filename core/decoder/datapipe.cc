@@ -438,18 +438,19 @@ namespace pxar {
     // If the number of ROCs does not correspond to what we expect
     // clear the event and return:
     if(roc_n+1 != GetTokenChainLength()) {
-    for (uint16_t i(0); i< sample->GetSize(); i++)
-            std::cout << (*sample)[i] << " ";
-        std::cout << "\n";
-        for (uint16_t i(0); i< sample->GetSize(); i++)
-            std::cout << expandSign((*sample)[i] & 0x0fff) << " ";
-        std::cout << "\n";
-        std::cout << black << " " << ultrablack << "\n";
-      LOG(logERROR) << "Number of ROCs (" << static_cast<int>(roc_n+1)
+        if(sample->GetSize() == 300){
+            LOG(logWARNING) << "ADC timeout reached! Event has more than 300 words!";
+        }
+        else {
+            for (uint16_t i(0); i< sample->GetSize(); i++)
+                std::cout << expandSign((*sample)[i] & 0x0fff) << " ";
+            std::cout << "\nBLACK: " << black << "\tULTRABLACK: " << ultrablack << "\n";
+            LOG(logERROR) << "Number of ROCs (" << static_cast<int>(roc_n+1)
 		    << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
-      decodingStats.m_errors_roc_missing++;
-      // Clearing event content:
-      roc_Event.Clear();
+        }
+        decodingStats.m_errors_roc_missing++;
+        // Clearing event content:
+        roc_Event.Clear(); 
     }
     // Count empty events
     else if(roc_Event.pixels.empty()) {
