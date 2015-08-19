@@ -438,6 +438,13 @@ namespace pxar {
     // If the number of ROCs does not correspond to what we expect
     // clear the event and return:
     if(roc_n+1 != GetTokenChainLength()) {
+        if (!sample){
+            LOG(logWARNING) << "CheckEventValidity: rawEvent pointer sample is Zero - returning";
+            decodingStats.m_errors_roc_missing++;
+            // Clearing event content:
+            roc_Event.Clear(); 
+            return;
+        }
         if(sample->GetSize() == 300){
             LOG(logWARNING) << "ADC timeout reached! Event has more than 300 words!";
         }
