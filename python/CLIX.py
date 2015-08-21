@@ -1432,22 +1432,28 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_test.__doc__, '']
 
-    @arity(0, 4, [int, int, int, int])
-    def do_wbcScan(self, min_wbc=90, max_triggers=50, max_wbc=130, rocs=4):
+    @arity(0, 3, [int, int, int])
+    def do_wbcScan(self, min_wbc=90, max_triggers=50, max_wbc=130):
         """do_wbcScan [minimal WBC] [number of events] [maximal WBC]: \n
         sets wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches maxWBC \n
         (default [90] [100] [130])"""
 
         self.api.daqTriggerSource("extern")
+        rocs = self.api.getNEnabledRocs()
         wbc_scan = []
+        wbc_values = []
         roc_hits = []
         best_wbc = None
+        trigger_phase = []
+        for i in range(10):
+            trigger_phase.append(0)
         print "wbc \tyield"
 
         # loop over wbc
         for wbc in range(min_wbc, max_wbc):
             self.api.setDAC("wbc", wbc)
             self.api.daqStart()
+            wbc_values.append(wbc)
             hits = 0
             triggers = 0
             roc_hits.append([])
@@ -1463,11 +1469,11 @@ class PxarCoreCmd(cmd.Cmd):
                     found_roc = []
                     for i in range(rocs):
                         found_roc.append(False)
-                    #for i in range(len(data.pixels)):
-                        #roc = data.pixels.roc
-                        #if not found_roc[roc]:
-                            #roc_hits[wbc - min_wbc][roc] += 1
-                            #found_roc[roc] = True
+                    for i in range(len(data.pixels)):
+                        roc = data.pixels[i].roc
+                        if not found_roc[roc]:
+                            roc_hits[wbc - min_wbc][roc] += 1
+                            found_roc[roc] = True
                     triggers += 1
                 except RuntimeError:
                     pass
@@ -1490,15 +1496,45 @@ class PxarCoreCmd(cmd.Cmd):
             except RuntimeError:
                 pass
 
+        stop = 0
+        while stop < 1000:
+            bla = self.converted_raw_event()
+            if len(bla) > 2:
+                for i in range(10):
+                    if bla[1] == i:
+                        trigger_phase[i] += 1
+                stop += 1
+
         self.api.daqStop()
 
+        if best_wbc == None:
+            last_wbc = 0
+            for i in range(len(wbc_scan)):
+                if wbc_scan[i] < last_wbc and last_wbc > 20:
+                    best_wbc = wbc_values[i-1]
+                    break
+                last_wbc = wbc_scan[i]
+            print "Set DAC wbc to", best_wbc
+            self.api.setDAC("wbc", best_wbc)
+
         # roc statistics
-        #print 'wbc\troc0\troc1\troc2\troc3'
-        #for i in range(-1, 2):
-            #print best_wbc - min_wbc + i, '\t',
-            #for j in range(rocs):
-                #print roc_hits[best_wbc - min_wbc + i][j] / max_triggers * 100, '\t',
-            #print
+        print "\nROC STATISTICS:"
+        print 'wbc\t',
+        for i in range(rocs):
+            print 'roc' + str(i) + '\t',
+        print
+        for i in range(-2, 3):
+            print best_wbc + i, '\t',
+            for j in range(rocs):
+                print "{0:2.1f}".format(roc_hits[best_wbc - min_wbc + i][j] / float(max_triggers) * 100), '\t',
+            print
+
+        #triggerphase
+        print '\nTRIGGER PHASE:'
+        for i in range(len(trigger_phase)):
+            if trigger_phase[i]:
+                print i, '\t', trigger_phase[i] / 20 * '|', "{0:2.1f}%".format( trigger_phase[i] / float(10))
+
 
         # plot wbc_scan
         self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
@@ -1511,7 +1547,7 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_wbcScan.__doc__, '']
 
     @arity(0,4,[int, int, int, str])
-    def do_latencyScan(self, minlatency = 50, maxlatency = 100, triggers = 10, triggersignal = "extern"):
+    def do_latencyScan(self, minlatency = 75, maxlatency = 85, triggers = 50, triggersignal = "extern"):
         """ do_latencyScan [min] [max] [triggers] [signal]: scan the trigger latency from min to max with set number of triggers)"""
 
         self.api.testAllPixels(0,None)
@@ -1535,7 +1571,11 @@ class PxarCoreCmd(cmd.Cmd):
                 try:
                     data = self.api.daqGetEvent()
                     if len(data.pixels) > 0:
-                       nHits += 1
+                        rocs = []
+                        for i in range(len(data.pixels)):
+                            rocs.append(data.pixels[i].roc)
+                        if 1 in rocs and 2 in rocs:
+                            nHits += 1
                     nTriggers += 1
                 except RuntimeError:
                     pass
