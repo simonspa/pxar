@@ -296,7 +296,7 @@ void ConfigParameters::readCredentials(string file) {
   std::string replyMsg;
   if( twitterObj.accountVerifyCredGet() ) {
     twitterObj.getLastWebResponse( replyMsg );
-    LOG(logINFO) << "twitCurl::accountVerifyCredGet web response: " << replyMsg;
+    LOG(logDEBUG) << "twitCurl::accountVerifyCredGet web response: " << replyMsg;
     twitter_authorized = true;
   }
   else {
