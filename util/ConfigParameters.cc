@@ -282,7 +282,6 @@ void ConfigParameters::readCredentials(string file) {
     istringstream mystr(line);
     mystr >> key;
     mystr >> token;
-    LOG(logINFO) << key << ": " << token;
     if(key == "username") twitterObj.setTwitterUsername(token);
     else if(key == "password") twitterObj.setTwitterPassword(token);
     else if(key == "consumerkey") twitterObj.getOAuth().setConsumerKey(token);
@@ -313,7 +312,8 @@ void ConfigParameters::tweetStatus(std::string message) {
   }
 
   std::string replyMsg;
-  if(twitterObj.statusUpdate(message)) {
+  std::string mymessage = fTBName + ": " + message;
+  if(twitterObj.statusUpdate(mymessage)) {
     twitterObj.getLastWebResponse( replyMsg );
     LOG(logDEBUG) << "twitCurl::statusUpdate web response: " << replyMsg;
   }
