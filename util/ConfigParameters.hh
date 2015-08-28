@@ -2,6 +2,9 @@
 #define CONFIGPARAMETERS
 
 #include "pxardllexport.h"
+#ifdef TWITTER
+#include "twitcurl.h"
+#endif
 
 /** Cannot use stdint.h when running rootcint on WIN32 */
 #if ((defined WIN32) && (defined __CINT__))
@@ -151,7 +154,11 @@ public:
   void cleanupString(std::string& str);
   void readNrocs(std::string line);
 
-private:
+#ifdef TWITTER
+  void tweetStatus(std::string message);
+#endif
+
+ private:
 
   bool fReadTbParameters, fReadTbmParameters, fReadDacParameters, fReadRocPixelConfig, fReadReadbackCal;
   std::vector<std::pair<std::string, uint8_t> > fTbParameters;
@@ -185,6 +192,11 @@ private:
   std::string fTrimParametersFileName;
   std::string fTestParametersFileName;
   std::string fRootFileName;
+#ifdef TWITTER
+  twitCurl twitterObj;
+  bool twitter_authorized;
+  void readCredentials(std::string file);
+#endif
   std::string fLogFileName;
   std::string fMaskFileName;
   std::string fDebugFileName;

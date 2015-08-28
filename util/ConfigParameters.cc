@@ -155,6 +155,9 @@ bool ConfigParameters::readConfigParameterFile(string file) {
       else if (0 == _name.compare("testParameters")) { setTestParameterFileName(_value); }
       else if (0 == _name.compare("dacParameters")) { setDACParameterFileName(_value); }
       else if (0 == _name.compare("rootFileName")) { setRootFileName(_value); }
+#ifdef TWITTER
+      else if (0 == _name.compare("credentialFileName")) { readCredentials(_value); }
+#endif
       else if (0 == _name.compare("trimParameters")) { setTrimParameterFileName(_value); }
       else if (0 == _name.compare("maskFile")) { setMaskFileName(_value); }
       else if (0 == _name.compare("gainPedestalParameters")) {fGainPedestalParameterFileName = _value;}
@@ -188,7 +191,6 @@ bool ConfigParameters::readConfigParameterFile(string file) {
       else if (0 == _name.compare("probeA2")) { fProbeA2 = _value; }
       else if (0 == _name.compare("probeD1")) { fProbeD1 = _value; }
       else if (0 == _name.compare("probeD2")) { fProbeD2 = _value; }
-     
 
       else { LOG(logINFO) << "Did not understand '" << _name << "'."; }
     }
@@ -263,6 +265,65 @@ vector<pair<string, uint8_t> >  ConfigParameters::getTbParameters() {
   return  fTbParameters;
 }
 
+#ifdef TWITTER
+// ----------------------------------------------------------------------
+void ConfigParameters::readCredentials(string file) {
+
+  twitter_authorized = false;
+  
+  string filename = fDirectory + "/" + file;
+  LOG(logINFO) << "Attempting to read Twitter credentials from " << filename;
+  ifstream is(filename.c_str());
+  if(!is) { LOG(logWARNING) << "Could not open twitter credential file " << filename; }
+  
+  std::string line, key, token;
+  while(is.good() && ! is.eof() ) {
+    getline(is, line);
+    istringstream mystr(line);
+    mystr >> key;
+    mystr >> token;
+    LOG(logINFO) << key << ": " << token;
+    if(key == "username") twitterObj.setTwitterUsername(token);
+    else if(key == "password") twitterObj.setTwitterPassword(token);
+    else if(key == "consumerkey") twitterObj.getOAuth().setConsumerKey(token);
+    else if(key == "consumersecret") twitterObj.getOAuth().setConsumerSecret(token);
+    else if(key == "accesstoken") twitterObj.getOAuth().setOAuthTokenKey(token);
+    else if(key == "accesssecret") twitterObj.getOAuth().setOAuthTokenSecret(token);
+    else { LOG(logWARNING) << "Couldn't understand " << key; }
+  }
+  is.close();
+
+  std::string replyMsg;
+  if( twitterObj.accountVerifyCredGet() ) {
+    twitterObj.getLastWebResponse( replyMsg );
+    LOG(logINFO) << "twitCurl::accountVerifyCredGet web response: " << replyMsg;
+    twitter_authorized = true;
+  }
+  else {
+    twitterObj.getLastCurlError( replyMsg );
+    LOG(logERROR) << "twitCurl::accountVerifyCredGet error: " << replyMsg;
+  }
+}
+
+void ConfigParameters::tweetStatus(std::string message) {
+
+  if(!twitter_authorized) {
+    LOG(logERROR) << "Can't tweet to account with failed authentification!";
+    return;
+  }
+
+  std::string replyMsg;
+  if(twitterObj.statusUpdate(message)) {
+    twitterObj.getLastWebResponse( replyMsg );
+    LOG(logDEBUG) << "twitCurl::statusUpdate web response: " << replyMsg;
+  }
+  else {
+    twitterObj.getLastCurlError( replyMsg );
+    LOG(logDEBUG) << "twitCurl::statusUpdate error: " << replyMsg;
+    LOG(logERROR) << "Failed to tweet message!";
+  }
+}
+#endif
 
 // ----------------------------------------------------------------------
 void ConfigParameters::readTbParameters() {
