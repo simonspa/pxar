@@ -28,6 +28,10 @@ OPTION(INTERFACE_USB "Build DTB USB interface?" ON)
 # Switch off building for all interfaces:
 OPTION(BUILD_dtbemulator "Do not build any interface but simulate DTB?" OFF)
 
+# OPtion to build the twitter backend for notifications
+OPTION(BUILD_twitter "Build Twitter Interface for notifications?" OFF)
+
+
 ########################################
 # Setup the build environment for pxar #
 ########################################
@@ -214,6 +218,20 @@ IF(DEVICES)
   SET(DEVICES_LINK_LIBRARY devices)
   INCLUDE_DIRECTORIES(devices)
 ENDIF(DEVICES)
+
+
+IF(BUILD_twitter)
+  FIND_PACKAGE(CURL)
+  IF(CURL_FOUND)
+    INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIRS})
+    ADD_SUBDIRECTORY(extern/libtwitcurl)
+    IF(TWITTER)
+      SET(NOTIFICATION_LINK_LIBRARY twitcurl)
+      INCLUDE_DIRECTORIES(extern/libtwitcurl)
+      ADD_DEFINITIONS(-DTWITTER)
+    ENDIF(TWITTER)
+  ENDIF(CURL_FOUND)
+ENDIF(BUILD_twitter)
 
 # full UI and test suite (requires ROOT)
 IF(BUILD_pxarui)
