@@ -650,8 +650,9 @@ PixTest::~PixTest() {
     h->SetDirectory(fDirectory); 
     h->Write();
   }
-
+#ifdef TWITTER
   fPixSetup->getConfigParameters()->tweetStatus("Test finished: " + fName);
+#endif
 }
 
 // ----------------------------------------------------------------------
