@@ -107,7 +107,7 @@ void PixTestFullTest::doTest() {
 
     t->fullTest(); 
 
-    delete t; 
+    delete t;
   }
 
 }
