@@ -83,7 +83,7 @@ class CTestboard {
 
   std::vector<std::pair<std::string,std::string> > GetDeviceList() {
     std::vector<std::pair<std::string,std::string> > deviceList;
-    deviceList.push_back(std::make_pair("dtb_emulator","0x0"));
+    deviceList.push_back(std::make_pair("0x0","DTB_EMULATOR"));
     return deviceList;
   }
 
