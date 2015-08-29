@@ -160,9 +160,15 @@ void PixTestPretest::doTest() {
   h1->Draw(getHistOption(h1).c_str());
   PixTest::update(); 
 
-  // -- this no longer seems to converge with f/w 4.4
+  // -- this no longer seems to converge with f/w 4.4 for TBM09C
   //  setTimings();
-  findTiming(); 
+
+  string tbmtype = fApi->_dut->getTbmType(); //"tbm09c"
+  if ((tbmtype == "tbm09c") || (tbmtype == "tbm08c")) {
+    findTiming(); 
+  } else {
+    LOG(logWARNING) << "pretest::findTiming only works for TBM08c/09c! Do something on your own.";
+  }
 
   findWorkingPixel();
   h1 = (*fDisplayedHist); 
@@ -176,7 +182,9 @@ void PixTestPretest::doTest() {
 
   // -- save DACs and TBM parameters!
   saveDacs();
-  saveTbmParameters();
+  if ((tbmtype == "tbm09c") || (tbmtype == "tbm08c")) {
+    saveTbmParameters();
+  }
 
   int seconds = t.RealTime(); 
   LOG(logINFO) << "PixTestPretest::doTest() done, duration: " << seconds << " seconds";
@@ -413,11 +421,11 @@ void PixTestPretest::findTiming() {
   istring >> sline >> sline >> success >> sline >> tries; 
   istring.clear(); 
   istring.str(sparameters); 
-  int i160(-1), i400(-1), iroc(-1), iht(-1), itoken(-1); 
-  istring >> sline >> i160 >> i400 >> iroc >> iht >> itoken; 
+  int i160(-1), i400(-1), iroc(-1), iht(-1), itoken(-1), iwidth(-1); 
+  istring >> sline >> i160 >> i400 >> iroc >> iht >> itoken >> sline >> sline >> iwidth; 
   LOG(logINFO) << "TBM phases:  160MHz: " << i160 << ", 400MHz: " << i400 
 	       << ", TBM delays: ROC(0/1):" << iroc << ", header/trailer: " << iht << ", token: " << itoken;
-  LOG(logINFO) << "(success/tries = " << success << "/" << tries << ")";
+  LOG(logINFO) << "(success/tries = " << success << "/" << tries << "), width = " << iwidth;
 
   uint8_t value= ((i160 & 0x7)<<5) + ((i400 & 0x7)<<2);
   int stat = tbmSet("basee", 0, value);
