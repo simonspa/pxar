@@ -37,7 +37,7 @@ class Plotter(object):
         gr.GetXaxis().SetTitle(x_title)
         gr.GetYaxis().SetTitle(y_title)
         gr.GetYaxis().SetTitleOffset(1.4)
-        gr.SetDrawOption('ALP')
+        # gr.SetDrawOption('ALP')
         gr.SetLineWidth(2)
         return gr
 
