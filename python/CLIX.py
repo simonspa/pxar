@@ -357,6 +357,9 @@ class PxarCoreCmd(cmd.Cmd):
             if found_values:
                 break
 
+    def activated_pixels(self, roc=0):
+        return 'ROC ' + str(roc) + ' ' + str(self.api.getNEnabledPixels(roc)) + '/' +  str(self.api.getNMaskedPixels(roc))
+
     @staticmethod
     def translate_level(level, event, roc=0):
         offset = 7
@@ -1086,7 +1089,7 @@ class PxarCoreCmd(cmd.Cmd):
         self.window.histos.append(plot)
         self.window.update()
 
-    def complete_analogLevelScan(self, text, line, start_index, end_index):
+    def complete_analogLevelScan(self):
         # return help for the cmd
         return [self.do_analogLevelScan.__doc__, '']
 
@@ -1096,21 +1099,40 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.maskAllPixels(0)
         self.api.testAllPixels(1)
 
-    def complete_enableAllPixel(self, text, line, start_index, end_index):
+    def complete_enableAllPixel(self):
         # return help for the cmd
         return [self.do_enableAllPixel.__doc__, '']
 
+    @arity(0, 1, [int])
+    def do_print_activated_pixels(self, roc=0):
+        """print_activated_pixels: prints which pixels are activated"""
+        print self.activated_pixels(roc)
+
+    def print_activated_pixels(self):
+        # return help for the cmd
+        return [self.do_print_activated_pixels.__doc__, '']
+
     @arity(0, 3, [int, int, int])
-    def do_enableOnePixel(self, row=14, column=14, roc=0):
+    def do_enableOnePixel(self, row=14, column=14, roc=None):
         """enableOnePixel [row] [column] : enables one Pixel (default 14/14); masks and disables the rest"""
-        self.api.testAllPixels(0, roc)
-        self.api.maskAllPixels(1, roc)
-        print "--> disable and mask all Pixels (" + str(self.api.getNEnabledPixels(0)) + ", " + str(
-            self.api.getNMaskedPixels(0)) + ")"
-        self.api.testPixel(row, column, 1, roc)
-        self.api.maskPixel(row, column, 0, roc)
-        print "--> enable and unmask Pixel " + str(row) + "/" + str(column) + " (" + str(
-            self.api.getNEnabledPixels(0)) + ", " + str(self.api.getNMaskedPixels(0)) + ")"
+        if roc is None:
+            self.api.testAllPixels(0)
+            self.api.maskAllPixels(1)
+            self.api.testPixel(row, column, 1)
+            self.api.maskPixel(row, column, 0)
+        else:
+            self.api.testAllPixels(0, roc)
+            self.api.maskAllPixels(1, roc)
+            self.api.testPixel(row, column, 1, roc)
+            self.api.maskPixel(row, column, 0, roc)
+        print "--> disable and mask all Pixels of all activated ROCs"
+        print_string = '--> enable and unmask Pixel ' + str(row) + "/" + str(column) + ' ('
+        for roc in range(self.api.getNEnabledRocs()):
+            print_string += self.activated_pixels(roc)
+            if roc < self.api.getNEnabledRocs() - 1:
+                print_string += ', '
+        print_string += ')'
+        print print_string
 
     def complete_enableOnePixel(self, text, line, start_index, end_index):
         # return help for the cmd
@@ -1477,7 +1499,9 @@ class PxarCoreCmd(cmd.Cmd):
         """do_wbcScan [minimal WBC] [number of events] [maximal WBC]: \n
         sets wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches maxWBC \n
         (default [90] [100] [130])"""
-
+        
+        print 'Turning on HV! YES I DID IT :D'
+        self.api.HVon()
         self.api.daqTriggerSource("extern")
         rocs = self.api.getNEnabledRocs()
         wbc_scan = []
