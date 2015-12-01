@@ -762,7 +762,7 @@ class PxarCoreCmd(cmd.Cmd):
         except RuntimeError:
             pass
 
-    def complete_daqGetEventBuffer(self, text, line, start_index, end_index):
+    def complete_daqGetEventBuffer(self):
         # return help for the cmd
         return [self.do_daqGetEventBuffer.__doc__, '']
 
@@ -774,9 +774,17 @@ class PxarCoreCmd(cmd.Cmd):
         else:
             print "DAQ session returns faulty state"
 
-    def complete_daqStatus(self, text, line, start_index, end_index):
+    def complete_daqStatus(self):
         # return help for the cmd
         return [self.do_daqStatus.__doc__, '']
+
+    @arity(1, 2, [list, int])
+    def do_update_trim_bits(self, trim_list, roc_i2c):
+        self.api.updateTrimBits(self, trim_list, roc_i2c)
+
+    def complete_update_trim_bits(self):
+        # return help for the cmd
+        return [self.do_update_trim_bits.__doc__, '']
 
     # endregion
 
@@ -2296,6 +2304,8 @@ class PxarCoreCmd(cmd.Cmd):
     def do_quit(q=1):
         """quit: terminates the application"""
         sys.exit(q)
+
+    do_exit = do_quit
 
     # shortcuts
     do_q = do_quit

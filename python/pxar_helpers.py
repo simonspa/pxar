@@ -107,6 +107,63 @@ class PxarParametersFile:
     def getAll(self):
         return self.config
 
+class TrimFile:
+    """class that loads the trim file"""
+    def __init__(self, dir, i2c):
+        self.file_name = 'trimParameters'
+        self.use_trim = True
+        self.rows = 52
+        self.columns = 80
+        self.config = []
+        # self.config = self.create_default()
+
+        self.file_path = '{dir}/{name}_C{i2c}.dat'.format(dir=dir, i2c=i2c, name=self.file_name)
+        f = open(self.file_path)
+        try:
+            for line in f:
+                data = line.split()
+                row = int(data[3])
+                col = int(data[2])
+                trim = int(data[0])
+                conf = PixelConfig(col, row, trim)
+                conf.mask = False
+                self.config.append(conf)
+        except IndexError:
+            self.config = self.create_default()
+        finally:
+            f.close()
+
+        self.parameters = len(self.config)
+        self.is_full_file = True if self.parameters == self.rows * self.columns else False
+
+    def show(self):
+        print 'col\t row\t trim'
+        for i in range(20):
+            print self.config[i].column, self.config[i].row, self.config[i].trim
+        return
+
+    def create_default(self):
+        conf = []
+        for col in range(self.columns):
+            for row in range(self.rows):
+                p = PixelConfig(col, row, 15)
+                p.mask = False
+                conf.append(p)
+        return conf
+
+    def get_trim(self):
+        return self.config
+
+    def add_to_default(self):
+        default = self.create_default()
+        for j, def_conf in enumerate(default):
+            for i, conf in enumerate(self.config):
+                if def_conf.row == conf.row and def_conf.column == conf.column:
+                    default[j].trim = conf.trim
+                    self.config.pop(i)
+        self.config = default
+        return default
+
 def PxarStartup(directory, verbosity):
     if not directory or not os.path.isdir(directory):
         print "Error: no or invalid configuration directory specified!"
@@ -158,6 +215,15 @@ def PxarStartup(directory, verbosity):
         else:
             i2c = roc
         dacconfig = PxarParametersFile('%s%s_C%i.dat'%(os.path.join(directory,""),config.get("dacParameters"),i2c))
+        trimconfig = TrimFile(directory, i2c)
+        if trimconfig.use_trim:
+            print 'use trimming from file:', trimconfig.file_path
+            trimconfig.show()
+            if trimconfig.is_full_file:
+                pixels = trimconfig.get_trim()
+            else:
+                pixels = trimconfig.add_to_default()
+
         rocI2C.append(i2c)
         rocDacs.append(dacconfig.getAll())
         rocPixels.append(pixels)
