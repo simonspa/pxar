@@ -150,7 +150,7 @@ bool pxarCore::initDUT(std::vector<uint8_t> hubids,
     throw InvalidConfig("Too many hub ids supplied.");
   }
   else if(2*hubids.size() != tbmDACs.size()) {
-    LOG(logCRITICAL) << "Hm, we have " << tbmDACs.size() << " TBM Cores but " << hubids.size() << " HUB ids.";
+    LOG(logCRITICAL) << "Hm, we have " << tbmDACs.size() << " TBM Cores but " << hubids.size() << static_cast<int>(hubids.front()) << " HUB ids.";
     LOG(logCRITICAL) << "This cannot end well...";
     throw InvalidConfig("Mismatch between number of HUB addresses and TBM Cores");
   }

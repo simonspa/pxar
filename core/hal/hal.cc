@@ -341,9 +341,9 @@ void hal::initTBMCore(tbmConfig tbm) {
   
   // Set the hub address for the modules (BPIX default is 31)
   // FIXME add hubid to tbmConfig!
-  LOG(logDEBUGHAL) << "Module addr is " << static_cast<int>(tbm.hubid) << ".";
-  _testboard->mod_Addr(tbm.hubid);
-  _testboard->Flush();
+  //LOG(logDEBUGHAL) << "Module addr is " << static_cast<int>(tbm.hubid) << ".";
+  //_testboard->mod_Addr(tbm.hubid);
+  //_testboard->Flush();
 
   // Program all registers according to the configuration data:
   LOG(logDEBUGHAL) << "Setting register vector for TBM Core " << tbm.corename() << ".";

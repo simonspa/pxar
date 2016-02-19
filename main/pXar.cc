@@ -183,7 +183,7 @@ int main(int argc, char *argv[]){
 		   rocPixels, 
 		   i2cAddr);
     } else {
-      api->initDUT(configParameters->getHubId(),
+      api->initDUT(configParameters->getHubIds(),
 		   configParameters->getTbmType(), tbmDACs, 
 		   configParameters->getRocType(), rocDACs, 
 		   rocPixels);

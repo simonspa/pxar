@@ -235,7 +235,7 @@ namespace pxar {
     
     // Standard setup for token chain lengths:
     // Four ROCs per stream for dual-400MHz, eight ROCs for single-400MHz readout:
-    if(type >= TBM_09) { for(size_t i = 0; i < 2; i++) tokenchains.push_back(4); }
+    if(type >= TBM_09) { for(size_t i = 0; i < 2; i++) tokenchains.push_back(2); }
     else if(type >= TBM_08) { tokenchains.push_back(8); }
   }
 

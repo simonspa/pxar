@@ -144,12 +144,14 @@ public:
   double getVd() {return vd;}
   bool   getHvOn() {return fHvOn;}
 
-  uint8_t getHubId() {return fHubId;}
+  std::vector<uint8_t> getHubIds() {return fHubIds;}
+  uint8_t getHubId() {return fHubIds.front();}
   
   static bool bothAreSpaces(char lhs, char rhs);
   void replaceAll(std::string& str, const std::string& from, const std::string& to);
   void cleanupString(std::string& str);
   void readNrocs(std::string line);
+  void readHubIds(std::string line);
 
 private:
 
@@ -168,7 +170,7 @@ private:
 
   unsigned int fnCol, fnRow, fnRocs, fnTbms, fnModules, fHubId;
   int fHalfModule;
-  std::vector<uint8_t> fI2cAddresses; 
+  std::vector<uint8_t> fI2cAddresses, fHubIds; 
   int fEmptyReadoutLength, fEmptyReadoutLengthADC, fEmptyReadoutLengthADCDual, fTbmChannel;
   float ia, id, va, vd;
   float rocZeroAnalogCurrent;
