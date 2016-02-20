@@ -121,7 +121,6 @@ bool ConfigParameters::readConfigParameterFile(string file) {
   if (!_input.is_open())
     {
       LOG(logINFO) << "Can not open file '"  << file << "' to read Config Parameters.";
-
       return false;
     }
 

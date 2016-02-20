@@ -56,7 +56,7 @@ namespace pxar {
 
     /** Initialize attached TBMs with their settings and configuration
      */
-    void initTBMCore(tbmConfig tbm);
+    void initTBMCore(tbmCoreConfig tbm);
 
     /** Change the type of the TBM type member in HAL
      */

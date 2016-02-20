@@ -1091,7 +1091,7 @@ namespace pxar {
 
     /** Function returning the enabled TBM configs
      */
-    std::vector< tbmConfig > getEnabledTbms();
+    std::vector<tbmCoreConfig> getEnabledTbms();
 
     /** Function returning the status of a given pixel:
      */
@@ -1211,7 +1211,7 @@ namespace pxar {
 
     /** DUT member to hold all TBM configurations
      */
-    std::vector< tbmConfig > tbm;
+    std::vector<tbmCoreConfig> tbm;
 
     /** DUT member to hold all DTB signal delay configurations
      */

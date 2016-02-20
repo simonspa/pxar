@@ -325,7 +325,7 @@ bool hal::flashTestboard(std::ifstream& flashFile) {
   return false;
 }
 
-void hal::initTBMCore(tbmConfig tbm) {
+void hal::initTBMCore(tbmCoreConfig tbm) {
 
   // Turn the TBM on:
   _testboard->tbm_Enable(true);

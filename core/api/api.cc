@@ -150,7 +150,7 @@ bool pxarCore::initDUT(std::vector<uint8_t> hubids,
     throw InvalidConfig("Too many hub ids supplied.");
   }
   else if(2*hubids.size() != tbmDACs.size()) {
-    LOG(logCRITICAL) << "Hm, we have " << tbmDACs.size() << " TBM Cores but " << hubids.size() << static_cast<int>(hubids.front()) << " HUB ids.";
+    LOG(logCRITICAL) << "Hm, we have " << tbmDACs.size() << " TBM Cores but " << hubids.size() << " HUB ids.";
     LOG(logCRITICAL) << "This cannot end well...";
     throw InvalidConfig("Mismatch between number of HUB addresses and TBM Cores");
   }
@@ -233,7 +233,7 @@ bool pxarCore::initDUT(std::vector<uint8_t> hubids,
     LOG(logDEBUGAPI) << "Processing TBM Core " << static_cast<int>(tbmIt - tbmDACs.begin());
 
     // Prepare a new TBM configuration of the given type:
-    tbmConfig newtbm(stringToDeviceCode(tbmtype));
+    tbmCoreConfig newtbm(stringToDeviceCode(tbmtype));
 
     // Set the hub id for this TBM core (same hub id for two cores):
     newtbm.hubid = hubids.at((tbmIt - tbmDACs.begin())/2);
@@ -285,7 +285,7 @@ bool pxarCore::initDUT(std::vector<uint8_t> hubids,
   if(_dut->tbm.size() == 1) {
     LOG(logDEBUGAPI) << "Only register settings for one TBM core supplied. Duplicating to second core.";
     // Prepare a new TBM configuration and copy over all settings:
-    tbmConfig newtbm(_dut->tbm.at(0).type);
+    tbmCoreConfig newtbm(_dut->tbm.at(0).type);
     newtbm.tokenchains = _dut->tbm.at(0).tokenchains;
     // Flip the last bit of the TBM core identifier:
     newtbm.core = _dut->tbm.at(0).core ^ (1u << 4);
@@ -364,7 +364,7 @@ bool pxarCore::initDUT(std::vector<uint8_t> hubids,
 
   // Printout for final token chain lengths selected for each TBM channel and calculate the sum:
   uint16_t nrocs_total = 0;
-  for(std::vector<tbmConfig>::iterator tbm = _dut->tbm.begin(); tbm != _dut->tbm.end(); tbm++) {
+  for(std::vector<tbmCoreConfig>::iterator tbm = _dut->tbm.begin(); tbm != _dut->tbm.end(); tbm++) {
     for(size_t i = 0; i < tbm->tokenchains.size(); i++) { nrocs_total += tbm->tokenchains.at(i); }
   }
 
@@ -377,7 +377,7 @@ bool pxarCore::initDUT(std::vector<uint8_t> hubids,
       // Let's try to figure out where the ROC is missing using the standard I2C assignment
 
       // Reset the default token chain lengths:
-      for(std::vector<tbmConfig>::iterator tbm = _dut->tbm.begin(); tbm != _dut->tbm.end(); tbm++) {
+      for(std::vector<tbmCoreConfig>::iterator tbm = _dut->tbm.begin(); tbm != _dut->tbm.end(); tbm++) {
 	for(size_t i = 0; i < tbm->tokenchains.size(); i++) { tbm->tokenchains.at(i) = 0; }
       }
 
@@ -404,7 +404,7 @@ bool pxarCore::initDUT(std::vector<uint8_t> hubids,
     }
   }
 
-  for(std::vector<tbmConfig>::iterator tbm = _dut->tbm.begin(); tbm != _dut->tbm.end(); tbm++) {
+  for(std::vector<tbmCoreConfig>::iterator tbm = _dut->tbm.begin(); tbm != _dut->tbm.end(); tbm++) {
     LOG(logDEBUGAPI) << "TBM Core " << tbm->corename() 
 		     << " Token Chains: " << listVector(tbm->tokenchains);
   }
@@ -427,9 +427,9 @@ bool pxarCore::programDUT() {
 
   // Start programming the devices here!
 
-  std::vector<tbmConfig> enabledTbms = _dut->getEnabledTbms();
+  std::vector<tbmCoreConfig> enabledTbms = _dut->getEnabledTbms();
   if(!enabledTbms.empty()) { LOG(logDEBUGAPI) << "Programming TBMs..."; }
-  for (std::vector<tbmConfig>::iterator tbmit = enabledTbms.begin(); tbmit != enabledTbms.end(); ++tbmit){
+  for (std::vector<tbmCoreConfig>::iterator tbmit = enabledTbms.begin(); tbmit != enabledTbms.end(); ++tbmit){
     _hal->initTBMCore((*tbmit));
   }
 

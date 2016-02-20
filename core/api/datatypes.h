@@ -430,9 +430,9 @@ namespace pxar {
    *
    *  Contains a register map for the device register settings, a type flag and an enable switch
    */
-  class DLLEXPORT tbmConfig {
+  class DLLEXPORT tbmCoreConfig {
   public:
-    tbmConfig(uint8_t tbmtype);
+    tbmCoreConfig(uint8_t tbmtype);
     std::map< uint8_t,uint8_t > dacs;
     uint8_t type;
     uint8_t hubid;

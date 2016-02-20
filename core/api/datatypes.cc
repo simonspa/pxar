@@ -226,7 +226,7 @@ namespace pxar {
     m_errors_pixel_buffer_corrupt = 0;
   }
 
-  tbmConfig::tbmConfig(uint8_t tbmtype) : dacs(), type(tbmtype), hubid(31), core(0xE0), tokenchains(), enable(true) {
+  tbmCoreConfig::tbmCoreConfig(uint8_t tbmtype) : dacs(), type(tbmtype), hubid(31), core(0xE0), tokenchains(), enable(true) {
 
     if(tbmtype == 0x0) {
       LOG(logCRITICAL) << "Invalid TBM type \"" << tbmtype << "\"";

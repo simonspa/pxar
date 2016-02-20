@@ -103,7 +103,6 @@ int main(int argc, char *argv[]){
     api = new pxar::pxarCore("*", verbosity);
     struct stat buffer;   
     if (stat(flashFile.c_str(), &buffer) == 0) {
-      
       api->flashTB(flashFile);
     } else {
       LOG(logINFO) << "error: File " << flashFile << " not found" << endl;

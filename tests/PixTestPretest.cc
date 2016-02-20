@@ -541,8 +541,8 @@ void PixTestPretest::setTimings() {
     return;
   }
   int nTokenChains = 0;
-  std::vector<tbmConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
-  for(std::vector<tbmConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
+  std::vector<tbmCoreConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
+  for(std::vector<tbmCoreConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
 
   int NTrig = 10000;
   uint16_t period = 300;

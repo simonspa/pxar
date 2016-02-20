@@ -2514,8 +2514,8 @@ bool PixTest::checkReadBackBits(uint16_t period) {
   std::vector<uint8_t> rocids = fApi->_dut->getRocI2Caddr();
   size_t nTBMs = fApi->_dut->getNTbms();
   int nTokenChains = 0;
-  std::vector<tbmConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
-  for(std::vector<tbmConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
+  std::vector<tbmCoreConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
+  for(std::vector<tbmCoreConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
 
   int iroc=0;
   for (size_t itbm=0; itbm < nTBMs; itbm++) {

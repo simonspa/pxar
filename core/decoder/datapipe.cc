@@ -547,12 +547,12 @@ namespace pxar {
     // Evaluate the four error bits of the TBM trailer word:
     if((data & 0x0100) != 0x0000) {
       decodingStats.m_errors_event_nodata++;
-      LOG(logWARNING) << "Detected DESER400 trailer error bits: \"NO DATA\"";
+      //LOG(logWARNING) << "Detected DESER400 trailer error bits: \"NO DATA\"";
       throw DataDeserializerError("No data");
     }
     if((data & 0x0200) != 0x0000) {
       LOG(logWARNING) << "Detected DESER400 trailer error bits: \"IDLE DATA\"";
-      decodingStats.m_errors_event_idledata++;
+      //decodingStats.m_errors_event_idledata++;
       throw DataDeserializerError("Idle data");
     }
     if((data & 0x0400) != 0x0000) {
