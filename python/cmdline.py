@@ -935,6 +935,30 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_testPixel.__doc__, '']
 
+    @arity(2,4,[int, int, int, int])
+    def do_enablePixel(self, col, row, enable=True, rocid=None):
+        self.api.testPixel(col, row, enable, rocid)
+        self.api.maskPixel(col, row, not enable, rocid)
+
+    @arity(0,2,[int, int])
+    def do_enableAllPixels(self, enable=True, rocid=None):
+        self.api.testAllPixels(enable)
+        self.api.maskAllPixels(not enable)
+
+    @arity(0,4,[int, int])
+    def do_enableCluster(self, dc, row, enable=True, rocid=None):
+        for col in [dc, dc + 1]:
+            for row_ in [row, row + 1]:
+                self.api.testPixel(col, row_, enable, rocid)
+                self.api.maskPixel(col, row_, not enable, rocid)
+
+    @arity(0,3,[int, int, int])
+    def do_enableDC(self, dc, row=80, enable=True, rocid=None):
+        for col in [dc, dc + 1]:
+            for row_ in xrange(row):
+                self.api.testPixel(col, row_, enable, rocid)
+                self.api.maskPixel(col, row_, not enable, rocid)
+
     @arity(1,2,[int, int])
     def do_testAllPixels(self, enable, rocid = None):
         """testAllPixels [enable] [rocid]: enable/disable tesing for all pixels on given ROC"""
