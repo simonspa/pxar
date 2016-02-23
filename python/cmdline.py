@@ -1299,6 +1299,12 @@ class PxarCoreCmd(cmd.Cmd):
 
     # shortcuts
     do_q = do_quit
+    do_exit = do_quit
+    do_exot = do_quit
+    do_ds = do_daqStart
+    do_st = do_daqStop
+    do_dt = do_daqTrigger
+    do_eb = do_daqGetEventBuffer
 
 def main(argv=None):
     if argv is None:
