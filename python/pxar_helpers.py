@@ -271,7 +271,9 @@ def PxarStartup(directory, verbosity):
         print "Please check if a new FW version is available"
         exit
 
-    api.initDUT(int(config.get("hubId",31)),config.get("tbmType","tbm08"),tbmDACs,config.get("rocType"),rocDacs,rocPixels, rocI2C)
+    hubids = [int(i) for i in config.get("hubId",31).split(',')]
+    print '='*20, hubids
+    api.initDUT(hubids, config.get("tbmType","tbm08"), tbmDACs,config.get("rocType"), rocDacs, rocPixels, rocI2C)
 
     api.testAllPixels(True)
     print "Now enabled all pixels"
