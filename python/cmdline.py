@@ -757,6 +757,16 @@ class PxarCoreCmd(cmd.Cmd):
                 # return all DACS
                 return dacdict.getAllROCNames()
 
+    @arity(0,1,[int])
+    def do_tornadoPlot(self, nTriggers=10):
+        """tornadoPlot [nTriggers = 10]: returns the 2D caldel-vthrcomp scan"""
+        data = self.api.getEfficiencyVsDACDAC('caldel', 1, 0, 255, 'vthrcomp', 1, 0, 255, 0, nTriggers)
+        self.plot_2d(data,"Efficiency",'caldel', 1, 0, 255, 'vthrcomp', 1, 0, 255)
+
+    def complete_tornadoPlot(self):
+        # return help for the cmd
+        return [self.do_tornadoPlot.__doc__, '']
+
     @arity(0,0,[])
     def do_analogLevelScan(self):
         """analogLevelScan: scan the ADC levels of an analog ROC"""
