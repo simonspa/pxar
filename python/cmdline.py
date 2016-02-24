@@ -996,8 +996,8 @@ class PxarCoreCmd(cmd.Cmd):
 
     @arity(0,2,[int, int])
     def do_enableAllPixels(self, enable=True, rocid=None):
-        self.api.testAllPixels(enable)
-        self.api.maskAllPixels(not enable)
+        self.api.testAllPixels(enable, rocid)
+        self.api.maskAllPixels(not enable, rocid)
 
     @arity(0,4,[int, int])
     def do_enableCluster(self, dc, row, enable=True, rocid=None):
