@@ -912,9 +912,12 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(1,1,[int])
     def do_getTbmDACs(self, tbmid):
         """getTbmDACs [id]: get the currently programmed register settings for TBM #id"""
-        print self.api.getTbmDACs(tbmid)
+        dacs = self.api.getTbmDACs(tbmid)
+        for dac, value in dacs.iteritems():
+            print '{dac}: {value:08b}'.format(dac=dac.rjust(7), value=value)
+        return dacs
 
-    def complete_getTbmDACs(self, text, line, start_index, end_index):
+    def complete_getTbmDACs(self):
         # return help for the cmd
         return [self.do_getTbmDACs.__doc__, '']
 
