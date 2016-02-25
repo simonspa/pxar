@@ -52,8 +52,10 @@ public:
   bool writeDacParameterFile(int iroc, std::vector<std::pair<std::string, uint8_t> > );
   bool writeTrimFile(int iroc, std::vector<pxar::pixelConfig> );
   bool writeTbmParameterFile(int itbm,
-			     std::vector<std::pair<std::string, uint8_t> > ,
-			     std::vector<std::pair<std::string, uint8_t> > );
+			     std::vector<std::pair<std::string, uint8_t> > , 
+			     std::vector<uint8_t> , 
+			     std::vector<std::pair<std::string, uint8_t> > , 
+			     std::vector<uint8_t> );
   bool writeTbParameterFile();
   bool writeTestParameterFile(std::string test="all");
   bool writeReadbackFile(int iroc, std::vector<std::pair<std::string, double> > v);
@@ -90,7 +92,12 @@ public:
   std::vector<std::pair<std::string, uint8_t> > readDacFile(std::string fname);
   std::vector<std::pair<std::string, double> > readReadbackFile(std::string fname);
   void readTrimFile(std::string fname, std::vector<pxar::pixelConfig>&);
+
   std::vector<std::vector<std::pair<int, int> > > readMaskFile(std::string fname);
+  std::vector<std::vector<std::pair<int, int> > > getMaskedPixels() {return fMaskedPixels;} 
+  int nMaskedPixels() {return fMaskedPixels.size();} 
+  bool isMaskedPixel(int roc, int col, int row); 
+
   std::vector<std::vector<pxar::pixelConfig> > getRocPixelConfig();
   std::vector<pxar::pixelConfig> getRocPixelConfig(int i);
   bool customI2cAddresses() {return fI2cAddresses.size() > 0;}
@@ -138,12 +145,14 @@ public:
   double getVd() {return vd;}
   bool   getHvOn() {return fHvOn;}
 
-  uint8_t getHubId() {return fHubId;}
-
+  std::vector<uint8_t> getHubIds() {return fHubIds;}
+  uint8_t getHubId() {return fHubIds.front();}
+  
   static bool bothAreSpaces(char lhs, char rhs);
   void replaceAll(std::string& str, const std::string& from, const std::string& to);
   void cleanupString(std::string& str);
   void readNrocs(std::string line);
+  void readHubIds(std::string line);
 
 private:
 
@@ -158,9 +167,11 @@ private:
 
   std::vector<std::vector<gainPedestalParameters> > fGainPedestalParameters;
 
+  std::vector<std::vector<std::pair<int, int> > > fMaskedPixels;
+
   unsigned int fnCol, fnRow, fnRocs, fnTbms, fnModules, fHubId;
   int fHalfModule;
-  std::vector<uint8_t> fI2cAddresses;
+  std::vector<uint8_t> fI2cAddresses, fHubIds;
   int fEmptyReadoutLength, fEmptyReadoutLengthADC, fEmptyReadoutLengthADCDual, fTbmChannel;
   float ia, id, va, vd;
   float rocZeroAnalogCurrent;

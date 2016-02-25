@@ -14,7 +14,7 @@ PixSetup::PixSetup(pxarCore *a, PixTestParameters *tp, ConfigParameters *cp) {
   fApi               = a; 
   fPixTestParameters = tp; 
   fConfigParameters  = cp; 
-  fPixMonitor        = new PixMonitor(a);
+  fPixMonitor        = new PixMonitor(this);
   fDoAnalysisOnly    = false; 
   fDoUpdateRootFile  = false;
   fGuiActive         = false;
@@ -47,7 +47,7 @@ PixSetup::PixSetup(string verbosity, PixTestParameters *tp, ConfigParameters *cp
   LOG(logINFO) << "DUT info: ";
   fApi->_dut->info(); 
 
-  fPixMonitor = new PixMonitor(fApi);
+  fPixMonitor = new PixMonitor(this);
 
 
 }
@@ -107,6 +107,16 @@ void PixSetup::init() {
 }
 
 
+// ----------------------------------------------------------------------
+void PixSetup::writeAllFiles() {
+  // -- DUT files
+  writeDacParameterFiles();
+  writeTrimFiles();
+  writeTbmParameterFiles();
+
+  // -- TB and configParameters.dat
+  fConfigParameters->writeAllFiles();
+}
 
 // ----------------------------------------------------------------------
 void PixSetup::writeDacParameterFiles() {
@@ -127,6 +137,6 @@ void PixSetup::writeTrimFiles() {
 // ----------------------------------------------------------------------
 void PixSetup::writeTbmParameterFiles() {
   for (unsigned int itbm = 0; itbm < fApi->_dut->getNTbms(); itbm += 2) {
-    fConfigParameters->writeTbmParameterFile(itbm, fApi->_dut->getTbmDACs(itbm), fApi->_dut->getTbmDACs(itbm+1));
+    fConfigParameters->writeTbmParameterFile(itbm, fApi->_dut->getTbmDACs(itbm), fApi->_dut->getTbmChainLengths(itbm), fApi->_dut->getTbmDACs(itbm+1), fApi->_dut->getTbmChainLengths(itbm+1));
   }
 }

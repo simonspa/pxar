@@ -25,6 +25,7 @@ import sys
 # set up the DAC and probe dictionaries
 dacdict = PyRegisterDictionary()
 probedict = PyProbeDictionary()
+triggerdict = PyTriggerDictionary()
 
 class PxarCoreCmd(cmd.Cmd):
     """Simple command processor for the pxar core API."""
@@ -386,10 +387,10 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_setClockStretch.__doc__, '']
 
-    @arity(0,0,[])
-    def do_daqStart(self):
+    @arity(0,1,[int])
+    def do_daqStart(self, flags = 0):
         """daqStart: starts a new DAQ session"""
-        self.api.daqStart()
+        self.api.daqStart(flags)
 
     def complete_daqStart(self, text, line, start_index, end_index):
         # return help for the cmd
@@ -407,17 +408,27 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_daqStatus.__doc__, '']
 
-    @arity(1,1,[str])
-    def do_daqTriggerSource(self, source):
-        """daqTriggerSource: select the trigger source to be used for the DAQ session"""
-        if self.api.daqTriggerSource(source):
+    @arity(1,2,[str,int])
+    def do_daqTriggerSource(self, source, rate = 0):
+        """daqTriggerSource [source] [rate]: select the trigger source to be used for the DAQ session, the rate is valid for periodic and random triggers"""
+        if self.api.daqTriggerSource(source,rate):
             print "Trigger source \"" + source + "\" selected."
         else:
             print "DAQ returns faulty state."
 
     def complete_daqTriggerSource(self, text, line, start_index, end_index):
         # return help for the cmd
-        return [self.do_daqTriggerSource.__doc__, '']
+        if text and len(line.split(" ")) <= 2: # first argument and started to type
+            # list matching entries
+            return [trg for trg in triggerdict.getAllNames()
+                        if trg.startswith(text)]
+        else:
+            if len(line.split(" ")) > 2:
+                # return help for the cmd
+                return [self.do_daqTriggerSource.__doc__, '']
+            else:
+                # return all trigger sources
+                return triggerdict.getAllNames()
 
     @arity(1,1,[str])
     def do_daqSingleSignal(self, signal):
@@ -513,7 +524,7 @@ class PxarCoreCmd(cmd.Cmd):
     def do_getStatistics(self):
         """getStatistics: print full statistics accumulated during last DAQ session"""
         dat = self.api.getStatistics()
-        print dat
+        dat.dump
 
     def complete_getStatistics(self, text, line, start_index, end_index):
         # return help for the cmd
@@ -551,6 +562,16 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_daqGetReadback(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_daqGetReadback.__doc__, '']
+
+    @arity(1,1,[int])
+    def do_daqGetXORsum(self, channel):
+        """daqGetXORsum: return all DESER400 XOR sum values from the last DAQ session fo channel [channel]"""
+        dat = self.api.daqGetXORsum(channel)
+        print dat
+
+    def complete_daqGetXORsum(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_daqGetXORsum.__doc__, '']
 
     @arity(0,2,[int, int])
     def do_getEfficiencyMap(self, flags = 0, nTriggers = 10):
@@ -730,10 +751,10 @@ class PxarCoreCmd(cmd.Cmd):
                 # return all signals
                 return dacdict.getAllDTBNames()
 
-    @arity(2,2,[str, str])
-    def do_SignalProbe(self, probe, name):
-        """SignalProbe [probe] [name]: Switches DTB probe output [probe] to signal [name]"""
-        self.api.SignalProbe(probe,name)
+    @arity(2,3,[str, str, int])
+    def do_SignalProbe(self, probe, name, channel = 0):
+        """SignalProbe [probe] [name] [channel]: Switches DTB probe output [probe] to signal [name]. The [channel] parameter can be used to select the deserializer DAQ channel"""
+        self.api.SignalProbe(probe,name, channel)
 
     def complete_SignalProbe(self, text, line, start_index, end_index):
         probes = ["d1","d2","a1","a2"]
@@ -786,6 +807,24 @@ class PxarCoreCmd(cmd.Cmd):
                 # return all DACS
                 return dacdict.getAllROCNames()
 
+    @arity(2,3,[str, int, int])
+    def do_setTbmReg(self, regname, value, tbmid = None):
+        """setTbmReg [Reg. name] [value] [TBMID]: Set the register to given value for given TBM ID"""
+        self.api.setTbmReg(regname, value, tbmid)
+
+    def complete_setTbmReg(self, text, line, start_index, end_index):
+        if text and len(line.split(" ")) <= 2: # first argument and started to type
+            # list matching entries
+            return [dac for dac in dacdict.getAllTBMNames()
+                        if dac.startswith(text)]
+        else:
+            if len(line.split(" ")) > 2:
+                # return help for the cmd
+                return [self.do_setTbmReg.__doc__, '']
+            else:
+                # return all DACS
+                return dacdict.getAllTBMNames()
+
     @arity(1,1,[str])
     def do_getDACRange(self, dacname):
         """getDACRange [DAC name]: Get the valid value range for the given DAC"""
@@ -830,6 +869,15 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_getTbmDACs(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_getTbmDACs.__doc__, '']
+
+    @arity(1,1,[int])
+    def do_getRocDACs(self, tbmid):
+        """getRocDACs [id]: get the currently programmed register/DAC settings for ROC #id"""
+        print self.api.getRocDACs(tbmid)
+
+    def complete_getRocDACs(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_getRocDACs.__doc__, '']
 
     @arity(0,0,[])
     def do_info(self):
@@ -886,6 +934,30 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_testPixel(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_testPixel.__doc__, '']
+
+    @arity(2,4,[int, int, int, int])
+    def do_enablePixel(self, col, row, enable=True, rocid=None):
+        self.api.testPixel(col, row, enable, rocid)
+        self.api.maskPixel(col, row, not enable, rocid)
+
+    @arity(0,2,[int, int])
+    def do_enableAllPixels(self, enable=True, rocid=None):
+        self.api.testAllPixels(enable)
+        self.api.maskAllPixels(not enable)
+
+    @arity(0,4,[int, int])
+    def do_enableCluster(self, dc, row, enable=True, rocid=None):
+        for col in [dc, dc + 1]:
+            for row_ in [row, row + 1]:
+                self.api.testPixel(col, row_, enable, rocid)
+                self.api.maskPixel(col, row_, not enable, rocid)
+
+    @arity(0,3,[int, int, int])
+    def do_enableDC(self, dc, row=80, enable=True, rocid=None):
+        for col in [dc, dc + 1]:
+            for row_ in xrange(row):
+                self.api.testPixel(col, row_, enable, rocid)
+                self.api.maskPixel(col, row_, not enable, rocid)
 
     @arity(1,2,[int, int])
     def do_testAllPixels(self, enable, rocid = None):
@@ -985,10 +1057,12 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_findAnalogueTBDelays.__doc__, '']
 
     @arity(0,3,[int, int, int])
-    def do_wbcScan(self, minWBC = 90, maxTriggers = 10, maxWBC = 255):
-        """ do_wbcScan [minWBC] [maxTriggers]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
+    def do_wbcScan(self, minWBC = 90, maxWBC = 255, maxTriggers = 10, triggersignal = "extern"):
+        """ do_wbcScan [minWBC] [maxWBC] [maxTriggers] [signal]: sets the values of wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches 255 (default minWBC 90)"""
 
-        self.api.daqTriggerSource("extern")
+        self.api.daqTriggerSource(triggersignal)
+        self.api.HVon();
+
         wbcScan = []
         print "wbc \tyield"
 
@@ -1013,14 +1087,7 @@ class PxarCoreCmd(cmd.Cmd):
             wbcScan.append(hitYield)
             print '{0:03d}'.format(wbc),"\t", '{0:3.0f}%'.format(hitYield)
 
-            # stopping criterion
-            if wbc>3+minWBC:
-                if wbcScan[-4] > 90:
-                    print "Set DAC wbc to", wbc-3
-                    self.api.setDAC("wbc", wbc-3)
-                    break
-
-        self.api.daqStop()
+            self.api.daqStop()
 
         if(self.window):
             self.window = PxarGui( ROOT.gClient.GetRoot(), 1000, 800 )
@@ -1232,6 +1299,12 @@ class PxarCoreCmd(cmd.Cmd):
 
     # shortcuts
     do_q = do_quit
+    do_exit = do_quit
+    do_exot = do_quit
+    do_ds = do_daqStart
+    do_st = do_daqStop
+    do_dt = do_daqTrigger
+    do_eb = do_daqGetEventBuffer
 
 def main(argv=None):
     if argv is None:

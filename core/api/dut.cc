@@ -17,10 +17,10 @@ void dut::info() {
   if (status()) {
     LOG(logINFO) << "The DUT currently contains the following objects:";
 
-    LOG(logINFO) << std::setw(2) << tbm.size() << " TBM Cores (" << getNEnabledTbms() 
+    LOG(logINFO) << std::setw(2) << tbm.size() << " TBM Cores " << getTbmType() << " (" << getNEnabledTbms() 
 		 << " ON)";
 
-    for(std::vector<tbmConfig>::iterator tbmIt = tbm.begin(); tbmIt != tbm.end(); tbmIt++) {
+    for(std::vector<tbmCoreConfig>::iterator tbmIt = tbm.begin(); tbmIt != tbm.end(); tbmIt++) {
       LOG(logINFO) << "\tTBM Core " 
 		   << ((tbmIt-tbm.begin())%2 == 0 ? "alpha" : "beta " )
 		   << " (" << static_cast<int>(tbmIt - tbm.begin()) << "): " 
@@ -29,7 +29,7 @@ void dut::info() {
 
     // We currently hide the possibility to enable pixels on some ROCs only,
     // so looking at ROC 0 as default is safe:
-    LOG(logINFO) << std::setw(2) << roc.size() << " ROCs (" << getNEnabledRocs() 
+    LOG(logINFO) << std::setw(2) << roc.size() << " ROCs " << getRocType() << " (" << getNEnabledRocs() 
 		 << " ON) with " << roc.at(0).pixels.size() << " pixelConfigs";
 
     for(std::vector<rocConfig>::iterator rocIt = roc.begin(); rocIt != roc.end(); rocIt++) {
@@ -110,7 +110,7 @@ size_t dut::getNEnabledTbms() {
   if (!status()) return 0;
   // loop over result, count enabled TBMs
   size_t count = 0;
-  for (std::vector<tbmConfig>::iterator it = tbm.begin(); it != tbm.end(); ++it){
+  for (std::vector<tbmCoreConfig>::iterator it = tbm.begin(); it != tbm.end(); ++it){
     if (it->enable) count++;
   }
   return count;
@@ -132,6 +132,26 @@ std::vector< pixelConfig > dut::getEnabledPixels(size_t rocid) {
   for (std::vector<pixelConfig>::iterator it = roc.at(rocid).pixels.begin(); it != roc.at(rocid).pixels.end(); ++it){
     if (it->enable()) result.push_back(*it);
   }
+  return result;
+}
+
+std::vector< pixelConfig > dut::getEnabledPixelsI2C(size_t roci2c) {
+
+  std::vector< pixelConfig > result;
+
+  // Check if DUT is allright:
+  if (!status()) return result;
+
+  // Loop over all ROCs
+  for (std::vector<rocConfig>::iterator rocit = roc.begin() ; rocit != roc.end(); ++rocit){
+    if(rocit->i2c_address == roci2c) {
+      // Search for pixels that have enable set
+      for (std::vector<pixelConfig>::iterator it = rocit->pixels.begin(); it != rocit->pixels.end(); ++it){
+	if (it->enable()) result.push_back(*it);
+      }
+    }
+  }
+
   return result;
 }
 
@@ -250,11 +270,11 @@ std::vector< uint8_t > dut::getRocI2Caddr() {
   return result;
 }
 
-std::vector< tbmConfig > dut::getEnabledTbms() {
-  std::vector< tbmConfig > result;
+std::vector<tbmCoreConfig> dut::getEnabledTbms() {
+  std::vector<tbmCoreConfig> result;
   if (!_initialized) return result;
   // search for rocs that have enable set
-  for (std::vector<tbmConfig>::iterator it = tbm.begin(); it != tbm.end(); ++it){
+  for (std::vector<tbmCoreConfig>::iterator it = tbm.begin(); it != tbm.end(); ++it){
     if (it->enable) result.push_back(*it);
   }
   return result;
@@ -361,6 +381,10 @@ std::vector< std::pair<std::string,uint8_t> > dut::getTbmDACs(size_t tbmId) {
     return vec;
   }
   else return std::vector< std::pair<std::string,uint8_t> >();
+}
+
+std::vector<uint8_t> dut::getTbmChainLengths(size_t tbmId) {
+  return tbm.at(tbmId).tokenchains;
 }
 
 void dut::printDACs(size_t rocId) {

@@ -12,6 +12,7 @@ test/
 *.png
 *.log
 *.raw
+*.dat
 
 # ignore backup files of any sort of editor:
 ~*

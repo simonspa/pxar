@@ -23,6 +23,8 @@ typedef unsigned char uint8_t;
 #include <limits>
 #include <cmath>
 
+#include "constants.h"
+
 namespace pxar {
 
   /** Class for storing decoded pixel readout data
@@ -40,7 +42,10 @@ namespace pxar {
 
     /** Constructor for pixel objects with rawdata pixel address & value and ROC id initialization.
      */
-  pixel(uint32_t rawdata, uint8_t rocid, bool invertAddress = false) : _roc_id(rocid) { decodeRaw(rawdata,invertAddress); }
+  pixel(uint32_t rawdata, uint8_t rocid, bool invertAddress = false, bool linearAddress = false) : _roc_id(rocid) {
+      if(linearAddress) { decodeLinear(rawdata); }
+      else { decodeRaw(rawdata,invertAddress); }
+    }
 
     /** Constructor for pixel objects with analog levels data, ultrablack & black levels and ROC id initialization.
      */
@@ -94,6 +99,10 @@ namespace pxar {
      */
     uint32_t encode();
 
+    /** Member function to re-encode pixel into raw data, linear address space
+     */
+    uint32_t encodeLinear();
+
     /** Overloaded comparison operator
      */
     bool operator == (const pixel& px) {
@@ -145,6 +154,13 @@ namespace pxar {
      *  case of a failed decoding attempts.
      */
     void decodeRaw(uint32_t raw, bool invert);
+
+    /** Decoding function for PSI46digPlus raw ROC data with linear 
+     *  address space.
+     *  This function throws a pxar::DataDecodingError exception in
+     *  case of a failed decoding attempts.
+     */
+    void decodeLinear(uint32_t raw);
 
     /** Decoding function for PSI46 analog levels ROC data. Parameters "black"
      *  and "ultrablack" refer to the ROC identifier levels and are used to calculate
@@ -282,12 +298,23 @@ namespace pxar {
 
   private:
 
+    /** Overloaded sum operator for adding up data from different events
+     */
+    friend Event& operator+=(Event &lhs, const Event &rhs) {
+      // FIXME this currently only transports pixels, no header information:
+      lhs.pixels.insert(lhs.pixels.end(), rhs.pixels.begin(), rhs.pixels.end());
+      lhs.header = rhs.header;
+      lhs.trailer = rhs.trailer;
+      return lhs;
+    };
+
     /** Overloaded ostream operator for simple printing of Event data
      */
     friend std::ostream & operator<<(std::ostream &out, Event& evt) {
       out << "====== " << std::hex << static_cast<uint16_t>(evt.header) << std::dec << " ====== ";
       for (std::vector<pixel>::iterator it = evt.pixels.begin(); it != evt.pixels.end(); ++it)
 	out << (*it) << " ";
+      out << "====== " << std::hex << static_cast<uint16_t>(evt.trailer) << std::dec << " ====== ";
       return out;
     }
   };
@@ -325,6 +352,16 @@ namespace pxar {
     */
     unsigned int flags;
 
+    /** Overloaded sum operator for adding up data from different events
+     */
+    friend rawEvent& operator+=(rawEvent &lhs, const rawEvent &rhs) {
+      // Add the raw data:
+      lhs.data.insert(lhs.data.end(), rhs.data.begin(), rhs.data.end());
+      // Also carry over event flags:
+      lhs.flags |= rhs.flags;
+      return lhs;
+    };
+    
     /** Overloaded ostream operator for simple printing of raw data blobs
      */
     friend std::ostream & operator<<(std::ostream &out, rawEvent& record) {
@@ -393,13 +430,20 @@ namespace pxar {
    *
    *  Contains a register map for the device register settings, a type flag and an enable switch
    */
-  class DLLEXPORT tbmConfig {
+  class DLLEXPORT tbmCoreConfig {
   public:
-  tbmConfig() : dacs(), type(0), tokenchains(), enable(true) {}
+    tbmCoreConfig(uint8_t tbmtype);
     std::map< uint8_t,uint8_t > dacs;
     uint8_t type;
+    uint8_t hubid;
+    uint8_t core;
     std::vector<uint8_t> tokenchains;
     bool enable;
+
+    // Check token pass setting:
+    bool NoTokenPass() { return (dacs[0x00]&0x40); };
+    // Return readable name of the core:
+    std::string corename() { return ((core&0x10) ? "Beta" : "Alpha"); };
   };
 
   /** Class for statistics on event and pixel decoding
@@ -424,6 +468,9 @@ namespace pxar {
       m_errors_event_overflow(0),
       m_errors_event_invalid_words(0),
       m_errors_event_invalid_xor(0),
+      m_errors_event_frame(0),
+      m_errors_event_idledata(0),
+      m_errors_event_nodata(0),
       m_errors_tbm_header(0),
       m_errors_tbm_trailer(0),
       m_errors_tbm_eventid_mismatch(0),
@@ -436,7 +483,40 @@ namespace pxar {
 	{};
     // Print all statistics to stdout:
     void dump();
-    friend statistics& operator+=(statistics &lhs, const statistics &rhs);
+    friend statistics& operator+=(statistics &lhs, const statistics &rhs) {
+      // Informational bits:
+      lhs.m_info_words_read += rhs.m_info_words_read;
+      lhs.m_info_events_empty += rhs.m_info_events_empty;
+      lhs.m_info_events_valid += rhs.m_info_events_valid;
+      lhs.m_info_pixels_valid += rhs.m_info_pixels_valid;
+
+      // Event errors:
+      lhs.m_errors_event_start += rhs.m_errors_event_start;
+      lhs.m_errors_event_stop += rhs.m_errors_event_stop;
+      lhs.m_errors_event_overflow += rhs.m_errors_event_overflow;
+      lhs.m_errors_event_invalid_words += rhs.m_errors_event_invalid_words;
+      lhs.m_errors_event_invalid_xor += rhs.m_errors_event_invalid_xor;
+      lhs.m_errors_event_frame += rhs.m_errors_event_frame;
+      lhs.m_errors_event_idledata += rhs.m_errors_event_idledata;
+      lhs.m_errors_event_nodata += rhs.m_errors_event_nodata;
+
+      // TBM errors:
+      lhs.m_errors_tbm_header += rhs.m_errors_tbm_header;
+      lhs.m_errors_tbm_trailer += rhs.m_errors_tbm_trailer;
+      lhs.m_errors_tbm_eventid_mismatch += rhs.m_errors_tbm_eventid_mismatch;
+
+      // ROC errors:
+      lhs.m_errors_roc_missing += rhs.m_errors_roc_missing;
+      lhs.m_errors_roc_readback += rhs.m_errors_roc_readback;
+
+      // Pixel decoding errors:
+      lhs.m_errors_pixel_incomplete += rhs.m_errors_pixel_incomplete;
+      lhs.m_errors_pixel_address += rhs.m_errors_pixel_address;
+      lhs.m_errors_pixel_pulseheight += rhs.m_errors_pixel_pulseheight;
+      lhs.m_errors_pixel_buffer_corrupt += rhs.m_errors_pixel_buffer_corrupt;
+
+      return lhs;
+    };
 
     uint32_t info_words_read() {return m_info_words_read; }
     uint32_t info_events_empty() {return m_info_events_empty; }
@@ -452,7 +532,10 @@ namespace pxar {
 	      + errors_event_stop()
 	      + errors_event_overflow()
 	      + errors_event_invalid_words()
-	      + errors_event_invalid_xor());
+	      + errors_event_invalid_xor()
+	      + errors_event_frame()
+	      + errors_event_idledata()
+	      + errors_event_nodata());
     };
     uint32_t errors_tbm() {
       return (errors_tbm_header()
@@ -474,6 +557,10 @@ namespace pxar {
     uint32_t errors_event_overflow() { return m_errors_event_overflow; }
     uint32_t errors_event_invalid_words() { return m_errors_event_invalid_words; }
     uint32_t errors_event_invalid_xor() { return m_errors_event_invalid_xor; }
+    uint32_t errors_event_frame() { return m_errors_event_frame; }
+    uint32_t errors_event_idledata() { return m_errors_event_idledata; }
+    uint32_t errors_event_nodata() { return m_errors_event_nodata; }
+
     uint32_t errors_tbm_header() { return m_errors_tbm_header; }
     uint32_t errors_tbm_eventid_mismatch() { return m_errors_tbm_eventid_mismatch; }
     uint32_t errors_tbm_trailer() { return m_errors_tbm_trailer; }
@@ -506,6 +593,12 @@ namespace pxar {
     uint32_t m_errors_event_invalid_words;
     // Total number of events with invalid XOR eye diagram:
     uint32_t m_errors_event_invalid_xor;
+    // Total number of DESER400 Frame errors (failed synchronization):
+    uint32_t m_errors_event_frame;
+    // Total number of DESER400 idle data errors (no TBM trailer received):
+    uint32_t m_errors_event_idledata;
+    // Total number of DESER400 no-data error (only TBM header received):
+    uint32_t m_errors_event_nodata;
 
     // Total number of events with flawed TBM header:
     uint32_t m_errors_tbm_header;
