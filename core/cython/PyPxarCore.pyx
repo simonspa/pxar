@@ -326,11 +326,15 @@ cdef class PyPxarCore:
             self.thisptr._dut.testAllPixels(enable)
 
     def getTbmDACs(self, int tbmid):
-        return self.thisptr._dut.getTbmDACs(tbmid)
+        r = self.thisptr._dut.getTbmDACs(tbmid)
+        return {tup.first: tup.second for tup in r}
+  
     def getRocDACs(self, int rocid):
-        return self.thisptr._dut.getDACs(rocid)
+        r = self.thisptr._dut.getDACs(rocid)
+        return {tup.first: tup.second for tup in r}
     def getDACs(self, int rocid):
-        return self.thisptr._dut.getDACs(rocid)
+        return self.getRocDACs(rocid)
+  
     def updateTrimBits(self, trimming, int rocid):
         cdef vector[pixelConfig] v
         cdef pixelConfig pc
@@ -657,6 +661,12 @@ cdef class PyPxarCore:
         s = Statistics()
         s.c_clone(r)
         return s
+
+    def setReportingLevel(self, string logLevel):
+        self.thisptr.setReportingLevel(logLevel)
+
+    def getReportingLevel(self):
+        return self.thisptr.getReportingLevel()
 
 cimport regdict
 cdef class PyRegisterDictionary:
