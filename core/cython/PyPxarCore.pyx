@@ -111,14 +111,14 @@ cdef class RocConfig:
     def __dealloc__(self):
         del self.thisptr
     property column:
-        def __get__(self): 
+        def __get__(self):
             r = list()
             for p in self.thisptr.pixels:
                 P = PixelConfig()
                 P.c_clone(&p)
                 r.append(P)
             return r
-        def __set__(self, value): 
+        def __set__(self, value):
             cdef vector[pixelConfig] v
             cdef PixelConfig pc
             for pc in value:
@@ -186,14 +186,14 @@ cdef class PxEvent:
         for px in ev.pixels:
             self.thisptr.pixels.push_back(px)
     property pixels:
-        def __get__(self): 
+        def __get__(self):
             r = list()
             for p in self.thisptr.pixels:
                 P = Pixel()
                 P.fill(p)
                 r.append(P)
             return r
-        def __set__(self, value): 
+        def __set__(self, value):
             cdef vector[pixel] v
             cdef Pixel px
             for px in value:
@@ -248,6 +248,9 @@ cdef class PyPxarCore:
         for key, value in power_settings.items():
             ps.push_back((key,float(value)))
         self.thisptr.setTestboardPower(ps)
+    def setDecodingOffset(self, offset):
+        cdef uint8_t os = offset
+        self.thisptr.setDecodingOffset(os)
     def setTestboardDelays(self, sig_delays):
         """ Initializer method for the testboard
         Parameters are dictionaries in the form {"name":value}:
@@ -340,7 +343,7 @@ cdef class PyPxarCore:
             pc = pixelConfig(trimming[line][0][0], trimming[line][1][0], trimming[line][2][0])
             v.push_back(pc)
         self.thisptr._dut.updateTrimBits(v, rocid)
-    
+
     def info(self):
         self.thisptr._dut.info()
 
@@ -658,6 +661,12 @@ cdef class PyPxarCore:
         s = Statistics()
         s.c_clone(r)
         return s
+
+    def setReportingLevel(self, string logLevel):
+        self.thisptr.setReportingLevel(logLevel)
+
+    def getReportingLevel(self):
+        return self.thisptr.getReportingLevel()
 
 cimport regdict
 cdef class PyRegisterDictionary:

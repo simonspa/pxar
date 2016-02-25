@@ -2,7 +2,6 @@
 """
 Helper classes and functions useful when interfacing the pxar API with Python.
 """
-import PyPxarCore
 from PyPxarCore import Pixel, PixelConfig, PyPxarCore, PyRegisterDictionary, PyProbeDictionary
 from functools import wraps # used in parameter verification decorator ("arity")
 import os # for file system cmds
@@ -245,22 +244,26 @@ def PxarStartup(directory, verbosity):
         rocDacs.append(dacconfig.getAll())
         rocPixels.append(trimconfig.getAll())
 
+
     # set pgcal according to wbc
-    pgcal = int(rocDacs[0]['wbc']) + 6
+    pgcal = int(rocDacs[0]['wbc']) + 6 if nrocs else 106
 
     # Pattern Generator for single ROC operation:
     if int(config.get("nTbms")) == 0:
         pg_setup = (
+            #("PG_RESR",25),
             ("PG_RESR",25),
             ("PG_CAL",pgcal),
             ("PG_TRG",16),
-            ("PG_TOK",0))
+            #("PG_TRG",16),
+            ("PG_TOK",0)
+            #("PG_RESR",0),
+            )
     else:
         pg_setup = (
             ("PG_RESR",15),
             ("PG_CAL",pgcal),
             ("PG_TRG",0))
-
        # Start an API instance from the core pxar library
     api = PyPxarCore(usbId=config.get("testboardName"),logLevel=verbosity)
     print api.getVersion()
@@ -269,9 +272,16 @@ def PxarStartup(directory, verbosity):
     sig_delays = tbparameters.getAll()):
         print "WARNING: could not init DTB -- possible firmware mismatch."
         print "Please check if a new FW version is available"
-        exit
+        exit()
+    try:
+        api.setDecodingOffset(int(config.get("decodingOffset", int(0))))
+    except KeyError:
+        pass
+    print "And we have just initialized " + str(len(pixels)) + " pixel configs to be used for every ROC!"
 
-    api.initDUT(int(config.get("hubId",31)),config.get("tbmType","tbm08"),tbmDACs,config.get("rocType"),rocDacs,rocPixels, rocI2C)
+    hubids = [int(i) for i in config.get("hubId",31).split(',')]
+    print '='*20, hubids
+    api.initDUT(hubids, config.get("tbmType","tbm08"), tbmDACs,config.get("rocType"), rocDacs, rocPixels, rocI2C)
 
     api.testAllPixels(True)
     print "Now enabled all pixels"

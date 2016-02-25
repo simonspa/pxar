@@ -63,7 +63,10 @@ namespace pxar {
   uint8_t pixel::translateLevel(uint16_t x, int16_t level0, int16_t level1, int16_t levelS) {
     int16_t y = expandSign(x) - level0;
     if (y >= 0) y += levelS; else y -= levelS;
-    return level1 ? y/level1 + 1: 0;
+    uint8_t retVal =  level1 ? y/level1 + 1: 0;
+    if (retVal > 5)
+        retVal =  5;
+    return retVal;
   }
 
   void pixel::decodeAnalog(std::vector<uint16_t> analog, int16_t ultrablack, int16_t black) {
@@ -74,6 +77,7 @@ namespace pxar {
     }
 
     // Calculate the levels:
+    /** Changes by Micha*/
     int16_t level0 = black;
     int16_t level1 = (black - ultrablack)/4;
     int16_t levelS = level1/2;
@@ -94,7 +98,16 @@ namespace pxar {
     _row = 80 - r/2;
     _column = 2*c + (r&1);
 
-    // Perform range checks:
+    /**Output by Micha*/
+    std::stringstream ss;
+    ss << "AnalogLevels: ";
+    ss<<(int)_column<<" "<<(int)_row << "\t";
+    for (unsigned i(0); i<analog.size(); i++)
+        ss << analog[i] << " ";
+    ss << "\t" << c1 <<" "<<c0<<" "<<r2<<" "<<r1<<" "<< r0;
+    LOG(logDEBUGAPI)<<ss.str() << " ";
+
+    /** Perform range checks:*/
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {
       LOG(logDEBUGAPI) << "Invalid pixel from levels "<< listVector(analog) << ": " << *this;
       throw DataInvalidAddressError("Error decoding pixel address");
@@ -116,7 +129,7 @@ namespace pxar {
     raw |= ((dcol)/6 << 21);
     raw |= (((dcol%6)) << 18);
 
-    LOG(logDEBUGPIPES) << "Pix  " << static_cast<int>(_column) << "|" 
+    LOG(logDEBUGPIPES) << "Pix  " << static_cast<int>(_column) << "|"
 		       << static_cast<int>(_row) << " = "
 		       << dcol << "/" << r << " = "
 		       << dcol/6 << " " << dcol%6 << " "
@@ -226,7 +239,7 @@ namespace pxar {
     m_errors_pixel_buffer_corrupt = 0;
   }
 
-  tbmConfig::tbmConfig(uint8_t tbmtype) : dacs(), type(tbmtype), hubid(31), core(0xE0), tokenchains(), enable(true) {
+  tbmCoreConfig::tbmCoreConfig(uint8_t tbmtype) : dacs(), type(tbmtype), hubid(31), core(0xE0), tokenchains(), enable(true) {
 
     if(tbmtype == 0x0) {
       LOG(logCRITICAL) << "Invalid TBM type \"" << tbmtype << "\"";
@@ -235,7 +248,7 @@ namespace pxar {
     
     // Standard setup for token chain lengths:
     // Four ROCs per stream for dual-400MHz, eight ROCs for single-400MHz readout:
-    if(type >= TBM_09) { for(size_t i = 0; i < 2; i++) tokenchains.push_back(4); }
+    if(type >= TBM_09) { for(size_t i = 0; i < 2; i++) tokenchains.push_back(2); }
     else if(type >= TBM_08) { tokenchains.push_back(8); }
   }
 

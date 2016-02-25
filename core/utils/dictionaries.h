@@ -294,6 +294,10 @@ namespace pxar {
       }
       return "";
     }
+    // returns true if the roc is analog, todo: check if entry exist
+    inline bool isAnalogROC(std::string name){
+    	return (getDevCode(name) > 0 && getDevCode(name) < ROC_PSI46DIG);
+    }
 
   private:
     DeviceDictionary() {

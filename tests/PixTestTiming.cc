@@ -235,8 +235,8 @@ void PixTestTiming::PhaseScan() {
   TLogLevel UserReportingLevel = Log::ReportingLevel();
   size_t nTBMs = fApi->_dut->getNTbms();
   int nTokenChains = 0;
-  std::vector<tbmConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
-  for(std::vector<tbmConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
+  std::vector<tbmCoreConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
+  for(std::vector<tbmCoreConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
   uint16_t period = 200;
   vector<rawEvent> daqRawEv;
   vector<Event> daqEv;
@@ -385,8 +385,8 @@ void PixTestTiming::TBMPhaseScan() {
   TLogLevel UserReportingLevel = Log::ReportingLevel();
   size_t nTBMs = fApi->_dut->getNTbms();
   int nTokenChains = 0;
-  std::vector<tbmConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
-  for(std::vector<tbmConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
+  std::vector<tbmCoreConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
+  for(std::vector<tbmCoreConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
   uint16_t period = 200;
   vector<rawEvent> daqRawEv;
   vector<Event> daqEv;
@@ -471,8 +471,8 @@ void PixTestTiming::ROCDelayScan() {
   TLogLevel UserReportingLevel = Log::ReportingLevel();
   size_t nTBMs = fApi->_dut->getNTbms();
   int nTokenChains = 0;
-  std::vector<tbmConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
-  for(std::vector<tbmConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
+  std::vector<tbmCoreConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
+  for(std::vector<tbmCoreConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
   uint16_t period = 200;
   vector<rawEvent> daqRawEv;
   vector<Event> daqEv;
@@ -548,8 +548,8 @@ void PixTestTiming::TimingTest() {
 
   size_t nTBMs = fApi->_dut->getNTbms();
   int nTokenChains = 0;
-  std::vector<tbmConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
-  for(std::vector<tbmConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
+  std::vector<tbmCoreConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
+  for(std::vector<tbmCoreConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
   uint16_t period = 200;
   vector<rawEvent> daqRawEv;
   vector<Event> daqEv;
@@ -605,8 +605,8 @@ void PixTestTiming::LevelScan() {
 
   //Get the normal info
   int nTokenChains = 0;
-  std::vector<tbmConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
-  for(std::vector<tbmConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
+  std::vector<tbmCoreConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
+  for(std::vector<tbmCoreConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
 
   if (fNoTokenPass) {
     size_t nTBMs = fApi->_dut->getNTbms();

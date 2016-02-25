@@ -210,7 +210,7 @@ namespace pxar {
     // Check the alignment markers to be correct:
     if((sample->data.at(size-2) & 0xe000) != 0xe000
        || (sample->data.at(size-1) & 0xe000) != 0xc000) { decodingStats.m_errors_tbm_trailer++; }
-    
+
     // Check possible DESER400 error flags in the TBM trailer:
     if((sample->data.at(size-2) & 0x1000) == 0x1000
        || (sample->data.at(size-1) & 0x1000) == 0x1000) {
@@ -279,14 +279,14 @@ namespace pxar {
 	  decodingStats.m_errors_pixel_incomplete++;
 	  break;
 	}
-	
+
 	// FIXME optional check:
 	// (*word) >> 13 == 0
 	// (*(word+1) >> 13 == 1
 
 	uint32_t raw = (((*word) & 0x0fff) << 12) + ((*(++word)) & 0x0fff);
 	try {
-	  // Check if this is just fill bits of the TBM09 data stream 
+	  // Check if this is just fill bits of the TBM09 data stream
 	  // accounting for the other channel:
 	  if(GetEnvelopeType() >= TBM_09 && (raw&0xffffff) == 0xffffff) {
 	    LOG(logDEBUGPIPES) << "Empty hit detected (TBM09 data streams). Skipping.";
@@ -334,8 +334,8 @@ namespace pxar {
 
       // Not enough data for anything, stop here - and assume it was half a pixel hit:
       if((sample->data.end() - word < 2)) { 
-	decodingStats.m_errors_pixel_incomplete++;
-	break;
+	      decodingStats.m_errors_pixel_incomplete++;
+	      break;
       }
 
       // Check if we have another ROC header (UB and B levels):
@@ -343,47 +343,46 @@ namespace pxar {
       // its Ultrablack and Black level as initial values for auto-calibration:
 
       if(roc_n < 0 || 
-	 // Ultrablack level:
-	 ((ultrablack-levelS < expandSign((*word) & 0x0fff) && ultrablack+levelS > expandSign((*word) & 0x0fff))
-	  // Black level:
-	  && (black-levelS < expandSign((*(word+1)) & 0x0fff) && black+levelS > expandSign((*(word+1)) & 0x0fff)))) {
+          // Ultrablack level:
+          ((ultrablack-levelS < expandSign((*word) & 0x0fff) && ultrablack+levelS > expandSign((*word) & 0x0fff))
+          // Black level:
+          && (black-levelS < expandSign((*(word+1)) & 0x0fff) && black+levelS > expandSign((*(word+1)) & 0x0fff)))) {
+        roc_n++;
+	      // Save the lastDAC value:
+	      evalLastDAC(roc_n, (*(word+2)) & 0x0fff);
 
-	roc_n++;
-	// Save the lastDAC value:
-	evalLastDAC(roc_n, (*(word+2)) & 0x0fff);
+	      // Iterate to improve ultrablack and black measurement:
+	      AverageAnalogLevel((*word) & 0x0fff, (*(word+1)) & 0x0fff);
 
-	// Iterate to improve ultrablack and black measurement:
-	AverageAnalogLevel((*word) & 0x0fff, (*(word+1)) & 0x0fff);
-
-	LOG(logDEBUGPIPES) << "ROC Header: "
-			   << expandSign((*word) & 0x0fff) << " (avg. " << ultrablack << ") (UB) "
-			   << expandSign((*(word+1)) & 0x0fff) << " (avg. " << black << ") (B) "
-			   << expandSign((*(word+2)) & 0x0fff) << " (lastDAC) ";
-	// Advance iterator:
-	word +=  2;
+        LOG(logDEBUGPIPES)  << "ROC Header: "
+                            << expandSign((*word) & 0x0fff) << " (avg. " << ultrablack << ") (UB) "
+                            << expandSign((*(word+1)) & 0x0fff) << " (avg. " << black << ") (B) "
+                            << expandSign((*(word+2)) & 0x0fff) << " (lastDAC) ";
+	      // Advance iterator:
+	      word +=  2;
       }
       // We have a pixel hit:
       else {
-	// Not enough data for a new pixel hit (six words):
-	if(sample->data.end() - word < 6) {
-	  decodingStats.m_errors_pixel_incomplete++;
-	  break;
-	}
+        // Not enough data for a new pixel hit (six words):
+        if(sample->data.end() - word < 6) {
+          decodingStats.m_errors_pixel_incomplete++;
+          break;
+        }
 
-	std::vector<uint16_t> data;
-	data.push_back((*word) & 0x0fff);
-	for(size_t i = 0; i < 5; i++) { data.push_back((*(++word)) & 0x0fff); }
- 
-	try{
-	  LOG(logDEBUGPIPES) << "Trying to decode pixel: " << listVector(data,false,true);
-	  pixel pix(data,roc_n,ultrablack,black);
-	  roc_Event.pixels.push_back(pix);
-	  decodingStats.m_info_pixels_valid++;
-	}
-	catch(DataDecodingError /*&e*/){
-	  // decoding of raw address lead to invalid address
-	  decodingStats.m_errors_pixel_address++;
-	}
+        std::vector<uint16_t> data;
+        data.push_back((*word) & 0x0fff);
+        for(size_t i = 0; i < 5; i++) { data.push_back((*(++word)) & 0x0fff); }
+
+        try{
+            LOG(logDEBUGPIPES) << "Trying to decode pixel: " << listVector(data,false,true);
+            pixel pix(data,roc_n,ultrablack,black);
+            roc_Event.pixels.push_back(pix);
+            decodingStats.m_info_pixels_valid++;
+        }
+        catch(DataDecodingError /*&e*/){
+            // decoding of raw address lead to invalid address
+            decodingStats.m_errors_pixel_address++;
+        }
       }
     }
 
@@ -513,7 +512,7 @@ namespace pxar {
       roc_Event.Clear();
     }
     // Count empty events
-    else if(roc_Event.pixels.empty()) { 
+    else if(roc_Event.pixels.empty()) {
       decodingStats.m_info_events_empty++;
       LOG(logDEBUGPIPES) << "Event is empty.";
     }
@@ -530,14 +529,14 @@ namespace pxar {
     if(slidingWindow < 1000) {
       slidingWindow++;
       sumUB += expandSign(word1 & 0x0fff);
-      ultrablack = static_cast<float>(sumUB)/slidingWindow;
+      ultrablack = static_cast<int32_t>(static_cast<float>(sumUB)/slidingWindow);
       sumB += expandSign(word2 & 0x0fff);
-      black = static_cast<float>(sumB)/slidingWindow;
+      black = static_cast<int32_t>(static_cast<float>(sumB)/slidingWindow + offsetB);
     }
     // Sliding window:
     else {
       ultrablack = static_cast<float>(999)/1000*ultrablack + static_cast<float>(1)/1000*expandSign(word1 & 0x0fff);
-      black = static_cast<float>(999)/1000*black + static_cast<float>(1)/1000*expandSign(word2 & 0x0fff);
+      black = static_cast<float>(999)/1000*black + static_cast<float>(1)/1000*expandSign(word2 & 0x0fff) + offsetB;
     }
     levelS = (black - ultrablack)/8;
   }
@@ -547,12 +546,12 @@ namespace pxar {
     // Evaluate the four error bits of the TBM trailer word:
     if((data & 0x0100) != 0x0000) {
       decodingStats.m_errors_event_nodata++;
-      LOG(logWARNING) << "Detected DESER400 trailer error bits: \"NO DATA\"";
+      //LOG(logWARNING) << "Detected DESER400 trailer error bits: \"NO DATA\"";
       throw DataDeserializerError("No data");
     }
     if((data & 0x0200) != 0x0000) {
       LOG(logWARNING) << "Detected DESER400 trailer error bits: \"IDLE DATA\"";
-      decodingStats.m_errors_event_idledata++;
+      //decodingStats.m_errors_event_idledata++;
       throw DataDeserializerError("Idle data");
     }
     if((data & 0x0400) != 0x0000) {
@@ -628,7 +627,7 @@ namespace pxar {
     }
   }
 
-  statistics dtbEventDecoder::getStatistics() { 
+  statistics dtbEventDecoder::getStatistics() {
     // Automatically clear the statistics after it was read out:
     statistics tmp = decodingStats;
     decodingStats.clear();

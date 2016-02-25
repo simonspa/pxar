@@ -179,6 +179,7 @@ cdef extern from "api.h" namespace "pxar":
         void setTestboardPower(vector[pair[string, double] ] power_settings) except +
         void setTestboardDelays(vector[pair[string, uint8_t] ] sig_delays) except +
         void setPatternGenerator(vector[pair[string, uint8_t] ] pg_setup) except +
+        void setDecodingOffset(uint8_t offset)
 
         bool initDUT(vector[uint8_t] hubId,
 	             string tbmtype,
@@ -239,6 +240,7 @@ cdef extern from "api.h" namespace "pxar":
         vector[uint16_t] daqGetBuffer() except +
         vector[vector[uint16_t]] daqGetReadback() except +
         vector[uint8_t] daqGetXORsum(uint8_t channel) except +
-        statistics getStatistics()
+        statistics getStatistics() except +
+        void setReportingLevel(string logLevel) except +
+        string getReportingLevel() except +
         bool daqStop() except +
-
