@@ -246,7 +246,9 @@ def PxarStartup(directory, verbosity):
 
 
     # set pgcal according to wbc
-    pgcal = int(rocDacs[0]['wbc']) + 6 if nrocs else 106
+    pgcal = int(rocDacs[0]['wbc'])
+    pgcal += 6 if 'dig' in config.get('rocType') else 5
+    print 'pgcal is:', pgcal
 
     # Pattern Generator for single ROC operation:
     if int(config.get("nTbms")) == 0:
