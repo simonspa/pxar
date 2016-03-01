@@ -132,7 +132,7 @@ class PxarCoreCmd(cmd.Cmd):
 
     def varyDelays(self,tindelay,toutdelay,verbose=False):
         self.api.setTestboardDelays({"tindelay":tindelay,"toutdelay":toutdelay})
-        self.api.daqStart()
+        self.api.daqStart(0)
         self.api.daqTrigger(1, 500)
 
         try:

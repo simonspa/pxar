@@ -568,7 +568,7 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0, 0, [])
     def do_daqStart(self):
         """daqStart: starts a new DAQ session"""
-        self.api.daqStart()
+        self.api.daqStart(0)
 
     def complete_daqStart(self, text, line, start_index, end_index):
         # return help for the cmd
