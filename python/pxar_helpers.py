@@ -76,11 +76,8 @@ class PxarConfigFile:
             thisf.close()
     def show(self):
         print self.config
-    def get(self, opt, default = None):
-        if default:
-            return self.config.get(opt.lower(),default)
-        else:
-            return self.config[opt.lower()]
+    def get(self, opt, default=None):
+        return self.config.get(opt.lower(), default)
 
 class PxarParametersFile:
     """ class that loads the old-style parameters files of psi46expert """
