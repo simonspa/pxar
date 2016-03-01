@@ -1142,13 +1142,13 @@ void ConfigParameters::readNrocs(string line) {
 
 // ----------------------------------------------------------------------
 void ConfigParameters::readHubIds(string line) {
-	std::cout << "************************LINE HUBIDS" << line;
   cleanupString(line);
   string::size_type s0 = line.find(" ");
   if (string::npos == s0) {
     return;
   } else {
     string hubidstring = line.substr(6);
+    LOG(logINFO) << "Reading HubIds: " << hubidstring;
     s0 = hubidstring.find(","); 
     string hubid("");
     while (string::npos != s0) {
