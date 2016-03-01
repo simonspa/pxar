@@ -583,7 +583,7 @@ cdef class PyPxarCore:
     def setSignalMode(self, string signal, string mode, uint8_t speed):
         self.thisptr.setSignalMode(signal, mode, speed)
 
-    def daqStart(self, uint16_t flags):
+    def daqStart(self, uint16_t flags=0):
         return self.thisptr.daqStart(flags)
 
     def daqStart(self):
