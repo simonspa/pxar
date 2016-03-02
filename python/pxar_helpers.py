@@ -276,7 +276,7 @@ def PxarStartup(directory, verbosity):
     print "And we have just initialized " + str(len(pixels)) + " pixel configs to be used for every ROC!"
 
     hubids = [int(i) for i in config.get("hubId",31).split(',')]
-    print '='*20, hubids
+    print 'HubIds set to:', hubids
     api.initDUT(hubids, config.get("tbmType","tbm08"), tbmDACs,config.get("rocType"), rocDacs, rocPixels, rocI2C)
 
     api.testAllPixels(True)
