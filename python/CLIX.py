@@ -80,10 +80,13 @@ class PxarCoreCmd(cmd.Cmd):
                 pixels.append(px)
         self.plot_map(pixels, 'Event Display', True)
 
-    def plot_map(self, data, name, count=False):
+    def plot_map(self, data, name, count=False, no_stats=False):
         if not self.window:
             print data
             return
+
+        c = gROOT.GetListOfCanvases()[-1]
+        c.SetRightMargin(.12)
 
         # Find number of ROCs present:
         module = False
@@ -102,8 +105,9 @@ class PxarCoreCmd(cmd.Cmd):
             x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
             d[x + 1][y + 1] += 1 if count else px.value
 
-        plot = Plotter.create_th2(d, 0, 417 if module else 53, 0, 161 if module else 81, name, 'pixels x', 'pixels y',
-                                  name)
+        plot = Plotter.create_th2(d, 0, 417 if module else 53, 0, 161 if module else 81, name, 'pixels x', 'pixels y', name)
+        if no_stats:
+            plot.SetStats(0)
         self.window.histos.append(plot)
         self.window.update()
 
@@ -636,7 +640,7 @@ class PxarCoreCmd(cmd.Cmd):
         """getEfficiencyMap [flags = 0] [nTriggers = 10]: returns the efficiency map"""
         self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
         data = self.api.getEfficiencyMap(flags, nTriggers)
-        self.plot_map(data, "Efficiency")
+        self.plot_map(data, "Efficiency", no_stats=True)
 
     def complete_getEfficiencyMap(self, text, line, start_index, end_index):
         # return help for the cmd
