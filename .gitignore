@@ -34,4 +34,5 @@ pXar.layout
 pXar.cbp
 main/roc
 python/levels_*
+*.out
 
