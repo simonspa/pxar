@@ -668,13 +668,15 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0, 10, [str, int, int, int, str, int, int, int, int, int])
     def do_dacDacScan(self, dac1name="caldel", dac1step=1, dac1min=0, dac1max=255, dac2name="vthrcomp", dac2step=1,
                       dac2min=0, dac2max=255, flags=0, nTriggers=10):
-        """getEfficiencyVsDACDAC [DAC1 name] [step size 1] [min 1] [max 1] [DAC2 name] [step size 2] [min 2] [max 2] [flags = 0] [nTriggers = 10]: returns the efficiency over a 2D DAC1-DAC2 scan"""
-        self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
-        self.api.testAllPixels(0)
-        self.api.testPixel(14, 14, 1)
-        data = self.api.getEfficiencyVsDACDAC(dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min,
-                                              dac2max, flags, nTriggers)
-        self.plot_2d(data, "DacDacScan", dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max)
+        """getEfficiencyVsDACDAC [DAC1 name] [step size 1] [min 1] [max 1] [DAC2 name] [step size 2] [min 2] [max 2] [flags = 0] [nTriggers = 10]
+        return: the efficiency over a 2D DAC1-DAC2 scan"""
+        for roc in xrange(self.api.getNEnabledRocs()):
+            self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
+            self.api.testAllPixels(0)
+            self.api.testPixel(14, 14, 1, roc)
+            data = self.api.getEfficiencyVsDACDAC(dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max, flags, nTriggers)
+            name = '{dac1} vs {dac2} Scan for ROC {roc}'.format(dac1=dac1name.title(), dac2=dac2name.title(), roc=roc)
+            self.plot_2d(data, name, dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max)
 
     def complete_dacDacScan(self, text, line, start_index, end_index):
         if text and len(line.split(" ")) <= 2:  # first argument and started to type
