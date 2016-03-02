@@ -2309,6 +2309,36 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_marie_can_save.__doc__, '']
 
+    @arity(0, 2, [int, int])
+    def do_checkADCTimeConstant(self, vcal=200, ntrig=10):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        self.api.setDAC('vcal', vcal)
+        self.enable_pix(14, 14)
+        self.api.daqStart()
+        for ctrl_reg in [0, 4]:
+            print 'ctrlreg:', ctrl_reg
+            self.api.setDAC('ctrlreg', ctrl_reg)
+            sleep(.5)
+            trig = 0
+            n_err = 0
+            while trig < ntrig and n_err < 100:
+                try:
+                    self.api.daqTrigger(1, 500)
+                    data = self.api.daqGetEvent()
+                    if len(data.pixels):
+                        print '{0:4d}'.format(int(data.pixels[0].value))
+                        trig += 1
+                    else:
+                        n_err += 1
+                except Exception as err:
+                    n_err += 1
+                    print err
+        self.api.daqStop()
+
+    def complete_checkADCTimeConstant(self):
+        # return help for the cmd
+        return [self.do_checkADCTimeConstant.__doc__, '']
+
     @staticmethod
     def do_quit(q=1):
         """quit: terminates the application"""
