@@ -1,8 +1,6 @@
 #include "datapipe.h"
 #include "helper.h"
 #include "log.h"
-#include "constants.h"
-#include "exceptions.h"
 
 namespace pxar {
 
@@ -342,11 +340,12 @@ namespace pxar {
       // Here we have to assume the first two words are a ROC header because we rely on
       // its Ultrablack and Black level as initial values for auto-calibration:
 
-      if(roc_n < 0 || 
-          // Ultrablack level:
-          ((ultrablack-levelS < expandSign((*word) & 0x0fff) && ultrablack+levelS > expandSign((*word) & 0x0fff))
+      if(roc_n < 0 ||
+          /** Ultrablack level:
+           * increase levelS for UB, the UBs of different ROCs may vary */
+          ((ultrablack - levelS * 2 < expandSign(*word & 0x0fff) && ultrablack + levelS * 2 > expandSign(*word & 0x0fff))
           // Black level:
-          && (black-levelS < expandSign((*(word+1)) & 0x0fff) && black+levelS > expandSign((*(word+1)) & 0x0fff)))) {
+          && (black - levelS < expandSign(*(word + 1) & 0x0fff) && black + levelS > expandSign(*(word + 1) & 0x0fff)))) {
         roc_n++;
 	      // Save the lastDAC value:
 	      evalLastDAC(roc_n, (*(word+2)) & 0x0fff);
