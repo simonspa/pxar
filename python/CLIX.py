@@ -9,7 +9,7 @@ Simple Example Python Script Using the Pxar API.
 # ==============================================
 # region imports
 from PyPxarCore import Pixel, PixelConfig, PyPxarCore, PyRegisterDictionary, PyProbeDictionary
-from numpy import zeros
+from numpy import zeros, array
 from pxar_helpers import *  # arity decorator, PxarStartup, PxarConfigFile, PxarParametersFile and others
 
 # Try to import ROOT:
@@ -20,7 +20,7 @@ except ImportError:
     gui_available = False
     pass
 if gui_available:
-    from ROOT import PyConfig
+    from ROOT import PyConfig, gStyle, gROOT
 
     PyConfig.IgnoreCommandLineOptions = True
     from pxar_gui import PxarGui
@@ -36,6 +36,9 @@ from time import time, sleep, strftime
 dacdict = PyRegisterDictionary()
 probedict = PyProbeDictionary()
 # endregion
+
+palette = array([632, 810, 807, 797, 800, 400, 830, 827, 817, 417], 'i')
+gStyle.SetPalette(len(palette), palette)
 
 
 class PxarCoreCmd(cmd.Cmd):
