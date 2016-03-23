@@ -41,7 +41,6 @@ void ConfigParameters::initialize() {
   fnRocs = 16;
   fnTbms = 1;
   fnModules = 1;
-  fHubId = 31;
   fI2cAddresses.clear();
 
   fHvOn = true;

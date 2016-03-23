@@ -169,7 +169,7 @@ private:
 
   std::vector<std::vector<std::pair<int, int> > > fMaskedPixels;
 
-  unsigned int fnCol, fnRow, fnRocs, fnTbms, fnModules, fHubId;
+  unsigned int fnCol, fnRow, fnRocs, fnTbms, fnModules;
   int fHalfModule;
   std::vector<uint8_t> fI2cAddresses, fHubIds;
   int fEmptyReadoutLength, fEmptyReadoutLengthADC, fEmptyReadoutLengthADCDual, fTbmChannel;
