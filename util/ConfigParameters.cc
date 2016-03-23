@@ -1116,7 +1116,6 @@ void ConfigParameters::readNrocs(string line) {
   fnRocs = atoi(nrocs.c_str());
   string::size_type s1 = line.find("i2c:");
   if (string::npos == s1) {
-    // autogenerate I2C addresses
     LOG(logINFO) << "I2C addresses will be automatically generated.";
     for (uint8_t i2c = 0; i2c < fnRocs; i2c++) { fI2cAddresses.push_back(i2c); }
     return;

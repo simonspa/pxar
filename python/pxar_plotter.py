@@ -47,6 +47,7 @@ class Plotter(object):
         th2.SetDirectory(0)
         th2.GetXaxis().SetTitle(x_title)
         th2.GetYaxis().SetTitle(y_title)
+        th2.GetYaxis().SetTitleOffset(1.3)
         th2.GetZaxis().SetTitle(z_title)
         th2.SetDrawOption('COLZ')
         for ix, x in enumerate(data):

@@ -9,7 +9,7 @@ Simple Example Python Script Using the Pxar API.
 # ==============================================
 # region imports
 from PyPxarCore import Pixel, PixelConfig, PyPxarCore, PyRegisterDictionary, PyProbeDictionary
-from numpy import zeros
+from numpy import zeros, array
 from pxar_helpers import *  # arity decorator, PxarStartup, PxarConfigFile, PxarParametersFile and others
 
 # Try to import ROOT:
@@ -20,7 +20,7 @@ except ImportError:
     gui_available = False
     pass
 if gui_available:
-    from ROOT import PyConfig
+    from ROOT import PyConfig, gStyle, gROOT
 
     PyConfig.IgnoreCommandLineOptions = True
     from pxar_gui import PxarGui
@@ -36,6 +36,9 @@ from time import time, sleep, strftime
 dacdict = PyRegisterDictionary()
 probedict = PyProbeDictionary()
 # endregion
+
+palette = array([632, 810, 807, 797, 800, 400, 830, 827, 817, 417], 'i')
+gStyle.SetPalette(len(palette), palette)
 
 
 class PxarCoreCmd(cmd.Cmd):
@@ -77,10 +80,13 @@ class PxarCoreCmd(cmd.Cmd):
                 pixels.append(px)
         self.plot_map(pixels, 'Event Display', True)
 
-    def plot_map(self, data, name, count=False):
+    def plot_map(self, data, name, count=False, no_stats=False):
         if not self.window:
             print data
             return
+
+        c = gROOT.GetListOfCanvases()[-1]
+        c.SetRightMargin(.12)
 
         # Find number of ROCs present:
         module = False
@@ -99,8 +105,9 @@ class PxarCoreCmd(cmd.Cmd):
             x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
             d[x + 1][y + 1] += 1 if count else px.value
 
-        plot = Plotter.create_th2(d, 0, 417 if module else 53, 0, 161 if module else 81, name, 'pixels x', 'pixels y',
-                                  name)
+        plot = Plotter.create_th2(d, 0, 417 if module else 53, 0, 161 if module else 81, name, 'pixels x', 'pixels y', name)
+        if no_stats:
+            plot.SetStats(0)
         self.window.histos.append(plot)
         self.window.update()
 
@@ -633,7 +640,7 @@ class PxarCoreCmd(cmd.Cmd):
         """getEfficiencyMap [flags = 0] [nTriggers = 10]: returns the efficiency map"""
         self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
         data = self.api.getEfficiencyMap(flags, nTriggers)
-        self.plot_map(data, "Efficiency")
+        self.plot_map(data, "Efficiency", no_stats=True)
 
     def complete_getEfficiencyMap(self, text, line, start_index, end_index):
         # return help for the cmd
@@ -661,13 +668,15 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0, 10, [str, int, int, int, str, int, int, int, int, int])
     def do_dacDacScan(self, dac1name="caldel", dac1step=1, dac1min=0, dac1max=255, dac2name="vthrcomp", dac2step=1,
                       dac2min=0, dac2max=255, flags=0, nTriggers=10):
-        """getEfficiencyVsDACDAC [DAC1 name] [step size 1] [min 1] [max 1] [DAC2 name] [step size 2] [min 2] [max 2] [flags = 0] [nTriggers = 10]: returns the efficiency over a 2D DAC1-DAC2 scan"""
-        self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
-        self.api.testAllPixels(0)
-        self.api.testPixel(14, 14, 1)
-        data = self.api.getEfficiencyVsDACDAC(dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min,
-                                              dac2max, flags, nTriggers)
-        self.plot_2d(data, "DacDacScan", dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max)
+        """getEfficiencyVsDACDAC [DAC1 name] [step size 1] [min 1] [max 1] [DAC2 name] [step size 2] [min 2] [max 2] [flags = 0] [nTriggers = 10]
+        return: the efficiency over a 2D DAC1-DAC2 scan"""
+        for roc in xrange(self.api.getNEnabledRocs()):
+            self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
+            self.api.testAllPixels(0)
+            self.api.testPixel(14, 14, 1, roc)
+            data = self.api.getEfficiencyVsDACDAC(dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max, flags, nTriggers)
+            name = '{dac1} vs {dac2} Scan for ROC {roc}'.format(dac1=dac1name.title(), dac2=dac2name.title(), roc=roc)
+            self.plot_2d(data, name, dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max)
 
     def complete_dacDacScan(self, text, line, start_index, end_index):
         if text and len(line.split(" ")) <= 2:  # first argument and started to type
@@ -2299,6 +2308,36 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_marie_can_save(self):
         # return help for the cmd
         return [self.do_marie_can_save.__doc__, '']
+
+    @arity(0, 2, [int, int])
+    def do_checkADCTimeConstant(self, vcal=200, ntrig=10):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        self.api.setDAC('vcal', vcal)
+        self.enable_pix(14, 14)
+        self.api.daqStart()
+        for ctrl_reg in [0, 4]:
+            print 'ctrlreg:', ctrl_reg
+            self.api.setDAC('ctrlreg', ctrl_reg)
+            sleep(.5)
+            trig = 0
+            n_err = 0
+            while trig < ntrig and n_err < 100:
+                try:
+                    self.api.daqTrigger(1, 500)
+                    data = self.api.daqGetEvent()
+                    if len(data.pixels):
+                        print '{0:4d}'.format(int(data.pixels[0].value))
+                        trig += 1
+                    else:
+                        n_err += 1
+                except Exception as err:
+                    n_err += 1
+                    print err
+        self.api.daqStop()
+
+    def complete_checkADCTimeConstant(self):
+        # return help for the cmd
+        return [self.do_checkADCTimeConstant.__doc__, '']
 
     @staticmethod
     def do_quit(q=1):

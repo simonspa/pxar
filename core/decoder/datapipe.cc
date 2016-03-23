@@ -1,8 +1,6 @@
 #include "datapipe.h"
 #include "helper.h"
 #include "log.h"
-#include "constants.h"
-#include "exceptions.h"
 
 namespace pxar {
 
@@ -342,11 +340,12 @@ namespace pxar {
       // Here we have to assume the first two words are a ROC header because we rely on
       // its Ultrablack and Black level as initial values for auto-calibration:
 
-      if(roc_n < 0 || 
-          // Ultrablack level:
-          ((ultrablack-levelS < expandSign((*word) & 0x0fff) && ultrablack+levelS > expandSign((*word) & 0x0fff))
+      if(roc_n < 0 ||
+          /** Ultrablack level:
+           * increase levelS for UB, the UBs of different ROCs may vary */
+          ((ultrablack - levelS * 2 < expandSign(*word & 0x0fff) && ultrablack + levelS * 2 > expandSign(*word & 0x0fff))
           // Black level:
-          && (black-levelS < expandSign((*(word+1)) & 0x0fff) && black+levelS > expandSign((*(word+1)) & 0x0fff)))) {
+          && (black - levelS < expandSign(*(word + 1) & 0x0fff) && black + levelS > expandSign(*(word + 1) & 0x0fff)))) {
         roc_n++;
 	      // Save the lastDAC value:
 	      evalLastDAC(roc_n, (*(word+2)) & 0x0fff);
@@ -535,10 +534,10 @@ namespace pxar {
     }
     // Sliding window:
     else {
-      ultrablack = static_cast<float>(999)/1000*ultrablack + static_cast<float>(1)/1000*expandSign(word1 & 0x0fff);
-      black = static_cast<float>(999)/1000*black + static_cast<float>(1)/1000*expandSign(word2 & 0x0fff) + offsetB;
+      ultrablack = static_cast<int32_t>(float(999) / 1000 * ultrablack + float(1) / 1000 * expandSign(word1 & 0x0fff));
+      black = static_cast<int32_t>(float(999) / 1000 * black + float(1) / 1000 * (expandSign(word2 & 0x0fff) + offsetB));
     }
-    levelS = (black - ultrablack)/8;
+    levelS = static_cast<int16_t>((black - ultrablack)/8);
   }
 
   void dtbEventDecoder::evalDeser400Errors(uint16_t data) {
