@@ -800,7 +800,7 @@ bool ConfigParameters::writeConfigParameterFile() {
   fprintf(file, "nModules %i\n", fnModules);
   fprintf(file, "nRocs %i\n", fnRocs);
   fprintf(file, "nTbms %i\n", fnTbms);
-  fprintf(file, "hubId %i\n", fHubId);
+  fprintf(file, "hubId %s\n", vectorToString(fHubIds).c_str());
   fprintf(file, "tbmEnable %i\n", fTbmEnable);
   fprintf(file, "tbmEmulator %i\n", fTbmEmulator);
   fprintf(file, "hvOn %i\n", fHvOn);
