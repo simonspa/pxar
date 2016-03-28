@@ -345,7 +345,7 @@ namespace pxar {
            * increase levelS for UB, the UBs of different ROCs may vary */
           ((ultrablack - levelS * 2 < expandSign(*word & 0x0fff) && ultrablack + levelS * 2 > expandSign(*word & 0x0fff))
           // Black level:
-          && (black - levelS < expandSign(*(word + 1) & 0x0fff) && black + levelS > expandSign(*(word + 1) & 0x0fff)))) {
+          && (black - levelS < offsetB + expandSign(*(word + 1) & 0x0fff) && black + levelS > offsetB + expandSign(*(word + 1) & 0x0fff)))) {
         roc_n++;
 	      // Save the lastDAC value:
 	      evalLastDAC(roc_n, (*(word+2)) & 0x0fff);
