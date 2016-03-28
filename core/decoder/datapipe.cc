@@ -386,7 +386,7 @@ namespace pxar {
     }
 
     // Check event validity (empty, missing ROCs...):
-    CheckEventValidity(roc_n);
+    CheckEventValidity(roc_n, sample);
   }
 
   void dtbEventDecoder::DecodeDeser160(rawEvent * sample) {
@@ -473,10 +473,10 @@ namespace pxar {
     }
     
     // Increment event counter:
-    eventID = (eventID%256) + 1;
+    eventID = (int16_t) (eventID % 256 + 1);
   }
 
-  void dtbEventDecoder::CheckEventValidity(int16_t roc_n) {
+  void dtbEventDecoder::CheckEventValidity(int16_t roc_n, rawEvent * sample) {
 
     // Check that we found all expected ROC headers:
     // If a PKAM has been detected, the NoTokenPass bis is set and the content should be discarded:
@@ -492,7 +492,7 @@ namespace pxar {
     // In case of a NoTokenPass flag, no ROC headers are expected
     else if(roc_Event.hasNoTokenPass() && (roc_n+1 > 0)) {
       LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel())
-		    << " has NoTokenPass but " << static_cast<int>(roc_n+1) 
+		    << " has NoTokenPass but " << roc_n+1
 		    << " ROCs were found";
       decodingStats.m_errors_roc_missing++;
       // This breaks the readback for the missing roc, let's ignore this readback cycle for all ROCs:
@@ -502,13 +502,37 @@ namespace pxar {
     }
     // If the number of ROCs does not correspond to what we expect clear the event and return
     else if(roc_Event.hasTokenPass() && (roc_n+1 != GetTokenChainLength())) {
-      LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel()) << " Number of ROCs (" << static_cast<int>(roc_n+1)
-		    << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
-      decodingStats.m_errors_roc_missing++;
-      // This breaks the readback for the missing roc, let's ignore this readback cycle for all ROCs:
-      std::fill(readback_dirty.begin(), readback_dirty.end(), true);
-      // Clearing event content:
-      roc_Event.Clear();
+      // if the argument sample was used!
+      if (sample != (rawEvent *) 1) {
+        if (!sample){
+          LOG(logWARNING) << "CheckEventValidity: rawEvent pointer sample is Zero - returning";
+          decodingStats.m_errors_roc_missing++;
+          // Clearing event content:
+          roc_Event.Clear();
+          return;
+        }
+        if(sample->GetSize() == 300){
+          LOG(logWARNING) << "ADC timeout exceeded! Event has more than 300 words!";
+        }
+        else {
+          LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
+                        << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
+          decodingStats.m_errors_roc_missing++;
+          // This breaks the readback for the missing roc, let's ignore this readback cycle for all ROCs:
+          std::fill(readback_dirty.begin(), readback_dirty.end(), true);
+          // Clearing event content:
+          roc_Event.Clear();
+        }
+      }
+      else {
+        LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
+                      << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
+        decodingStats.m_errors_roc_missing++;
+        // This breaks the readback for the missing roc, let's ignore this readback cycle for all ROCs:
+        std::fill(readback_dirty.begin(), readback_dirty.end(), true);
+        // Clearing event content:
+        roc_Event.Clear();
+      }
     }
     // Count empty events
     else if(roc_Event.pixels.empty()) {

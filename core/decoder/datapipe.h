@@ -174,7 +174,7 @@ namespace pxar {
 
     // Error checking:
     void evalDeser400Errors(uint16_t data);
-    void CheckEventValidity(int16_t roc_n);
+    void CheckEventValidity(int16_t roc_n, rawEvent * sample=(rawEvent *) 1);
     void CheckEventID();
     int16_t eventID;
 
