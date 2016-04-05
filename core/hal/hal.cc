@@ -161,7 +161,7 @@ void hal::setTestboardDelays(std::map<uint8_t,uint8_t> sig_delays) {
   }
   LOG(logDEBUGHAL) << "Setting all DTB signal levels to " << static_cast<int>(signal_level);
 
-  _testboard->Deser400_SetPhaseAutoAll();  
+  LOG(logCRITICAL) << "_testboard->Deser400_SetPhaseAutoAll() not available in this firmware.";  
   LOG(logDEBUGHAL) << "Defaulting all DESER400 modules to automatic phase selection.";
   
   // Write testboard delay settings and deserializer phases to the repsective registers:
@@ -176,23 +176,23 @@ void hal::setTestboardDelays(std::map<uint8_t,uint8_t> sig_delays) {
     else if(sigIt->first == SIG_DESER400RATE) {
       LOG(logDEBUGHAL) << "Set DTB deser400 phase sampling rate to value " << static_cast<int>(sigIt->second);
       // This function is a DTB-internal call to Deser400_PdPhase(), I don't know why Beat decided to encapsulate it...
-      _testboard->Deser400_GateRun(0,sigIt->second);
+      LOG(logCRITICAL) << "_testboard->Deser400_GateRun() is not available in this firmware.";
     }
     else if(sigIt->first == SIG_DESER400PHASE0) {
       LOG(logDEBUGHAL) << "Set DTB deser400 module 0 phase to value " << static_cast<int>(sigIt->second);
-      _testboard->Deser400_SetPhase(0,sigIt->second);
+      LOG(logCRITICAL) << "_testboard->Deser400_Setphase0() is not available in this firmware.";
     }
     else if(sigIt->first == SIG_DESER400PHASE1) {
       LOG(logDEBUGHAL) << "Set DTB deser400 module 1 phase to value " << static_cast<int>(sigIt->second);
-      _testboard->Deser400_SetPhase(1,sigIt->second);
+      LOG(logCRITICAL) << "_testboard->Deser400_SetPhase1() is not available in this firmware.";
     }
     else if(sigIt->first == SIG_DESER400PHASE2) {
       LOG(logDEBUGHAL) << "Set DTB deser400 module 2 phase to value " << static_cast<int>(sigIt->second);
-      _testboard->Deser400_SetPhase(2,sigIt->second);
+      LOG(logCRITICAL) << "_testboard->Deser400_SetPhase2() is not available in this firmware.";
     }
     else if(sigIt->first == SIG_DESER400PHASE3) {
       LOG(logDEBUGHAL) << "Set DTB deser400 module 3 phase to value " << static_cast<int>(sigIt->second);
-      _testboard->Deser400_SetPhase(3,sigIt->second);
+      LOG(logCRITICAL) << "_testboard->Deser400_SetPhase3() is not available in this firmware.";
     }
     else if(sigIt->first == SIG_LOOP_TRIGGER_DELAY) {
       LOG(logDEBUGHAL) << "Set DTB loop delay between triggers to " << static_cast<int>(sigIt->second)*10 <<" clk";
@@ -200,7 +200,7 @@ void hal::setTestboardDelays(std::map<uint8_t,uint8_t> sig_delays) {
     }
     else if(sigIt->first == SIG_LOOP_TRIM_DELAY) {
       LOG(logDEBUGHAL) << "Set DTB loop delay after trimming to " << static_cast<int>(sigIt->second)*10 <<" clk";
-      _testboard->SetLoopTrimDelay(sigIt->second*10);
+      LOG(logCRITICAL) << "_testboard->SetLoopTrimDelay() is not available in this firmware.";
     }
     else if(sigIt->first == SIG_TRIGGER_LATENCY) {
       LOG(logDEBUGHAL) << "Set latency for external triggers to " << static_cast<int>(sigIt->second) <<" clk";
@@ -559,7 +559,8 @@ void hal::setHubId(uint8_t hubid) {
 
 void hal::setHubId(uint8_t hub0, uint8_t hub1) {
   LOG(logDEBUGHAL) << "Setting both Layer 1 Hub IDs: " << static_cast<int>(hub0) << ", " << static_cast<int>(hub1);
-  _testboard->mod_Addr(hub0, hub1);
+  LOG(logCRITICAL) << "No second HUB ID supported in this firmware.";
+  _testboard->mod_Addr(hub0);
 }
 
 bool hal::rocSetDACs(uint8_t roci2c, std::map< uint8_t, uint8_t > dacPairs) {
@@ -1443,14 +1444,14 @@ void hal::SignalProbeD2(uint8_t signal) {
 
 void hal::SignalProbeDeserD1(uint8_t deser, uint8_t signal) {
   LOG(logDEBUGHAL) << "Setting Deser " << static_cast<int>(deser) << " to signal " << static_cast<int>(signal) << " (D1)";
-  _testboard->SignalProbeDeserD1(deser, signal);
+  LOG(logCRITICAL) << "_testboard->SignalProbeDeserD1() not available in this firmware.";
   _testboard->uDelay(100);
   _testboard->Flush();
 }
 
 void hal::SignalProbeDeserD2(uint8_t deser, uint8_t signal) {
   LOG(logDEBUGHAL) << "Setting Deser " << static_cast<int>(deser) << " to signal " << static_cast<int>(signal) << " (D2)";
-  _testboard->SignalProbeDeserD2(deser, signal);
+  LOG(logCRITICAL) << "_testboard->SignalProbeDeserD2() not available in this firmware.";
   _testboard->uDelay(100);
   _testboard->Flush();
 }
@@ -1662,7 +1663,7 @@ std::vector<Event> hal::daqAllEvents() {
 	catch (dsBufferEmpty &) {
 	  LOG(logDEBUGHAL) << "Finished readout Channel " << ch << ".";
 	  // Reset the DTB memory to work around buffer issue:
-	  _testboard->Daq_MemReset(ch);
+	  LOG(logCRITICAL) << "_testboard->Daq_MemReset() is not available in this firmware.";
 	  done_ch.at(ch) = true;
 	}
 	catch (dataPipeException &e) { LOG(logERROR) << e.what(); return evt; }
@@ -1736,7 +1737,7 @@ std::vector<rawEvent> hal::daqAllRawEvents() {
 	catch (dsBufferEmpty &) {
 	  LOG(logDEBUGHAL) << "Finished readout Channel " << ch << ".";
 	  // Reset the DTB memory to work around buffer issue:
-	  _testboard->Daq_MemReset(ch);
+	  LOG(logCRITICAL) << "_testboard->Daq_MemReset() is not available in this firmware.";
 	  done_ch.at(ch) = true;
 	}
 	catch (dataPipeException &e) { LOG(logERROR) << e.what(); return raw; }
@@ -1772,7 +1773,7 @@ std::vector<uint16_t> hal::daqBuffer() {
       catch (dsBufferEmpty &) {
 	LOG(logDEBUGHAL) << "Finished readout Channel " << ch << ".";
 	// Reset the DTB memory to work around buffer issue:
-	_testboard->Daq_MemReset(ch);
+	LOG(logCRITICAL) << "_testboard->Daq_MemReset() is not available in this firmware.";
       }
       catch (dataPipeException &e) { LOG(logERROR) << e.what(); return raw; }
     }
