@@ -164,7 +164,7 @@ void hal::setTestboardDelays(std::map<uint8_t,uint8_t> sig_delays) {
   _testboard->Deser400_SetPhaseAutoAll();  
   LOG(logDEBUGHAL) << "Defaulting all DESER400 modules to automatic phase selection.";
   
-  // Write testboard delay settings and deserializer phases to the repsective registers:
+  // Write testboard delay settings and deserializer phases to the respective registers:
   for(std::map<uint8_t,uint8_t>::iterator sigIt = sig_delays.begin(); sigIt != sig_delays.end(); ++sigIt) {
 
     if(sigIt->first == SIG_DESER160PHASE) {
@@ -418,7 +418,7 @@ bool hal::CheckCompatibility() {
   }
   else { LOG(logINFO) << "RPC call hashes of host and DTB match: " << hostCmdHash; }
 
-  // We are though all checks, testboard is successfully connected:
+  // We are through all checks, testboard is successfully connected:
   return true;
 }
 
@@ -1865,6 +1865,7 @@ uint32_t hal::daqBufferStatus() {
   for(uint8_t channel = 0; channel < DTB_DAQ_CHANNELS; channel++) {
     if(m_daqstatus.size() > channel && m_daqstatus.at(channel)) {
       buffered_data += _testboard->Daq_GetSize(channel);
+      LOG(logDEBUGHAL) << "daqbufferstatus" << static_cast<int>(channel) << ": " << _testboard->Daq_GetSize(channel);
     }
   }
   return buffered_data;

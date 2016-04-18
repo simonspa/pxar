@@ -176,12 +176,12 @@ int main(int argc, char *argv[]){
     if (configParameters->customI2cAddresses()) {
       string i2cstring("");
       vector<uint8_t> i2cAddr = configParameters->getI2cAddresses();
-      for (unsigned int i = 0; i < i2cAddr.size(); ++i) i2cstring += Form(" %d", (int)i2cAddr[i]);
-      LOG(logINFO) << "custom i2c addresses: " << i2cstring;
+      for (unsigned int i = 0; i < i2cAddr.size(); ++i) i2cstring += Form(" %d", (int)i2cAddr[i]); 
+      LOG(logINFO) << "custom i2c addresses: " << i2cstring; 
       api->initDUT(configParameters->getHubIds(),
-		   configParameters->getTbmType(), tbmDACs,
-		   configParameters->getRocType(), rocDACs,
-		   rocPixels,
+		   configParameters->getTbmType(), tbmDACs, 
+		   configParameters->getRocType(), rocDACs, 
+		   rocPixels, 
 		   i2cAddr);
     } else {
       api->initDUT(configParameters->getHubIds(),

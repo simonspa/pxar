@@ -1043,7 +1043,7 @@ namespace pxar {
 
     /** Function returning the number of TBMs:
      */
-    size_t getNTbms();
+    size_t getNTbmCores();
 
     /** Function returning the TBM type programmed:
      */

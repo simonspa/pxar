@@ -87,6 +87,7 @@ cdef extern from "api.h" namespace "pxar":
         uint32_t errors_tbm()
         uint32_t errors_roc()
         uint32_t errors_pixel()
+        uint32_t info_pixels_valid()
 
 
 cdef extern from "api.h" namespace "pxar":
@@ -98,7 +99,7 @@ cdef extern from "api.h" namespace "pxar":
         int32_t getNMaskedPixels(uint8_t rocid)
         int32_t getNMaskedPixels()
         int32_t getNEnabledTbms()
-        int32_t getNTbms()
+        int32_t getNTbmCores()
         string getTbmType()
         int32_t getNEnabledRocs()
         int32_t getNRocs()

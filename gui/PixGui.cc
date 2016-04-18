@@ -233,7 +233,7 @@ TGMainFrame(p, 1, 1, kVerticalFrame), fWidth(w), fHeight(h) {
   fD2TBM->SetHeight(20);
   fD2TBM->SetWidth(100);
   fD2TBM->AddEntry(Form("undefined"), 0);
-  for (unsigned int i = 0 ; i < fApi->_dut->getNTbms(); i++) {
+  for (unsigned int i = 0 ; i < fApi->_dut->getNTbmCores(); i++) {
     for (unsigned int j = 0 ; j < 4; j++) {
       fD2TBM->AddEntry(Form("chan %d", 4*i + j), 4*i + j);
     }
@@ -251,7 +251,7 @@ TGMainFrame(p, 1, 1, kVerticalFrame), fWidth(w), fHeight(h) {
   fD1TBM->SetHeight(20);
   fD1TBM->SetWidth(100);
   fD1TBM->AddEntry(Form("undefined"), 0);
-  for (unsigned int i = 0 ; i < fApi->_dut->getNTbms(); i++) {
+  for (unsigned int i = 0 ; i < fApi->_dut->getNTbmCores(); i++) {
     for (unsigned int j = 0 ; j < 4; j++) {
       fD1TBM->AddEntry(Form("chan %d", 4*i + j), 4*i + j);
     }
@@ -347,6 +347,8 @@ TGMainFrame(p, 1, 1, kVerticalFrame), fWidth(w), fHeight(h) {
   if (fApi) fParTab->updateSelection(); // ensure that fId2Idx for all tests is initialized
 
   vector<string> tests = fTestParameters->getTests();
+  cout << string(30, '=') << endl;
+  for (int i =0; i < tests.size(); i++) cout << tests.at(i) << endl;
   for (unsigned int i = 0; i < tests.size(); ++i) {
     createTab(tests[i].c_str()); 
   }

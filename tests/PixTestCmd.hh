@@ -20,6 +20,7 @@
 #include <iostream>  // cout, debugging only (need ostream, though)
 #include <sstream>   // for producing string representations
 #include <fstream>
+#include <bitset>
 
 
 class CmdProc;
@@ -178,6 +179,8 @@ class Keyword{
     bool match(const char * s1 ,const char * s2, int &, int &, int& );
 
     bool match(const char * s, string & s1, vector<string> & options, ostream & err);
+    bool match(const char * s, string & s1, vector<string> & options, int & value,  ostream & err);
+    
     bool match(const char *, int &);
     bool match(const char *, int &, int &);
     bool match(const char *, int &, int &, int &);
@@ -351,6 +354,7 @@ class CmdProc {
   bool fPixelConfigNeeded;
   unsigned int fTCT, fTRC, fTTK;
   unsigned int fBufsize;
+  unsigned int fMaxPeriod;
   vector<uint16_t>  fBuf;
   unsigned int fNumberOfEvents;
   unsigned int fHeaderCount;
@@ -388,7 +392,7 @@ class CmdProc {
    uint16_t fRocHeaderData[17];
    
    // readout configuration
-   bool layer1(){return false;};
+   bool layer1() { return fApi->_dut->getNTbmCores() == 4; }
    bool tbm08(){ return fApi->_dut->getTbmType()=="tbm08c"; };
    bool tbmWithDummyHits(){ return !tbm08(); }
    unsigned int fnDaqChannel;// filled in setApi
@@ -397,7 +401,21 @@ class CmdProc {
    int rocIdFromReadoutPosition(unsigned int daqChannel, unsigned int roc){
        return fDaqChannelRocIdOffset[daqChannel]+roc;
    }
-  
+   int rocIdFromReadoutPositionRaw( unsigned int position){
+	   // needed for daqGetRawEventBuffer()
+	   uint8_t daqChannel = position / fnRocPerChannel;
+	   return fDaqChannelRocIdOffset[daqChannel] + (position % fnRocPerChannel);
+   }
+   /* TBM core selection masks for settbm */
+  #define ALLTBMS 0xf
+  #define TBMA    0x5
+  #define TBMB    0xa
+  #define TBM0    0x3
+  #define TBM1    0xc
+  #define TBM0A   0x1
+  #define TBM0B   0x2
+  #define TBM1A   0x4
+  #define TBM1B   0x8
   
   
   bool fIgnoreReadbackErrors;
@@ -416,7 +434,8 @@ class CmdProc {
   int tbmscan(const int nloop=10, const int ntrig=100, const int ftrigkhz=10);
   int test_timing(int nloop, int d160, int d400, int rocdelay=-1, int htdelay=0, int tokdelay=0);
   int find_timing(int npass=0);
-  int find_timing2();
+  int find_timing2(int npass, uint8_t tbm=0);
+  int find_2tbm_timing();
   bool find_midpoint(int threshold, int data[], uint8_t & position, int & width);
   bool find_midpoint(int threshold, double step, double range,  int data[], uint8_t & position, int & width);
 
@@ -466,7 +485,7 @@ class CmdProc {
   int pg_stop();
 
   int tb(Keyword);
-  int tbm(Keyword, int cores=2);
+  int tbm(Keyword, int cores=ALLTBMS);
   int roc(Keyword, int rocid);
   
   void stop(bool force=true);
