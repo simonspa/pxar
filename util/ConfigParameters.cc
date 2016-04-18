@@ -86,6 +86,8 @@ void ConfigParameters::initialize() {
   fHdiType = "bpix"; 
   fTBName = "*"; 
 
+  fGuiX = fGuiY = 0;
+
   fMaskedPixels.clear(); 
 }
 
@@ -189,7 +191,8 @@ bool ConfigParameters::readConfigParameterFile(string file) {
       else if (0 == _name.compare("probeD2")) { fProbeD2 = _value; }
 
       else if (0 == _name.compare("decodingOffset")) { fOffsetDecoding = _ivalue; }
-
+      else if (0 == _name.compare("guiX")) { fGuiX = _ivalue; }
+      else if (0 == _name.compare("guiY")) { fGuiY = _ivalue; }
 
       else { LOG(logINFO) << "Did not understand '" << _name << "'."; }
     }
@@ -810,6 +813,14 @@ bool ConfigParameters::writeConfigParameterFile() {
   fprintf(file, "hdiType %s\n", fHdiType.c_str());
 
   fprintf(file, "\n");
+
+  if ((fGuiX > 0) || (fGuiY > 0)) {
+    fprintf(file, "guiX %i\n", fGuiX);
+    fprintf(file, "guiY %i\n", fGuiY);
+  }
+
+  fprintf(file, "\n");
+
   fprintf(file, "-- voltages and current limits\n\n");
 
   fprintf(file, "ia %i\n"  , static_cast<int>(ia * 1000));

@@ -155,6 +155,12 @@ public:
   void readNrocs(std::string line);
   void readHubIds(std::string line);
 
+  int getGuiX() {return fGuiX;}
+  int getGuiY() {return fGuiY;}
+
+  void setGuiX(int x) {fGuiX = x;}
+  void setGuiY(int x) {fGuiY = x;}
+
 private:
 
   bool fReadTbParameters, fReadTbmParameters, fReadDacParameters, fReadRocPixelConfig, fReadReadbackCal;
@@ -195,6 +201,8 @@ private:
   std::string fDebugFileName;
   std::string fGainPedestalFileName, fGainPedestalParameterFileName;
   std::string fReadbackCalFileName;
+
+  int fGuiX, fGuiY;
 
   static ConfigParameters* fInstance;
 
