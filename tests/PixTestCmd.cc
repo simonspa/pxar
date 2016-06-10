@@ -971,7 +971,7 @@ bool CmdProc::fStopWhateverYouAreDoing = false;
 void CmdProc::init()
 {
     /* note: fApi may not be defined yet !*/
-    verbose=true;
+    verbose=false;
     redirected=false;
     fIgnoreReadbackErrors=false;
     fDumpFlawed=FLAG_DUMP_FLAWED_EVENTS;
@@ -1396,6 +1396,8 @@ bool CmdProc::find_midpoint(int threshold, double step, double range,  int data[
     // indirect sort according to time modulo range
     int m[8]={0,1,2,3,4,5,6,7};
     for(int i=0; i<8; i++){
+        for (uint8_t i=0; i < 8; i++) cout << m[i] << " ";
+        cout << endl;
         for(int j=0; j<7; j++){
             if(  fmod(m[j]*step,range) >  fmod(m[j+1]*step,range) ){
                 int tmp=m[j]; m[j]=m[j+1]; m[j+1]=tmp;
@@ -1403,7 +1405,8 @@ bool CmdProc::find_midpoint(int threshold, double step, double range,  int data[
         }
     }
     // now data[m[*]] is time-ordered
-    
+    for (uint8_t i=0; i < 8; i++) cout << m[i] << " ";
+    cout << endl;
     width=0;
     for(int i=0; i<8; i++){
         int w=0;
@@ -1452,9 +1455,9 @@ int CmdProc::find_timing(int npass){
     if (! ((tbmtype=="tbm09c")||(tbmtype=="tbm08c")) ){
         out << "This only works for TBM08c/09c! \n";
     }
-    if (tbmtype == "tbm09" || tbmtype == "tbm10"){
-        return find_2tbm_timing();
-    }
+//    if (tbmtype == "tbm09" || tbmtype == "tbm10"){
+//        return find_2tbm_timing();
+//    }
 
     uint8_t register_0=0;
     uint8_t register_e=0;
@@ -1472,12 +1475,14 @@ int CmdProc::find_timing(int npass){
     int nloop=10;
     
     // disable token pass
-    tbmsetbit("base0",ALLTBMS , 6, 1);
-    // diagonal scan to find something that works
+    tbmsetbit("base0", ALLTBMS , 6, 1);
+
+    // diagonal scan to find good starting values
     int nmax=0;
     for(uint8_t m=0; m<8; m++){
         int nvalid = test_timing(nloop, m, m);
         if(verbose) cout << "diag scan " << (int) m << "  valid = " << nvalid << "/ " << nloop << endl;
+        cout << "diag scan " << (int) m << "  valid = " << nvalid << "/ " << nloop << endl;
         if (nvalid>nmax){
             d400 = m; 
             d160 = m; 
@@ -1491,19 +1496,22 @@ int CmdProc::find_timing(int npass){
         return 0;
     }
     if(verbose) cout << "diag scan result = " << (int) d400 << endl;
-    
+
+    // doing a finer scan
     for(int pass=0; pass<3; pass++){
         
         if(verbose) cout << " pass " << pass << endl;
+
          // scan 160 MHz @ selected position
         int test160[8]={0,0,0,0,0,0,0,0};
         for (uint8_t m=0; m<8; m++){
-            if (pass==0){
+            if (pass==0)
                 test160[m] = test_timing(nloop, m, d400);
-            }else{
+            else
                 test160[m] = test_timing(nloop, m, d400, rocdelay, htdelay, tokendelay);
-            }
         }
+        for (uint8_t i=0; i < 8; i++) cout << test160[i] << " ";
+        cout << endl;
         
         int w160=0;
         if (! find_midpoint(nloop, 1.0, 6.25, test160, d160, w160)){
