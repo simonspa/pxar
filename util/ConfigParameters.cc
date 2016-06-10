@@ -1183,6 +1183,8 @@ void ConfigParameters::readHubIds(string line) {
               << static_cast<int>(fHubIds.size()) << " HubIds provided ";
       throw InvalidConfig("Mismatch between number of TBMs and HubIds");
     }
+    // print hub ids
+    LOG(logINFO) << "Successfully read HubIds: " << vectorToString(fHubIds);
   }
 }
 
