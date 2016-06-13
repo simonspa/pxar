@@ -501,6 +501,7 @@ class CmdProc {
   int tbmread(uint8_t regId, int hubid);
   string tbmprint(uint8_t regId, int hubid);
   int tbmreadback();
+  void mytest();
   
   int sequence(int seq);
   int pg_sequence(int seq, int length=0);

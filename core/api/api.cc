@@ -1568,6 +1568,10 @@ rawEvent pxarCore::daqGetRawEvent() {
   return _hal->daqRawEvent();
 }
 
+void pxarCore::daqGetCombinedEvent(Event &event, rawEvent &rawevent) {
+  _hal->daqCombinedEvent(event, rawevent);
+}
+
 bool pxarCore::daqStop() {
   return daqStop(true);
 }
