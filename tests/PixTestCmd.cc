@@ -1314,15 +1314,25 @@ int CmdProc::tbmscan(const int nloop, const int ntrig, const int ftrigkhz){
         nroc=0;
     }
 
-    out << "400\\160 0  1  2  3  4  5  6  7\n";
+    // show the phase delays in time-ordered manner
+    int p160_timed[8] = {0,1,2,3,4,5,6,7};
+    sort_time(p160_timed, STEP160, RANGE160);
+    out << "400\\160";
+    for(uint8_t i=0; i < sizeof(p160_timed); i++) {
+        out << " " << p160_timed[i] << " ";
+    }
+    out << "\n";
+    int p400_timed[8] = {0,1,2,3,4,5,6,7};
+    sort_time(p400_timed, STEP400, RANGE400);
+
     for(uint8_t p400=0; p400<8; p400++){
         int xor1[8] = {0,0,0,0,0,0,0,0};
         int xor2[8] = {0,0,0,0,0,0,0,0};
-        out << "  " << (int) p400 << " :  ";
+        out << "  " << (int) p400_timed[p400] << " :  ";
         for(uint8_t p160=0; p160<8; p160++){
-            stat = tbmset("basee", TBMA, ((p160&7)<<5)+((p400&7)<<2));
+            stat = tbmset("basee", TBMA, ((p160_timed[p160]&7)<<5)+((p400_timed[p400]&7)<<2));
             if(stat>0){
-                out << "error setting delay  base E " << hex << (int) ((p160<<5)+(p400<<2)) << dec << "\n";
+                out << "error setting delay  base E " << hex << (int) ((p160_timed[p160]<<5)+(p400_timed[p400]<<2)) << dec << "\n";
             }
             tbmset("base4", ALLTBMS, 0x80);// reset once after changing phases
             
@@ -1337,8 +1347,7 @@ int CmdProc::tbmscan(const int nloop, const int ntrig, const int ftrigkhz){
             if (good==nloop){ c='+';}
             else if (good>(0.7*nloop)) { c='o' ;}
             else if (good>0) { c='.' ;}
-
-            if((p160==p160c)&&(p400==p400c)){
+            if((p160_timed[p160]==p160c)&&(p400_timed[p400]==p400c)){
                out << "(" << c << ")";
             }else{
                out << " " << c << " ";
@@ -1461,6 +1470,16 @@ int CmdProc::test_timing2(int nloop, int d160, int d400, int rocdelay[], int htd
 }
 
 
+void CmdProc::sort_time(int values[], double step, double range){
+    // indirect sort according to time modulo range
+    for(int i=0; i<8; i++){
+        for(int j=0; j<7; j++){
+            if(  fmod(values[j]*step,range) >  fmod(values[j+1]*step,range) ){
+                int tmp=values[j]; values[j]=values[j+1]; values[j+1]=tmp;
+            }
+        }
+    }
+}
 
 bool CmdProc::find_midpoint(int threshold, int data[], uint8_t & position, int & width){
 
@@ -1483,17 +1502,8 @@ bool CmdProc::find_midpoint(int threshold, int data[], uint8_t & position, int &
 
 
 bool CmdProc::find_midpoint(int threshold, double step, double range,  int data[], uint8_t & position, int & width){
-    // indirect sort according to time modulo range
-    int m[8]={0,1,2,3,4,5,6,7};
-    for(int i=0; i<8; i++){
-        for (uint8_t i=0; i < 8; i++) cout << m[i] << " ";
-        cout << endl;
-        for(int j=0; j<7; j++){
-            if(  fmod(m[j]*step,range) >  fmod(m[j+1]*step,range) ){
-                int tmp=m[j]; m[j]=m[j+1]; m[j+1]=tmp;
-            }
-        }
-    }
+    int m[8] = {0,1,2,3,4,5,6,7};
+    sort_time(m, step, range);
     // now data[m[*]] is time-ordered
     for (uint8_t i=0; i < 8; i++) cout << m[i] << " ";
     cout << endl;
@@ -1604,7 +1614,7 @@ int CmdProc::find_timing(int npass){
         cout << endl;
         
         int w160=0;
-        if (! find_midpoint(nloop, 1.0, 6.25, test160, d160, w160)){
+        if (! find_midpoint(nloop, STEP160, RANGE160, test160, d160, w160)){
             out << "160 MHz scan failed ";
             tbmset("base0",ALLTBMS ,register_0);
             tbmset("basee",ALLTBMS ,register_e);
@@ -1628,7 +1638,7 @@ int CmdProc::find_timing(int npass){
         }
         
         int w400=0;
-        if (! find_midpoint(nloop, 0.57, 2.5, test400, d400, w400)){
+        if (! find_midpoint(nloop, STEP400, RANGE400, test400, d400, w400)){
             out << "400 MHz scan failed ";
             tbmset("base0",ALLTBMS, register_0);
             tbmset("basee",ALLTBMS, register_e);
@@ -2071,14 +2081,14 @@ int CmdProc::adctest(const string signalName){
 }
 
 
-int CmdProc::tbmread(uint8_t regId){
+int CmdProc::tbmread(uint8_t regId, int hubid){
 
     // part 1 , acquire data : delay scan
 
     uint8_t gain = GAIN_1;
     uint8_t start  = 17;  // wait after sda
-    uint8_t hubId = 31; // FIXME allow configurable values later, get from api?
-
+    uint8_t hubId = hubid;
+    
     uint16_t nSample = 100;
     unsigned int nDly = 20; // stepsize 1.25 ns
 
@@ -2155,15 +2165,36 @@ int CmdProc::tbmread(uint8_t regId){
     return -1;
 }
 
-string CmdProc::tbmprint(uint8_t regId){
+
+string CmdProc::tbmprint(uint8_t regId, int hubid){
 	stringstream s;
-	int value = tbmread(regId);
+	int value = tbmread(regId, hubid);
 	if (value>=0){
 		s<< "      0x" << (hex) << setfill('0') << setw(2) << value << setfill(' ');
 	}else{
 		s<< "       err";
 	}
 	return s.str();
+}
+
+
+int CmdProc::tbmreadback() {
+    // read some registers of the TBMs.
+    for(unsigned int i = 0; i < (fnTbmCore / 2); i++) {
+        // use the switch
+        fApi->selectTbmRDA(1 - i);
+        int hubid = fApi->_dut->getEnabledTbms().at(i*2).hubid;
+        fApi->setHubID(hubid);
+        cout << "TBM " << i << ", hubid: " << hubid;
+        cout << "               core A      core B \n";
+        cout << "Base + 1/0 " << tbmprint(0xe1, hubid) << "  " << tbmprint(0xf1, hubid) << "\n";
+        cout << "Base + 3/2 " << tbmprint(0xe3, hubid) << "  " << tbmprint(0xf3, hubid) << "\n";
+        cout << "Base + 9/8 " << tbmprint(0xe9, hubid) << "  " << tbmprint(0xf9, hubid) << "\n";
+        cout << "Base + B/A " << tbmprint(0xeb, hubid) << "  " << tbmprint(0xfb, hubid) << "\n";
+        cout << "Base + D/C " << tbmprint(0xed, hubid) << "  " << tbmprint(0xfd, hubid) << "\n";
+        cout << "Base + F   " << tbmprint(0xef, hubid) << "\n";
+    }
+    return 0;
 }
 
 
@@ -3827,17 +3858,8 @@ int CmdProc::tb(Keyword kw){
             return 0;
         }
     if( kw.match("adctest", s, fA_names, out ) ){ adctest(s); return 0;}
-    if( kw.match("adctest") ){ adctest("clk"); adctest("ctr"); adctest("sda"); adctest("rda"); adctest("sdata1"); adctest("sdata2"); return 0;}
-	if( kw.match("tbmread") || kw.match("readback","tbm") ){
-		out <<"               core A      core B \n";
-		out << "Base + 1/0 " << tbmprint(0xe1)  << "  " << tbmprint(0xf1) << "\n";
-		out << "Base + 3/2 " << tbmprint(0xe3)  << "  " << tbmprint(0xf3) << "\n";
-		out << "Base + 9/8 " << tbmprint(0xe9)  << "  " << tbmprint(0xf9) << "\n";
-		out << "Base + B/A " << tbmprint(0xeb)  << "  " << tbmprint(0xfb) << "\n";
-		out << "Base + D/C " << tbmprint(0xed)  << "  " << tbmprint(0xfd) << "\n";
-		out << "Base + F   " << tbmprint(0xef) << "\n";
-		return 0;
-	}
+    if( kw.match("adctest") ){ adctest("clk"); adctest("ctr"); adctest("sda"); adctest("rda"); adctest("sdata1"); adctest("sdata2"); return 0;} 
+	if( kw.match("tbmread") || kw.match("readback","tbm") ){return tbmreadback();}
     if( kw.match("readback")) { return readRocs();}
     if( kw.match("readback", value)){ return readRocs(value); }
     if( kw.match("readback", "vd")  ) { return readRocs(8, 0.016,"V");  }
@@ -3882,7 +3904,7 @@ int CmdProc::tb(Keyword kw){
 				uint8_t testvalue= (~value) | 0x02; // don't shut down the clock
 				tbmset("base0", 1 << core, testvalue);
 
-				int readvalue = tbmread(addr);
+				int readvalue = tbmread(addr, 31); // TODO: needs a fix, expand similar to tbmreadback()
 				tbmset("base0",1 << core, value);
 				if( readvalue == (int) testvalue){
 					out << "core " << name << " write/read ok\n";
