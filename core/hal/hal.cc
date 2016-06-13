@@ -1714,6 +1714,36 @@ rawEvent hal::daqRawEvent() {
   return current_Event;
 }
 
+void hal::daqBothEvents(Event& event, rawEvent& rawevent) {
+
+  // Read the next Event from each of the pipes, copy the data:
+  for(size_t ch = 0; ch < m_src.size(); ch++) {
+    if(m_src.at(ch).isConnected()) {
+      //raw event
+      dataSink<rawEvent*> rawpump;
+      m_splitter.at(ch) >> rawpump;
+      //normal event
+      dataSink<Event*> Eventpump;
+      m_splitter.at(ch) >> m_decoder.at(ch) >> Eventpump;
+
+      try { rawevent += *rawpump.Get(); }
+        // One of the channels did not return anything!
+      catch (dsBufferEmpty &) {
+        // If nothing has been read yet, just throw DataNoevent:
+        if(ch == 0) throw DataNoEvent("No event available");
+
+        // Else the previous channels already got data, so we have to retry:
+        try { rawevent += *rawpump.Get(); }
+        catch (dsBufferEmpty &) {
+          LOG(logCRITICAL) << "Found data in channel" << (ch > 1 ? std::string("s 0-" + (ch-1)) : std::string(" 0")) << " but not in channel " << ch << "!";
+          throw DataChannelMismatch("No event available in channel " + ch);
+        }
+      }
+      catch (dataPipeException &e) { LOG(logERROR) << e.what();}
+    }
+  }
+}
+
 std::vector<rawEvent> hal::daqAllRawEvents() {
 
   std::vector<rawEvent> raw;
@@ -1756,6 +1786,53 @@ std::vector<rawEvent> hal::daqAllRawEvents() {
 
   if(raw.empty()) throw DataNoEvent("No event available");
   return raw;
+}
+
+
+void hal::daqCombinedEvent(Event& event, rawEvent& rawevent) {
+  rawEvent current_rawEvent;
+  Event current_Event;
+
+  // Read the next Event from each of the pipes, copy the data:
+  for(size_t ch = 0; ch < m_src.size(); ch++) {
+    if(m_src.at(ch).isConnected()) {
+      dataSink<rawEvent*> rawpump;
+      dataSink<Event*> Eventpump;
+      m_splitter.at(ch) >> rawpump;
+      m_splitter.at(ch) >> m_decoder.at(ch) >> Eventpump;
+
+      try { current_rawEvent += *rawpump.Get(); }
+        // One of the channels did not return anything!
+      catch (dsBufferEmpty &) {
+        // If nothing has been read yet, just throw DataNoevent:
+        if(ch == 0) throw DataNoEvent("No event available");
+
+        // Else the previous channels already got data, so we have to retry:
+        try { current_rawEvent += *rawpump.Get(); }
+        catch (dsBufferEmpty &) {
+          LOG(logCRITICAL) << "Found data in channel" << (ch > 1 ? std::string("s 0-" + (ch-1)) : std::string(" 0")) << " but not in channel " << ch << "!";
+          throw DataChannelMismatch("No event available in channel " + ch);
+        }
+      }
+      catch (dataPipeException &e) { LOG(logERROR) << e.what(); }
+
+      try { current_Event += *Eventpump.Get(); }
+      catch (dsBufferEmpty &) {
+        // If nothing has been read yet, just throw DataNoevent:
+        if(ch == 0) throw DataNoEvent("No event available");
+
+        // Else the previous channels already got data, so we have to retry:
+        try { current_Event += *Eventpump.Get(); }
+        catch (dsBufferEmpty &) {
+          LOG(logCRITICAL) << "Found data in channel" << (ch > 1 ? std::string("s 0-" + (ch-1)) : std::string(" 0")) << " but not in channel " << ch << "!";
+          throw DataChannelMismatch("No event available in channel " + ch);
+        }
+      }
+      catch (dataPipeException &e) { LOG(logERROR) << e.what(); }
+    }
+  }
+  rawevent = current_rawEvent;
+  event = current_Event;
 }
 
 std::vector<uint16_t> hal::daqBuffer() {

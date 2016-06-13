@@ -761,6 +761,10 @@ namespace pxar {
      */
     rawEvent daqGetRawEvent();
 
+    /** Return an Event and an rawEvent from the same data
+     */
+    void daqGetCombinedEvent(Event& event, rawEvent& rawevent);
+
     /** Function to fire the previously defined pattern command list "nTrig"
      *  times, the function parameter defaults to 1.
      *  The function returns the triggering period actually used after cross-check

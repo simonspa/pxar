@@ -2198,6 +2198,67 @@ int CmdProc::tbmreadback() {
 }
 
 
+void CmdProc::mytest() {
+    Event event;
+    rawEvent rawevent;
+
+    fApi->_dut->testPixel(5, 5, true,  5);
+
+    fApi->daqTriggerSource("pg_dir");
+    fApi->daqStart(fBufsize, fPixelConfigNeeded);
+
+    fApi->daqTrigger(1, fPeriod);
+    try {fApi->daqGetCombinedEvent(event, rawevent);}
+    catch(pxar::DataNoEvent &) {}
+
+    int ntrig = 1;
+    setupDaq(ntrig, 0, 0);
+    fApi->daqTrigger(ntrig, fPeriod);
+    std::vector<pxar::rawEvent> buf;
+    try { buf = fApi->daqGetRawEventBuffer(); }
+    catch(pxar::DataNoEvent &) {}
+
+    fApi->daqStop(false);
+    pg_restore();
+
+    getBuffer(fBuf);
+    printData(fBuf, 0);
+
+    // copy the effect of "raw"
+    out << "raw:\n";
+    int stat = runDaq( fBuf, 1,0, 0 );
+    if(stat==0){
+        printData( fBuf, 0 );
+    }else{
+        out << " error getting data ("<<dec<<(int)stat<<")\n";
+        printData(fBuf, 0);
+    }
+
+//    for(unsigned int c=0; c<col.size(); c++){
+//        for(unsigned int r=0; r<row.size(); r++){
+//            if(verbose) { cout << kw.keyword << " roc " << rocId << ": " << col[c] << "," << row[r] << endl; }
+//            if (kw.keyword=="arm"){
+//                fApi->_dut->testPixel(col[c], row[r], true,  rocId);
+//                fApi->_dut->maskPixel(col[c], row[r], false, rocId);
+//            }else if (kw.keyword=="pixd"){
+//                if(verbose){out << "masked before pixd:"<<dec << fApi->_dut->getNMaskedPixels(rocId);}
+//                fApi->_dut->maskPixel(col[c], row[r], true,  rocId);
+//                if(verbose){out << ", masked after pixd:"<<dec << fApi->_dut->getNMaskedPixels(rocId);}
+//            }else if (kw.keyword=="pixe"){
+//                if(verbose){out << "masked before pixe:"<<dec << fApi->_dut->getNMaskedPixels(rocId);}
+//                fApi->_dut->maskPixel(col[c], row[r], false, rocId);
+//                if(verbose){out << ", masked after pixe:"<<dec << fApi->_dut->getNMaskedPixels(rocId);}
+//            }else if (kw.keyword=="trim"){
+//                fApi->_dut->updateTrimBits(col[c], row[r], value, rocId);
+//            }
+//        }
+//    }
+//    fPixelConfigNeeded = true;
+
+    std::cout << rawevent << std::endl;
+    std::cout << event << std::endl;
+}
+
 int CmdProc::pixDecodeRaw(int raw, int level){
     int ph(0), error(0),x(0),y(0);
     string s="";
@@ -4434,6 +4495,7 @@ int CmdProc::tbm(Keyword kw, int cores){
     int npass=0;
     if (kw.match("timing",npass)){return find_timing(npass);}
     if (kw.match("ports")){ return post_timing(); }
+    if (kw.match("mytest")) {mytest(); return 0;}
     return -1; // nothing done
 }
 

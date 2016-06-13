@@ -363,6 +363,11 @@ namespace pxar {
      */
     rawEvent daqRawEvent();
 
+    /** Return an Event and an rawEvent from the same data
+     */
+    void daqCombinedEvent(Event &event, rawEvent &rawevent);
+    void daqBothEvents(Event &event, rawEvent &rawevent);
+
     /** Read all remaining decoded Events from the FIFO buffer
      */
     std::vector<Event> daqAllEvents();

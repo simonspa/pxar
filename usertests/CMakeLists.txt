@@ -76,7 +76,7 @@ SET(MY_INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/core/api ${PROJECT_SOURCE_DIR}/
 
 # set everything needed for the root dictonary and create the
 # dictionary
-set(USERTESTLIB_DICTIONARY ${CMAKE_CURRENT_BINARY_DIR}/usertestsDict.cxx) 
+set(USERTESTLIB_DICTIONARY ${CMAKE_CURRENT_BINARY_DIR}/usertestsDict.cxx martinstest.h martinstest.cpp)
 ROOT_GENERATE_DICTIONARY_OLD("${USERTESTLIB_HEADERS}" "${USERTESTLIB_DICTIONARY}" "${MY_INCLUDE_DIRECTORIES}")
 
 
