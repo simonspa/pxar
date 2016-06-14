@@ -1538,7 +1538,8 @@ void hal::daqStart(uint16_t flags, uint8_t deser160phase, uint32_t buffersize) {
   uint8_t rocid_offset = 0;
   for(size_t i = 0; i < m_tokenchains.size(); i++) {
     // Open DAQ in channel i:
-    size_t j = (m_tokenchains.size() == 8 ? (6 + i) % 8 : i);
+//    size_t j = (m_tokenchains.size() == 8 ? (6 + i) % 8 : i);
+    size_t j = i;
     uint32_t allocated_buffer = _testboard->Daq_Open(buffersize,j);
     LOG(logDEBUGHAL) << "Channel " << j << ": token chain: "
 		     << static_cast<int>(m_tokenchains.at(j))
@@ -1725,6 +1726,20 @@ void hal::daqBothEvents(Event& event, rawEvent& rawevent) {
       //normal event
       dataSink<Event*> Eventpump;
       m_splitter.at(ch) >> m_decoder.at(ch) >> Eventpump;
+
+      try { event += *Eventpump.Get(); }
+      catch (dsBufferEmpty &) {
+        // If nothing has been read yet, just throw DataNoevent:
+        if(ch == 0) throw DataNoEvent("No event available");
+
+        // Else the previous channels already got data, so we have to retry:
+        try { event += *Eventpump.Get(); }
+        catch (dsBufferEmpty &) {
+          LOG(logCRITICAL) << "Found data in channel" << (ch > 1 ? std::string("s 0-" + (ch-1)) : std::string(" 0")) << " but not in channel " << ch << "!";
+          throw DataChannelMismatch("No event available in channel " + ch);
+        }
+      }
+      catch (dataPipeException &e) { LOG(logERROR) << e.what();}
 
       try { rawevent += *rawpump.Get(); }
         // One of the channels did not return anything!
