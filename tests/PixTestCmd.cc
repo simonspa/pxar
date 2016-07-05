@@ -1021,14 +1021,14 @@ void CmdProc::setApi(pxar::pxarCore * api, PixSetup * setup){
     if(layer1()){
         fnRocPerChannel=2;
         fnDaqChannel=8;
-        fDaqChannelRocIdOffset[0]= 4; 
-        fDaqChannelRocIdOffset[1]= 6;
-        fDaqChannelRocIdOffset[2]= 8;
-        fDaqChannelRocIdOffset[3]= 10;
-        fDaqChannelRocIdOffset[4]= 12;
-        fDaqChannelRocIdOffset[5]= 14;
-        fDaqChannelRocIdOffset[6]= 0;
-        fDaqChannelRocIdOffset[7]= 2;
+        fDaqChannelRocIdOffset[0]= 0;
+        fDaqChannelRocIdOffset[1]= 2;
+        fDaqChannelRocIdOffset[2]= 4;
+        fDaqChannelRocIdOffset[3]= 6;
+        fDaqChannelRocIdOffset[4]= 8;
+        fDaqChannelRocIdOffset[5]= 10;
+        fDaqChannelRocIdOffset[6]= 12;
+        fDaqChannelRocIdOffset[7]= 14;
     }else if(tbm08()){
         fnRocPerChannel=8;
         fnDaqChannel=2;

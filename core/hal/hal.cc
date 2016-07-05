@@ -1550,6 +1550,16 @@ void hal::daqStart(uint16_t flags, uint8_t deser160phase, uint32_t buffersize) {
     rocid_offset += m_tokenchains.at(i);
   }
 
+  // For layer 1 modules the numbering of the channels is not intuitive
+  // so we have to shuffle them for easier data processing
+  if ( m_tbmtype == TBM_10C && m_roccount == 16 ) {
+    LOG(logDEBUGHAL) << "Layer 1 module, shuffling the channels...";
+    std::vector<dtbSource> temp_src(m_src);
+    for (uint8_t i = 0; i < m_src.size(); i++) {
+      m_src.at(i) = temp_src.at( (i - 2) % m_src.size());
+    }
+  }
+
   // Data acquisition with real TBM:
   if(m_tbmtype != TBM_NONE && m_tbmtype != TBM_EMU) {
     // Check if we have all information needed concerning the token chains:
