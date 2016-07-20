@@ -104,10 +104,7 @@ int main(int argc, char *argv[]){
     api = new pxar::pxarCore("*", verbosity);
     struct stat buffer;
     if (stat(flashFile.c_str(), &buffer) == 0) {
-<<<<<<< HEAD
-=======
 
->>>>>>> e38d0a016304d6633441f61bcc616414c906edee
       api->flashTB(flashFile);
     } else {
       LOG(logINFO) << "error: File " << flashFile << " not found" << endl;
@@ -178,13 +175,8 @@ int main(int argc, char *argv[]){
     if (configParameters->customI2cAddresses()) {
       string i2cstring("");
       vector<uint8_t> i2cAddr = configParameters->getI2cAddresses();
-<<<<<<< HEAD
-      for (unsigned int i = 0; i < i2cAddr.size(); ++i) i2cstring += Form(" %d", (int)i2cAddr[i]); 
-      LOG(logINFO) << "custom i2c addresses: " << i2cstring; 
-=======
       for (unsigned int i = 0; i < i2cAddr.size(); ++i) i2cstring += Form(" %d", (int)i2cAddr[i]);
       LOG(logINFO) << "custom i2c addresses: " << i2cstring;
->>>>>>> e38d0a016304d6633441f61bcc616414c906edee
       api->initDUT(configParameters->getHubIds(),
 		   configParameters->getTbmType(), tbmDACs,
 		   configParameters->getRocType(), rocDACs,
@@ -332,21 +324,12 @@ int main(int argc, char *argv[]){
         PixTest *t = factory->createTest(input, &a);
         if (0 == t) t = userfactory->createTest(input, &a);
         if (t) {
-<<<<<<< HEAD
-        	if (subtest.compare("nada")) {
-        	  t->runCommand(subtest);
-        	} else {
-        	  t->doTest();
-        	}
-  	     delete t;
-=======
 	  if (subtest.compare("nada")) {
 	    t->runCommand(subtest);
 	  } else {
 	    t->doTest();
 	  }
 	  delete t;
->>>>>>> e38d0a016304d6633441f61bcc616414c906edee
         } else {
 	  LOG(logINFO) << "command ->" << input << "<- not known, ignored";
         }
@@ -408,12 +391,8 @@ void createBackup(string rootfile, string logfile) {
   if (1 == result) return;
 
   TDatime d(modtime);
-<<<<<<< HEAD
-  string tstamp = Form("_%d%02d%02d_%02d%02d%02d", d.GetYear(), d.GetMonth(), d.GetDay(), d.GetHour(), d.GetMinute(), d.GetSecond());
-=======
   string tstamp = Form("_%d%02d%02d_%02d%02d%02d",
 		       d.GetYear(), d.GetMonth(), d.GetDay(), d.GetHour(), d.GetMinute(), d.GetSecond());
->>>>>>> e38d0a016304d6633441f61bcc616414c906edee
   PixUtil::replaceAll(nrootfile, ".root", tstamp+".root");
   PixUtil::replaceAll(nlogfile, ".log", tstamp+".log");
 

@@ -392,7 +392,6 @@ namespace pxar {
   void dtbEventDecoder::DecodeDeser160(rawEvent * sample) {
     LOG(logDEBUGPIPES) << "Decoding ROC data from DESER160...";
 
-    std::cout <<...
     // Count the ROC headers:
     int16_t roc_n = -1;
 
