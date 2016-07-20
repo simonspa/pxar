@@ -183,7 +183,7 @@ namespace pxar {
     
     // Analog level averaging:
     void AverageAnalogLevel(int16_t word1, int16_t word2);
-    int32_t ultrablack, black;
+    float ultrablack, black;
     int16_t levelS;
     int32_t sumUB, sumB;
     size_t slidingWindow;
@@ -200,7 +200,7 @@ namespace pxar {
   dtbEventDecoder() : decodingStats(), readback_dirty(), count(), shiftReg(), readback(), eventID(-1), ultrablack(0xfff), black(0xfff), levelS(0),
                       sumUB(0), sumB(0), slidingWindow(0), offsetB(0), total_event(5), flawed_event(0), error_count(0), dump_count(0), event_ringbuffer(7) {};
     void Clear() { decodingStats.clear(); readback.clear(); count.clear(); shiftReg.clear(); eventID = -1; };
-    void setOffset(uint8_t decodingOffset) { offsetB = decodingOffset; }
+    void setOffset(uint8_t decodingOffset) { offsetB = decodingOffset; std::cout << "Set offset to " << decodingOffset << std::endl;}
 
     statistics getStatistics();
     std::vector<std::vector<uint16_t> > getReadback();
