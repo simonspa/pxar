@@ -1538,18 +1538,26 @@ void hal::daqStart(uint16_t flags, uint8_t deser160phase, uint32_t buffersize) {
   uint8_t rocid_offset = 0;
   for(size_t i = 0; i < m_tokenchains.size(); i++) {
     // Open DAQ in channel i:
-//    size_t j = (m_tokenchains.size() == 8 ? (6 + i) % 8 : i);
-    size_t j = i;
-    uint32_t allocated_buffer = _testboard->Daq_Open(buffersize,j);
-    LOG(logDEBUGHAL) << "Channel " << j << ": token chain: "
-		     << static_cast<int>(m_tokenchains.at(j))
+    uint32_t allocated_buffer = _testboard->Daq_Open(buffersize,i);
+    LOG(logDEBUGHAL) << "Channel " << i << ": token chain: "
+		     << static_cast<int>(m_tokenchains.at(i))
 		     << " offset " << static_cast<int>(rocid_offset) << " buffer " << allocated_buffer;
     // Initialize the data source, set tokenchain length to zero if no token pass is expected:
-    m_src.at(j) = dtbSource(_testboard,j,m_tokenchains.at(j),rocid_offset,m_tbmtype,m_roctype,true,flags);
-    m_src.at(j) >> m_splitter.at(j);
+    m_src.at(i) = dtbSource(_testboard,i,m_tokenchains.at(i),rocid_offset,m_tbmtype,m_roctype,true,flags);
+    m_src.at(i) >> m_splitter.at(i);
     _testboard->uDelay(100);
     // Increment the ROC id offset by the amount of ROCs expected:
-    rocid_offset += m_tokenchains.at(j);
+    rocid_offset += m_tokenchains.at(i);
+  }
+
+  // For layer 1 modules the numbering of the channels is not intuitive
+  // so we have to shuffle them for easier data processing
+  if ( m_tbmtype == TBM_10C && m_roccount == 16 ) {
+    LOG(logDEBUGHAL) << "Layer 1 module, shuffling the channels...";
+    std::vector<dtbSource> temp_src(m_src);
+    for (uint8_t i = 0; i < m_src.size(); i++) {
+      m_src.at(i) = temp_src.at( (i - 2) % m_src.size());
+    }
   }
 
   // Data acquisition with real TBM:

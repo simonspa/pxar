@@ -99,12 +99,15 @@ int main(int argc, char *argv[]){
     LOG(logINFO) << "terminate and shut down";
   }
 
-
   pxar::pxarCore *api(0);
   if (doUpdateFlash) {
     api = new pxar::pxarCore("*", verbosity);
     struct stat buffer;
     if (stat(flashFile.c_str(), &buffer) == 0) {
+<<<<<<< HEAD
+=======
+
+>>>>>>> e38d0a016304d6633441f61bcc616414c906edee
       api->flashTB(flashFile);
     } else {
       LOG(logINFO) << "error: File " << flashFile << " not found" << endl;
@@ -112,7 +115,6 @@ int main(int argc, char *argv[]){
     delete api;
     return 0;
   }
-
 
   ConfigParameters *configParameters = ConfigParameters::Singleton();
   configParameters->setDirectory(dir);
@@ -156,7 +158,7 @@ int main(int argc, char *argv[]){
   LOG(logINFO) << "*** Welcome to pxar ***";
   LOG(logINFO) << Form("*** Today: %s", tstamp.c_str());
   string version = exec("git describe --abbrev=4 --dirty --always --tags");
-  PixUtil::replaceAll(version, "\n", ""); 
+  PixUtil::replaceAll(version, "\n", "");
   LOG(logINFO) << "*** Version: " << version;
 
   vector<vector<pair<string,uint8_t> > >       rocDACs = configParameters->getRocDacs();
@@ -176,17 +178,22 @@ int main(int argc, char *argv[]){
     if (configParameters->customI2cAddresses()) {
       string i2cstring("");
       vector<uint8_t> i2cAddr = configParameters->getI2cAddresses();
+<<<<<<< HEAD
       for (unsigned int i = 0; i < i2cAddr.size(); ++i) i2cstring += Form(" %d", (int)i2cAddr[i]); 
       LOG(logINFO) << "custom i2c addresses: " << i2cstring; 
+=======
+      for (unsigned int i = 0; i < i2cAddr.size(); ++i) i2cstring += Form(" %d", (int)i2cAddr[i]);
+      LOG(logINFO) << "custom i2c addresses: " << i2cstring;
+>>>>>>> e38d0a016304d6633441f61bcc616414c906edee
       api->initDUT(configParameters->getHubIds(),
-		   configParameters->getTbmType(), tbmDACs, 
-		   configParameters->getRocType(), rocDACs, 
-		   rocPixels, 
+		   configParameters->getTbmType(), tbmDACs,
+		   configParameters->getRocType(), rocDACs,
+		   rocPixels,
 		   i2cAddr);
     } else {
       api->initDUT(configParameters->getHubIds(),
-		   configParameters->getTbmType(), tbmDACs, 
-		   configParameters->getRocType(), rocDACs, 
+		   configParameters->getTbmType(), tbmDACs,
+		   configParameters->getRocType(), rocDACs,
 		   rocPixels);
     }
 
@@ -225,7 +232,9 @@ int main(int argc, char *argv[]){
   a.setRootFileUpdate(doUpdateRootFile);
   LOG(logDEBUG) << "Initial Analog Current: " << api->getTBia()*1000 << "mA";
   LOG(logDEBUG) << "Initial Digital Current: " << api->getTBid()*1000 << "mA";
-  if (configParameters->getHdiType() == "fpix") { LOG(logDEBUG) << "Initial Module Temperature: " << Form("%3.1f", a.getPixMonitor()->getTemp()) << " C"; }
+  if (configParameters->getHdiType() == "fpix") {
+    LOG(logDEBUG) << "Initial Module Temperature: " << Form("%3.1f", a.getPixMonitor()->getTemp()) << " C";
+  }
 
   if (doRunGui) {
     runGui(a, argc, argv);
@@ -284,7 +293,6 @@ int main(int argc, char *argv[]){
 	cout << "subtest: ->" << subtest << "<- input: ->" << input << "<-" << endl;
       }
 
-
       if (!parameters.compare("nada")) {
 	LOG(logINFO) << "  test: " << input << " no parameter change";
       } else {
@@ -316,22 +324,31 @@ int main(int argc, char *argv[]){
       if (stop) break;
 
       if (!input.compare("delay")) {
-          int delaySeconds = atoi(parameters.c_str());
-          LOG(logINFO) << "delay test by " << delaySeconds << " seconds...";
-          pxar::mDelay(delaySeconds * 1000); // milliseconds
+	int delaySeconds = atoi(parameters.c_str());
+	LOG(logINFO) << "delay test by " << delaySeconds << " seconds...";
+	pxar::mDelay(delaySeconds * 1000); // milliseconds
       } else {
         LOG(logINFO) << "  running: " << input;
         PixTest *t = factory->createTest(input, &a);
         if (0 == t) t = userfactory->createTest(input, &a);
         if (t) {
+<<<<<<< HEAD
         	if (subtest.compare("nada")) {
         	  t->runCommand(subtest);
         	} else {
         	  t->doTest();
         	}
   	     delete t;
+=======
+	  if (subtest.compare("nada")) {
+	    t->runCommand(subtest);
+	  } else {
+	    t->doTest();
+	  }
+	  delete t;
+>>>>>>> e38d0a016304d6633441f61bcc616414c906edee
         } else {
-  	LOG(logINFO) << "command ->" << input << "<- not known, ignored";
+	  LOG(logINFO) << "command ->" << input << "<- not known, ignored";
         }
       }
     } while (!stop);
@@ -342,7 +359,9 @@ int main(int argc, char *argv[]){
   // -- clean exit (however, you should not get here when running with the GUI)
   LOG(logDEBUG) << "Final Analog Current: " << api->getTBia()*1000 << "mA";
   LOG(logDEBUG) << "Final Digital Current: " << api->getTBid()*1000 << "mA";
-  if (configParameters->getHdiType() == "fpix") { LOG(logDEBUG) << "Final Module Temperature: " << Form("%3.1f", a.getPixMonitor()->getTemp()) << " C"; }
+  if (configParameters->getHdiType() == "fpix") {
+    LOG(logDEBUG) << "Final Module Temperature: " << Form("%3.1f", a.getPixMonitor()->getTemp()) << " C";
+  }
   a.getPixMonitor()->dumpSummaries();
   rfile->Close();
   if (api) delete api;
@@ -389,7 +408,12 @@ void createBackup(string rootfile, string logfile) {
   if (1 == result) return;
 
   TDatime d(modtime);
+<<<<<<< HEAD
   string tstamp = Form("_%d%02d%02d_%02d%02d%02d", d.GetYear(), d.GetMonth(), d.GetDay(), d.GetHour(), d.GetMinute(), d.GetSecond());
+=======
+  string tstamp = Form("_%d%02d%02d_%02d%02d%02d",
+		       d.GetYear(), d.GetMonth(), d.GetDay(), d.GetHour(), d.GetMinute(), d.GetSecond());
+>>>>>>> e38d0a016304d6633441f61bcc616414c906edee
   PixUtil::replaceAll(nrootfile, ".root", tstamp+".root");
   PixUtil::replaceAll(nlogfile, ".log", tstamp+".log");
 
@@ -398,6 +422,7 @@ void createBackup(string rootfile, string logfile) {
   if (!gSystem->AccessPathName(logfile.c_str())) gSystem->Rename(logfile.c_str(), nlogfile.c_str());
 
 }
+
 
 // ----------------------------------------------------------------------
 string exec(string cmd) {
@@ -415,7 +440,7 @@ string exec(string cmd) {
   }
 #if (defined WIN32)
   _pclose(pipe);
-#else 
+#else
   pclose(pipe);
 #endif
   return result;

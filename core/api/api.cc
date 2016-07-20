@@ -509,7 +509,7 @@ uint8_t pxarCore::stringToDeviceCode(std::string name) {
   uint8_t _code = _devices->getDevCode(name);
   LOG(logDEBUGAPI) << "Device type return: " << static_cast<int>(_code);
 
-  if(_code == 0x0) {LOG(logERROR) << "Unknown device \"" << static_cast<int>(_code) << "\"!";}
+  if(_code == 0x0) {LOG(logERROR) << "Unknown device: \"" << name << "\" could not be found in the dictionary!";}
   return _code;
 }
 
@@ -800,12 +800,14 @@ bool pxarCore::setTbmReg(std::string regName, uint8_t regValue) {
   return true;
 }
 
-void pxarCore::selectTbmRDA(uint8_t channel) {
-  if (channel < 2) {
-    _hal->tbmSelectRDA(channel);
+void pxarCore::selectTbmRDA(uint8_t tbmid) {
+  if (tbmid < 2) {
+    uint8_t hubid = _dut->getEnabledTbms().at(tbmid*2).hubid;
+    setHubID(hubid);
+    _hal->tbmSelectRDA(1 - tbmid); // FIXME: change mapping in firmware for better readability
   }
   else {
-    LOG(logERROR) << "We don't have a TBM at RDA channel " << int(channel);
+    LOG(logERROR) << "We don't have a TBM at RDA channel " << int(tbmid);
   }
 }
 
@@ -2464,12 +2466,12 @@ uint16_t pxarCore::GetADC( uint8_t rpc_par1 ){
 
 void pxarCore::setReportingLevel(std::string logLevel)
 {
-  LOG(logINFO) << "Change Reporting Level from " << Log::ToString(Log::ReportingLevel()) << " to " << logLevel;
   Log::ReportingLevel() = Log::FromString(logLevel);
+  LOG(logQUIET) << "Changed Reporting Level from " << Log::ToString(Log::ReportingLevel()) << " to " << logLevel;
 }
 
 std::string pxarCore::getReportingLevel()
 {
-  LOG(logINFO) << "Reporting Level is " << Log::ToString(Log::ReportingLevel());
+  LOG(logQUIET) << "Reporting Level is " << Log::ReportingLevel();
   return Log::ToString(Log::ReportingLevel());
 }

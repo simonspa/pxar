@@ -26,7 +26,7 @@ namespace pxar {
 #define TBM_08C            0x25
 #define TBM_09             0x26
 #define TBM_09C            0x27
-#define TBM_10             0x28
+#define TBM_10C            0x28
 
 
 // --- TBM Register -----------------------------------------------------------
@@ -60,6 +60,7 @@ namespace pxar {
 #define ROC_PSI46DIGV21       0x07
 #define ROC_PSI46DIGV21RESPIN 0x08
 #define ROC_PROC600           0x09
+#define ROC_PROC600V2         0x0A
 
 // --- ROC DACs ---------------------------------------------------------------
 #define ROC_DAC_Vdig       0x01
