@@ -374,7 +374,7 @@ namespace pxar {
 
         try{
             LOG(logDEBUGPIPES) << "Trying to decode pixel: " << listVector(data,false,true);
-            pixel pix(data,roc_n,ultrablack,black);
+            pixel pix(data,roc_n, int16_t(ultrablack), int16_t(black));
             roc_Event.pixels.push_back(pix);
             decodingStats.m_info_pixels_valid++;
         }
@@ -559,10 +559,10 @@ namespace pxar {
     }
     // Sliding window:
     else {
-      ultrablack = static_cast<int32_t>(float(999) / 1000 * ultrablack + float(1) / 1000 * expandSign(word1 & 0x0fff));
-      black = static_cast<int32_t>(float(999) / 1000 * black + float(1) / 1000 * (expandSign(word2 & 0x0fff) + offsetB));
+      ultrablack = float(999) / 1000 * ultrablack + float(1) / 1000 * expandSign(word1 & 0x0fff);
+      black = float(999) / 1000 * black + float(1) / 1000 * (expandSign(word2 & 0x0fff) + offsetB);
     }
-    levelS = static_cast<int16_t>((black - ultrablack)/8);
+    levelS = static_cast<int16_t>((int(black) - int(ultrablack))/8);
   }
 
   void dtbEventDecoder::evalDeser400Errors(uint16_t data) {
