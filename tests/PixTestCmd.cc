@@ -1020,14 +1020,14 @@ void CmdProc::setApi(pxar::pxarCore * api, PixSetup * setup){
     if(layer1()){
         fnRocPerChannel=2;
         fnDaqChannel=8;
-        fDaqChannelRocIdOffset[0]= 0;
-        fDaqChannelRocIdOffset[1]= 2;
-        fDaqChannelRocIdOffset[2]= 4;
-        fDaqChannelRocIdOffset[3]= 6;
-        fDaqChannelRocIdOffset[4]= 8;
-        fDaqChannelRocIdOffset[5]= 10;
-        fDaqChannelRocIdOffset[6]= 12;
-        fDaqChannelRocIdOffset[7]= 14;
+        fDaqChannelRocIdOffset[0]= 4;
+        fDaqChannelRocIdOffset[1]= 6;
+        fDaqChannelRocIdOffset[2]= 8;
+        fDaqChannelRocIdOffset[3]= 10;
+        fDaqChannelRocIdOffset[4]= 12;
+        fDaqChannelRocIdOffset[5]= 14;
+        fDaqChannelRocIdOffset[6]= 0;
+        fDaqChannelRocIdOffset[7]= 2;
     }else if(tbm08()){
         fnRocPerChannel=8;
         fnDaqChannel=2;
@@ -1977,10 +1977,10 @@ int CmdProc::setTestboardDelay(string name, uint8_t value){
 
 
 
-int CmdProc::bursttest(int ntrig, int trigsep, int nburst, int loop){
+int CmdProc::bursttest(int ntrig, int trigsep, int nburst, int caltrig, int loop){
         int stat = 0;
         while( ! ( (loop==0) || (stopped()) ) ) {
-            burst(fBuf, ntrig, trigsep, nburst);
+            burst(fBuf, ntrig, trigsep, nburst, caltrig);
         
             vector<DRecord > data;
             stat = getData(fBuf, data, 0);
@@ -2291,18 +2291,51 @@ int CmdProc::pixDecodeRaw(int raw, int level){
     error = (raw & 0x10) ? 128 : 0;
     if((error==128)&&(level>0)){ s=", wrong stuffing bit";}
 
-    int c1 = (raw >> 21) & 7; if (c1>=6) {error |= 16; s+=", illegal raw column data (msb)"; };
-    int c0 = (raw >> 18) & 7; if (c0>=6) {error |= 8; s+=", illegal raw column data (lsb)";};
-    int c = c1*6 + c0;
+    if (fApi->_dut->getRocType() >= ROC_PROC600) {
+        x = ((raw >> 17) & 0x07) + ((raw >> 18) & 0x38);
+        y = ((raw >> 9) & 0x07) + ((raw >> 10) & 0x78);
+    }
+    else {
+        int c1 = (raw >> 21) & 7;
+        if (c1 >= 6) {
+            error |= 16;
+            s += ", illegal raw column data (msb)";
+        };
+        int c0 = (raw >> 18) & 7;
+        if (c0 >= 6) {
+            error |= 8;
+            s += ", illegal raw column data (lsb)";
+        };
+        int c = c1 * 6 + c0;
 
-    int r2 = (raw >> 15) & 7; if (r2>=6) {error |= 4; s+=", illegal raw row data (msb)";};
-    int r1 = (raw >> 12) & 7; if (r1>=6) {error |= 2; s+=", illegal raw row data (nmsb)";};
-    int r0 = (raw >> 9) & 7; if (r0>=6) {error |= 1; s+=", illegal raw row data (lsb)";};
-    int r = (r2*6 + r1)*6 + r0;
+        int r2 = (raw >> 15) & 7;
+        if (r2 >= 6) {
+            error |= 4;
+            s += ", illegal raw row data (msb)";
+        };
+        int r1 = (raw >> 12) & 7;
+        if (r1 >= 6) {
+            error |= 2;
+            s += ", illegal raw row data (nmsb)";
+        };
+        int r0 = (raw >> 9) & 7;
+        if (r0 >= 6) {
+            error |= 1;
+            s += ", illegal raw row data (lsb)";
+        };
+        int r = (r2 * 6 + r1) * 6 + r0;
 
-    y = 80 - r/2; if ((unsigned int)y >= 80){ error |= 32; s+=", bad row";};
-    x = 2*c + (r&1); if ((unsigned int)x >= 52) {error |= 64; s+=", bad column";};
-    if(level>0){
+        y = 80 - r / 2;
+        if ((unsigned int) y >= 80) {
+            error |= 32;
+            s += ", bad row";
+        };
+        x = 2 * c + (r & 1);
+        if ((unsigned int) x >= 52) {
+            error |= 64;
+            s += ", bad column";
+        };
+    }if(level>0){
     out << "( " << dec << setw(2) << setfill(' ') << x
          << ", "<< dec << setw(2) << setfill(' ') << y
          << ": "<< setw(3) << ph << ") ";
@@ -2321,20 +2354,32 @@ int CmdProc::pixDecodeRaw(int raw, uint8_t & col, uint8_t & row, uint8_t & ph){
     ph = (raw & 0x0f) + ((raw >> 1) & 0xf0);
     error = (raw & 0x10) ? 128 : 0;
 
-    int c1 = (raw >> 21) & 7; if (c1>=6) {error |= 16;  };
-    int c0 = (raw >> 18) & 7; if (c0>=6) {error |= 8; };
-    int c = c1*6 + c0;
+    if (fApi->_dut->getRocType() >= ROC_PROC600)  {
+        col = ((raw >> 17) & 0x07) + ((raw >> 18) & 0x38);
+        row = ((raw >> 9) & 0x07) + ((raw >> 10) & 0x78);
+    }
+    else {
+        int c1 = (raw >> 21) & 7;
+        if (c1 >= 6) { error |= 16; };
+        int c0 = (raw >> 18) & 7;
+        if (c0 >= 6) { error |= 8; };
+        int c = c1 * 6 + c0;
 
-    int r2 = (raw >> 15) & 7; if (r2>=6) {error |= 4;};
-    int r1 = (raw >> 12) & 7; if (r1>=6) {error |= 2;};
-    int r0 = (raw >> 9) & 7; if (r0>=6) {error |= 1;};
-    int r = (r2*6 + r1)*6 + r0;
+        int r2 = (raw >> 15) & 7;
+        if (r2 >= 6) { error |= 4; };
+        int r1 = (raw >> 12) & 7;
+        if (r1 >= 6) { error |= 2; };
+        int r0 = (raw >> 9) & 7;
+        if (r0 >= 6) { error |= 1; };
+        int r = (r2 * 6 + r1) * 6 + r0;
 
-    y = 80 - r/2; if ((unsigned int)y >= 80){ error |= 32;};
-    x = 2*c + (r&1); if ((unsigned int)x >= 52) {error |= 64;};
-    col = static_cast<uint8_t>(x);
-    row = static_cast<uint8_t>(y);
-
+        y = 80 - r / 2;
+        if ((unsigned int) y >= 80) { error |= 32; };
+        x = 2 * c + (r & 1);
+        if ((unsigned int) x >= 52) { error |= 64; };
+        col = static_cast<uint8_t>(x);
+        row = static_cast<uint8_t>(y);
+    }
     return error;
 }
 
@@ -3032,7 +3077,7 @@ int CmdProc::maskHotPixels(int ntrig, int ftrigkHz, int multiplier, float percen
     return 0;
 }
 
-int CmdProc::burst(vector<uint16_t> & buf, int ntrig, int trigsep, int nburst, int verbosity){
+int CmdProc::burst(vector<uint16_t> & buf, int ntrig, int trigsep, int nburst, int caltrig, int verbosity){
     /* run ntrig sequences and get the raw data from the DTB */
 
     // warn user when no data expected
@@ -3046,12 +3091,26 @@ int CmdProc::burst(vector<uint16_t> & buf, int ntrig, int trigsep, int nburst, i
     vector< pair<string, uint8_t> > pgsetup;
     pgsetup.push_back( make_pair("sync", 10) );
     pgsetup.push_back( make_pair("resr", fTRC) );
-    pgsetup.push_back( make_pair("cal",  fTCT ));
+    if(caltrig>0){
+        if ( (fTCT-trigsep*caltrig)>1){
+            pgsetup.push_back( make_pair("cal",  fTCT-trigsep*caltrig ));
+        }else{
+            out << "warning, illegal timing for calinject requested\n";
+            out << "TCT =  " << fTCT << "\n";
+            out << "trigsep * caltrig =  " << trigsep << " * " << caltrig << " = " << trigsep*caltrig << "\n";
+        }
+    }else{
+        pgsetup.push_back( make_pair("cal",  fTCT ));
+    }
     for(int i=0; i<ntrig; i++){
         pgsetup.push_back( make_pair("trg",  trigsep-1 ));
     }
-    pgsetup.push_back( make_pair("token", 0));
 
+    if(fApi->_dut->getNTbmCores()==0){
+        pgsetup.push_back( make_pair("token", 0));
+    }else{
+        pgsetup.push_back( make_pair("none",0) );
+    }
     fPeriod = fMaxPeriod;
  
     fApi->setPatternGenerator(pgsetup);
@@ -4287,12 +4346,12 @@ int CmdProc::tb(Keyword kw){
     }
     
     
-    int trigsep, nburst;
+    int trigsep, nburst,caltrig=0;
     if( kw.match("burst", ntrig, trigsep, nburst) ){ return bursttest(ntrig, trigsep, nburst);}
     if( kw.match("burst", ntrig, trigsep) ){ return bursttest(ntrig, trigsep);}
     if( kw.match("burst",ntrig) ){ return bursttest(ntrig);}
-
-    if( kw.match("bust",ntrig) ){ return bursttest(ntrig,10,1,-1);}
+    if( kw.match("burstcal",ntrig,trigsep,caltrig) ){ return bursttest(ntrig,trigsep,1,caltrig);}
+    // bursttest ntrig trigsep nburst caltrig loop
 
     
     if( kw.greedy_match("pgset",step, pattern, delay, comment)){
