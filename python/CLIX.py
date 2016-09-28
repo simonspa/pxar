@@ -56,6 +56,7 @@ class PxarCoreCmd(cmd.Cmd):
         self.api = api
         self.dir = conf_dir
         self.window = None
+        self.Plots = []
         if gui and gui_available:
             self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
         elif gui and not gui_available:
@@ -80,12 +81,21 @@ class PxarCoreCmd(cmd.Cmd):
                 pixels.append(px)
         self.plot_map(pixels, 'Event Display', True)
 
-    def plot_map(self, data, name, count=False, no_stats=False):
-        if not self.window:
-            print data
-            return
+    def plot_graph(self, gr, lm=.12, rm=.1, draw_opt='alp'):
+        c = TCanvas('c', 'c', 1000, 1000)
+        c.SetMargin(lm, rm, .1, .1)
+        gr.Draw(draw_opt)
+        self.window = c
+        self.Plots.append(gr)
+        self.window.Update()
 
-        c = gROOT.GetListOfCanvases()[-1]
+    def plot_map(self, data, name, count=False, no_stats=False):
+        # if not self.window:
+        #     print data
+        #     return
+
+        # c = gROOT.GetListOfCanvases()[-1]
+        c = TCanvas('c', 'c', 1000, 1000)
         c.SetRightMargin(.12)
 
         # Find number of ROCs present:
@@ -95,7 +105,7 @@ class PxarCoreCmd(cmd.Cmd):
                 module = True
                 break
         # Prepare new numpy matrix:
-        d = zeros((417 if module else 53, 161 if module else 81))
+        d = zeros((417 if module else 52, 161 if module else 80))
         for px in data:
             xoffset = 52 * (px.roc % 8) if module else 0
             yoffset = 80 * int(px.roc / 8) if module else 0
@@ -103,13 +113,16 @@ class PxarCoreCmd(cmd.Cmd):
             y = (px.row + yoffset) if (px.roc < 8) else (2 * yoffset - px.row - 1)
             # Reverse order of the upper ROC row:
             x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
-            d[x + 1][y + 1] += 1 if count else px.value
+            d[x][y] += 1 if count else px.value
 
-        plot = Plotter.create_th2(d, 0, 417 if module else 53, 0, 161 if module else 81, name, 'pixels x', 'pixels y', name)
+        plot = Plotter.create_th2(d, 0, 417 if module else 52, 0, 161 if module else 80, name, 'pixels x', 'pixels y', name)
         if no_stats:
             plot.SetStats(0)
-        self.window.histos.append(plot)
-        self.window.update()
+        plot.Draw('COLZ')
+        self.window = c
+        self.Plots.append(plot)
+        # self.window.histos.append(plot)
+        self.window.Update()
 
     def plot_1d(self, data, name, dacname, min_val, max_val):
         if not self.window:
@@ -127,15 +140,17 @@ class PxarCoreCmd(cmd.Cmd):
         self.window.update()
 
     def plot_2d(self, data, name, dac1, step1, min1, max1, dac2, step2, min2, max2):
-        if not self.window:
-            for idac, dac in enumerate(data):
-                dac1 = min1 + (idac / ((max2 - min2) / step2 + 1)) * step1
-                dac2 = min2 + (idac % ((max2 - min2) / step2 + 1)) * step2
-                s = "DACs " + str(dac1) + ":" + str(dac2) + " - "
-                for px in dac:
-                    s += str(px)
-                print s
-            return
+        # if not self.window:
+        #     for idac, dac in enumerate(data):
+        #         dac1 = min1 + (idac / ((max2 - min2) / step2 + 1)) * step1
+        #         dac2 = min2 + (idac % ((max2 - min2) / step2 + 1)) * step2
+        #         s = "DACs " + str(dac1) + ":" + str(dac2) + " - "
+        #         for px in dac:
+        #             s += str(px)
+        #         print s
+        #     return
+        c = TCanvas('c', 'c', 1000, 1000)
+        c.SetRightMargin(.12)
 
         # Prepare new numpy matrix:
         bins1 = (max1 - min1) / step1 + 1
@@ -149,10 +164,13 @@ class PxarCoreCmd(cmd.Cmd):
                 d[bin1][bin2] = dac[0].value
 
         plot = Plotter.create_th2(d, min1, max1, min2, max2, name, dac1, dac2, name)
-        self.window.histos.append(plot)
-        self.window.update()
+        plot.Draw('COLZ')
+        self.window = c
+        self.Plots.append(plot)
+        # self.window.histos.append(plot)
+        self.window.Update()
 
-    def do_gui(self):
+    def do_gui(self, line):
         """Open the ROOT results browser"""
         if not gui_available:
             print "No GUI available (missing ROOT library)"
