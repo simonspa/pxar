@@ -314,7 +314,7 @@ namespace pxar {
     }
 
     // Check event validity (empty, missing ROCs...):
-    CheckEventValidity(roc_n);
+    CheckEventValidity(roc_n, sample);
   }
 
   void dtbEventDecoder::DecodeADC(rawEvent * sample) {
@@ -446,7 +446,7 @@ namespace pxar {
     }
 
     // Check event validity (empty, missing ROCs...):
-    CheckEventValidity(roc_n);
+    CheckEventValidity(roc_n, sample);
   }
 
   void dtbEventDecoder::CheckEventID() {
