@@ -64,6 +64,22 @@ bool pxarCore::initTestboard(std::vector<std::pair<std::string,uint8_t> > sig_de
   return true;
 }
 
+std::vector< std::pair<std::string,uint8_t> > pxarCore::getTestboardDelays() {
+
+  if(status()) {
+    std::vector< std::pair<std::string,uint8_t> > vec;
+
+    // Get singleton DAC dictionary object:
+    RegisterDictionary * _dict = RegisterDictionary::getInstance();
+
+    for(std::map< uint8_t,uint8_t >::iterator it = _dut->sig_delays.begin(); it != _dut->sig_delays.end(); ++it) {
+      vec.push_back(std::make_pair(_dict->getName(it->first, DTB_REG), it->second));
+    }
+    return vec;
+  }
+  else return std::vector< std::pair<std::string,uint8_t> >();
+}
+
 void pxarCore::setTestboardDelays(std::vector<std::pair<std::string,uint8_t> > sig_delays) {
   if(!_hal->status()) {
     LOG(logERROR) << "Signal delays not updated!";
@@ -73,6 +89,7 @@ void pxarCore::setTestboardDelays(std::vector<std::pair<std::string,uint8_t> > s
   _hal->setTestboardDelays(_dut->sig_delays);
   LOG(logDEBUGAPI) << "Testboard signal delays updated.";
 }
+
 void pxarCore::setDecodingOffset(uint8_t offset) {  _hal->setOffset(offset); }
 
 void pxarCore::setPatternGenerator(std::vector<std::pair<std::string,uint8_t> > pg_setup) {

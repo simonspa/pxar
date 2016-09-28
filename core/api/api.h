@@ -236,6 +236,10 @@ namespace pxar {
      *  out-of-range, a pxar::InvalidConfig exception is thrown.
      *  The new settings are stored in the pxar::dut object for later reference.
      */
+
+    /** Function to read current test board delay values */
+    std::vector<std::pair<std::string, uint8_t> > getTestboardDelays();
+
     void setTestboardDelays(std::vector<std::pair<std::string,uint8_t> > sig_delays);
 
     /** Update method for testboard pattern generator. This method requires
