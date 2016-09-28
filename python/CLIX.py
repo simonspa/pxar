@@ -2442,6 +2442,107 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_checkADCTimeConstant.__doc__, '']
 
+    @arity(0, 4, [int, int, int, int])
+    def do_efficiency_check(self, ntrig=10, col=14, row=14, vcal=200):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        self.eff_check(ntrig, col, row, vcal)
+        self.api.daqStop()
+
+    def complete_efficiency_check(self):
+        # return help for the cmd
+        return [self.do_efficiency_check.__doc__, '']
+
+    @arity(2, 7, [int, int, str, int, int, int, int])
+    def do_efficiency_scan(self, start, stop, dac_str='vana', ntrig=100, col=14, row=14, vcal=200):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        efficiencies = []
+        for dac in xrange(start, stop):
+            print '\rmeasuring {1}: {0:3d}'.format(dac, dac_str),
+            self.api.setDAC(dac_str, dac)
+            efficiencies.append(self.eff_check(ntrig, col, row, vcal if dac_str != 'vcal' else dac))
+        print
+        gr = Plotter.create_graph(range(start, stop), efficiencies, 'Efficiency Vs {0}'.format(dac_str.title()), '{d} [dac]'.format(d=dac_str), 'Efficiency [%]')
+        self.plot_graph(gr)
+        self.api.daqStop()
+
+    def complete_efficiency_scan(self):
+        # return help for the cmd
+        return [self.do_efficiency_scan.__doc__, '']
+
+    @arity(0, 3, [int, int, int])
+    def do_findThreshold(self, col=14, row=14, ntrig=1000):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        self.enable_pix(row, col)
+        self.api.daqStart()
+        vanas = range(55, 110)
+        thresholds = []
+        for vana in vanas:
+            self.api.setDAC('vana', vana)
+            for vcal in xrange(0, 256):
+                print '\rscanning vcal for vana: {1} {0:3d}'.format(vcal, vana),
+                self.api.setDAC('vcal', vcal)
+                self.api.daqTrigger(ntrig, 500)
+                good_events = 0
+                for i in xrange(ntrig):
+                    good_events += bool(self.api.daqGetEvent().pixels)
+                eff = good_events / float(ntrig)
+                # eff = sum(1 for ev in self.api.daqGetEventBuffer() if ev.pixels) / float(ntrig)
+                print '{0:4.2f}%'.format(eff),
+                stdout.flush()
+                if eff > .99:
+                    thresholds.append(vcal)
+                    break
+                if vcal == 255 and eff < .99:
+                    thresholds.append(0)
+        print
+        gr = Plotter.create_graph(vanas, thresholds, 'Vana vs. Threshold (trimmed to 40 vcal)', 'vana [dac]', 'measured threshold [vcal]')
+        self.plot_graph(gr)
+        self.api.daqStop()
+
+    def complete_findThreshold(self):
+        # return help for the cmd
+        return [self.do_findThreshold.__doc__, '']
+
+    @arity(0, 3, [int, int, int])
+    def do_noisemap(self, col=14, row=14, ntrig=1000):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        self.enable_pix(row, col)
+        self.api.maskAllPixels(0)
+        self.api.daqStart()
+        self.api.daqTrigger(ntrig, 500)
+        d = self.api.daqGetEventBuffer()
+        data = zeros((52, 80))
+        for ev in d:
+            for px in ev.pixels:
+                data[px.column][px.row] += 1
+        th2d = Plotter.create_th2(data, 0, 52, 0, 80, 'Noise Map for Pix {c} {r}'.format(r=row, c=col), 'col', 'row', 'hits')
+        th2d.SetStats(0)
+        self.plot_graph(th2d, .1, .14, 'colz')
+        self.api.daqStop()
+
+    def complete_noisemap(self):
+        # return help for the cmd
+        return [self.do_noisemap.__doc__, '']
+
+    @arity(0, 0, [])
+    def do_anaCurrent(self):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        old_vana = self.getDAC('vana')
+        vanas = range(255)
+        ianas = []
+        for vana in vanas:
+            self.api.setDAC('vana', vana)
+            sleep(.01)
+            iana = mean([self.api.getTBia() for _ in xrange(10)]) * 1000
+            ianas.append(iana)
+        gr = Plotter.create_graph(vanas, ianas, 'Analogue Current', 'vana [dac]', 'iana [mA]')
+        self.plot_graph(gr)
+        self.api.setDAC('vana', old_vana)
+
+    def complete_anaCurrent(self):
+        # return help for the cmd
+        return [self.do_anaCurrent.__doc__, '']
+
     @staticmethod
     def do_quit(q=1):
         """quit: terminates the application"""
