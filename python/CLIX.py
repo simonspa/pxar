@@ -690,15 +690,35 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_maskAllPixels.__doc__, '']
 
     @arity(0, 2, [int, int])
+    def do_maskEdges(self, enable=1, rocid=None):
+        """maskEdges [enable] [rocid]: mask/unmask all pixels on given ROC"""
+        self.maskEdges(enable, rocid)
+
+    def complete_maskEdges(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_maskEdges.__doc__, '']
+
+    @arity(0, 2, [int, int])
     def do_getEfficiencyMap(self, flags=0, nTriggers=10):
         """getEfficiencyMap [flags = 0] [nTriggers = 10]: returns the efficiency map"""
-        self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
+        # self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
         data = self.api.getEfficiencyMap(flags, nTriggers)
+        print data[0], len(data)
         self.plot_map(data, "Efficiency", no_stats=True)
 
     def complete_getEfficiencyMap(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_getEfficiencyMap.__doc__, '']
+
+    @arity(0, 2, [int, int])
+    def do_getXPixelAlive(self, nTriggers=50):
+        """getxPixelAlive [flags = 0] [nTriggers = 10]: returns the efficiency map"""
+        data = self.api.getEfficiencyMap(896, nTriggers)
+        self.plot_map(data, "Efficiency", no_stats=True)
+
+    def complete_getXPixelAlive(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_getXPixelAlive.__doc__, '']
 
     @arity(0, 6, [str, int, int, int, int, int])
     def do_getPulseheightVsDAC(self, dacname="vcal", dacstep=1, dacmin=0, dacmax=255, flags=0, nTriggers=10):
@@ -725,7 +745,7 @@ class PxarCoreCmd(cmd.Cmd):
         """getEfficiencyVsDACDAC [DAC1 name] [step size 1] [min 1] [max 1] [DAC2 name] [step size 2] [min 2] [max 2] [flags = 0] [nTriggers = 10]
         return: the efficiency over a 2D DAC1-DAC2 scan"""
         for roc in xrange(self.api.getNEnabledRocs()):
-            self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
+            # self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
             self.api.testAllPixels(0)
             self.api.testPixel(14, 14, 1, roc)
             data = self.api.getEfficiencyVsDACDAC(dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max, flags, nTriggers)
