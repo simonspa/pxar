@@ -178,6 +178,7 @@ cdef extern from "api.h" namespace "pxar":
                            vector[pair[string, double] ] power_settings, 
                            vector[pair[string, uint8_t]] pg_setup) except +
         void setTestboardPower(vector[pair[string, double] ] power_settings) except +
+        vector[pair[string,uint8_t]] getTestboardDelays()
         void setTestboardDelays(vector[pair[string, uint8_t] ] sig_delays) except +
         void setPatternGenerator(vector[pair[string, uint8_t] ] pg_setup) except +
         void setDecodingOffset(uint8_t offset)

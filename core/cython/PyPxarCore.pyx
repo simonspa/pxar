@@ -252,6 +252,9 @@ cdef class PyPxarCore:
     def setDecodingOffset(self, offset):
         cdef uint8_t os = offset
         self.thisptr.setDecodingOffset(os)
+    def getTestboardDelays(self):
+        r = self.thisptr.getTestboardDelays()
+        return {tup.first: tup.second for tup in r}
     def setTestboardDelays(self, sig_delays):
         """ Initializer method for the testboard
         Parameters are dictionaries in the form {"name":value}:
