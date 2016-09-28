@@ -180,7 +180,7 @@ class PxarTrimFile:
     def getAll(self):
         return self.config
 
-def PxarStartup(directory, verbosity):
+def PxarStartup(directory, verbosity, trim=None):
     if not directory or not os.path.isdir(directory):
         print "Error: no or invalid configuration directory specified!"
         sys.exit(404)
@@ -231,8 +231,10 @@ def PxarStartup(directory, verbosity):
             i2c = i2cs[roc]
         else:
             i2c = roc
-        dacconfig = PxarParametersFile('%s%s_C%i.dat'%(os.path.join(directory,""),config.get("dacParameters"),i2c))
-        trimconfig = PxarTrimFile('%s%s_C%i.dat'%(os.path.join(directory,""),config.get("trimParameters"),i2c),i2c,masks.get())
+        dac_file = '{dir}/{f}{trim}_C{i2c}.dat'.format(dir=directory, trim=trim if trim is not None else '', i2c=i2c, f=config.get('dacParameters'))
+        trim_file = '{dir}/{f}{trim}_C{i2c}.dat'.format(dir=directory, trim=trim if trim is not None else '', i2c=i2c, f=config.get('trimParameters'))
+        dacconfig = PxarParametersFile(dac_file)
+        trimconfig = PxarTrimFile(trim_file, i2c, masks.get())
         print "We have " + str(len(trimconfig.getAll())) + " pixels for ROC " + str(i2c)
         rocI2C.append(i2c)
         rocDacs.append(dacconfig.getAll())
