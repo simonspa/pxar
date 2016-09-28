@@ -8,9 +8,9 @@ Simple Example Python Script Using the Pxar API.
 # IMPORTS
 # ==============================================
 # region imports
-from PyPxarCore import Pixel, PixelConfig, PyPxarCore, PyRegisterDictionary, PyProbeDictionary
-from numpy import zeros, array
+from numpy import zeros, array, mean
 from pxar_helpers import *  # arity decorator, PxarStartup, PxarConfigFile, PxarParametersFile and others
+from sys import stdout
 
 # Try to import ROOT:
 gui_available = True
@@ -20,7 +20,7 @@ except ImportError:
     gui_available = False
     pass
 if gui_available:
-    from ROOT import PyConfig, gStyle, gROOT
+    from ROOT import PyConfig, gStyle, TCanvas
 
     PyConfig.IgnoreCommandLineOptions = True
     from pxar_gui import PxarGui
