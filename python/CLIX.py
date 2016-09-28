@@ -460,6 +460,42 @@ class PxarCoreCmd(cmd.Cmd):
             length -= 1
         return dec
 
+    def eff_check(self, ntrig=10, col=14, row=14, vcal=200):
+        print 'checking pixel with col {c} and row {r}'.format(c=col, r=row)
+        self.api.HVon()
+        self.api.setDAC('vcal', vcal)
+        self.enable_pix(col, row)
+        self.api.maskAllPixels(0)
+        # self.api.maskPixel(51, 79, 1)
+        self.api.daqStart()
+        self.api.daqTrigger(ntrig, 500)
+        data = self.api.daqGetEventBuffer()
+        good_events = 0
+        for ev in data:
+            for px in ev.pixels:
+                if ntrig <= 50:
+                    print px,
+                if px.column == col and px.row == row and len(ev.pixels) == 1:
+                    good_events += 1
+            if ntrig <= 50:
+                print
+        eff = 100 * good_events / float(ntrig)
+        print '\nEFFICIENCY:\n  {e}/{t} ({p:5.2f}%)'.format(e=good_events, t=ntrig, p=eff)
+        # self.api.HVoff()
+        # self.api.daqStop()
+        return eff
+
+    def getDAC(self, dac, roc_id=0):
+        dacs = self.api.getRocDACs(roc_id)
+        if dac in dacs:
+            return dacs[dac]
+        else:
+            print 'Unknown dac {d}!'.format(d=dac)
+
+    def maskEdges(self, enable=1, rocid=0):
+        for col, row in [(0, 0), (51, 0), (0, 79), (51, 79)]:
+            self.api.maskPixel(col, row, enable, rocid)
+
     # endregion
 
     # ==============================================
