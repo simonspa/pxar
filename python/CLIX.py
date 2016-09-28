@@ -2584,17 +2584,16 @@ def main(argv=None):
     parser = argparse.ArgumentParser(prog=prog_name, description="A Simple Command Line Interface to the pxar API.")
     parser.add_argument('--dir', '-d', metavar="DIR", help="The digit rectory with all required config files.")
     parser.add_argument('--gui', '-g', action="store_true", help="The output verbosity set in the pxar API.")
-    parser.add_argument('--run', '-r', metavar="FILE",
-                        help="Load a cmdline script to be executed before entering the prompt.")
-    parser.add_argument('--verbosity', '-v', metavar="LEVEL", default="INFO",
-                        help="The output verbosity set in the pxar API.")
+    parser.add_argument('--run', '-r', metavar="FILE", help="Load a cmdline script to be executed before entering the prompt.")
+    parser.add_argument('--verbosity', '-v', metavar="LEVEL", default="INFO", help="The output verbosity set in the pxar API.")
+    parser.add_argument('--trim', '-T', nargs='?', default=None, help="The output verbosity set in the pxar API.")
     args = parser.parse_args(argv)
 
     print '\n================================================='
     print '# Extended pXarCore Command Line Interface'
     print '=================================================\n'
 
-    api = PxarStartup(args.dir, args.verbosity)
+    api = PxarStartup(args.dir, args.verbosity, args.trim)
 
     # start command line
     prompt = PxarCoreCmd(api, args.gui, args.dir)
