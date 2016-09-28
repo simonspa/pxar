@@ -191,10 +191,13 @@ def PxarStartup(directory, verbosity, trim=None):
     
     # Power settings:
     power_settings = {
-        "va":config.get("va",1.9),
-        "vd":config.get("vd",2.6),
-        "ia":config.get("ia",1.190),
-        "id":config.get("id",1.10)}
+        "va":config.get("va", 1.9),
+        "vd":config.get("vd", 2.6),
+        "ia":config.get("ia", 1.190),
+        "id":config.get("id", 1.10)}
+    if float(power_settings['va']) > 100:
+        print 'INFO: set power settings from [mV] to [V]'
+        power_settings = {key: int(value) / 1000. for key, value in power_settings.iteritems()}
 
     tbmDACs = []
     for tbm in range(int(config.get("nTbms"))):
