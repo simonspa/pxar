@@ -869,6 +869,35 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_update_trim_bits.__doc__, '']
 
+    @arity(0, 1, [int])
+    def do_getRocDacs(self, roc_id=0):
+        """ shows the current settings for dacs"""
+        for dac, value in self.api.getRocDACs(roc_id).iteritems():
+            print dac, value
+
+    def complete_getRocDacs(self):
+        # return help for the cmd
+        return [self.do_getRocDacs.__doc__, '']
+
+    @arity(1, 2, [str, int])
+    def do_getDAC(self, dac, roc_id=0):
+        """ shows the current settings for dacs"""
+        print '{d}: {v}'.format(d=dac, v=self.getDAC(dac, roc_id))
+
+    def complete_getDAC(self):
+        # return help for the cmd
+        return [self.do_getDAC.__doc__, '']
+
+    @arity(0, 1, [str])
+    def do_getTestboardDelays(self, delay=None):
+        """ shows the current settings for dacs"""
+        for dac, value in self.api.getTestboardDelays().iteritems():
+            print dac, value
+
+    def complete_getTestboardDelays(self):
+        # return help for the cmd
+        return [self.do_getTestboardDelays.__doc__, '']
+
     # endregion
 
     # ==============================================
