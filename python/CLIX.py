@@ -8,9 +8,9 @@ Simple Example Python Script Using the Pxar API.
 # IMPORTS
 # ==============================================
 # region imports
-from PyPxarCore import Pixel, PixelConfig, PyPxarCore, PyRegisterDictionary, PyProbeDictionary
-from numpy import zeros, array
+from numpy import zeros, array, mean
 from pxar_helpers import *  # arity decorator, PxarStartup, PxarConfigFile, PxarParametersFile and others
+from sys import stdout
 
 # Try to import ROOT:
 gui_available = True
@@ -20,7 +20,7 @@ except ImportError:
     gui_available = False
     pass
 if gui_available:
-    from ROOT import PyConfig, gStyle, gROOT
+    from ROOT import PyConfig, gStyle, TCanvas
 
     PyConfig.IgnoreCommandLineOptions = True
     from pxar_gui import PxarGui
@@ -56,6 +56,7 @@ class PxarCoreCmd(cmd.Cmd):
         self.api = api
         self.dir = conf_dir
         self.window = None
+        self.Plots = []
         if gui and gui_available:
             self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
         elif gui and not gui_available:
@@ -80,12 +81,21 @@ class PxarCoreCmd(cmd.Cmd):
                 pixels.append(px)
         self.plot_map(pixels, 'Event Display', True)
 
-    def plot_map(self, data, name, count=False, no_stats=False):
-        if not self.window:
-            print data
-            return
+    def plot_graph(self, gr, lm=.12, rm=.1, draw_opt='alp'):
+        c = TCanvas('c', 'c', 1000, 1000)
+        c.SetMargin(lm, rm, .1, .1)
+        gr.Draw(draw_opt)
+        self.window = c
+        self.Plots.append(gr)
+        self.window.Update()
 
-        c = gROOT.GetListOfCanvases()[-1]
+    def plot_map(self, data, name, count=False, no_stats=False):
+        # if not self.window:
+        #     print data
+        #     return
+
+        # c = gROOT.GetListOfCanvases()[-1]
+        c = TCanvas('c', 'c', 1000, 1000)
         c.SetRightMargin(.12)
 
         # Find number of ROCs present:
@@ -95,7 +105,7 @@ class PxarCoreCmd(cmd.Cmd):
                 module = True
                 break
         # Prepare new numpy matrix:
-        d = zeros((417 if module else 53, 161 if module else 81))
+        d = zeros((417 if module else 52, 161 if module else 80))
         for px in data:
             xoffset = 52 * (px.roc % 8) if module else 0
             yoffset = 80 * int(px.roc / 8) if module else 0
@@ -103,13 +113,16 @@ class PxarCoreCmd(cmd.Cmd):
             y = (px.row + yoffset) if (px.roc < 8) else (2 * yoffset - px.row - 1)
             # Reverse order of the upper ROC row:
             x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
-            d[x + 1][y + 1] += 1 if count else px.value
+            d[x][y] += 1 if count else px.value
 
-        plot = Plotter.create_th2(d, 0, 417 if module else 53, 0, 161 if module else 81, name, 'pixels x', 'pixels y', name)
+        plot = Plotter.create_th2(d, 0, 417 if module else 52, 0, 161 if module else 80, name, 'pixels x', 'pixels y', name)
         if no_stats:
             plot.SetStats(0)
-        self.window.histos.append(plot)
-        self.window.update()
+        plot.Draw('COLZ')
+        self.window = c
+        self.Plots.append(plot)
+        # self.window.histos.append(plot)
+        self.window.Update()
 
     def plot_1d(self, data, name, dacname, min_val, max_val):
         if not self.window:
@@ -127,15 +140,17 @@ class PxarCoreCmd(cmd.Cmd):
         self.window.update()
 
     def plot_2d(self, data, name, dac1, step1, min1, max1, dac2, step2, min2, max2):
-        if not self.window:
-            for idac, dac in enumerate(data):
-                dac1 = min1 + (idac / ((max2 - min2) / step2 + 1)) * step1
-                dac2 = min2 + (idac % ((max2 - min2) / step2 + 1)) * step2
-                s = "DACs " + str(dac1) + ":" + str(dac2) + " - "
-                for px in dac:
-                    s += str(px)
-                print s
-            return
+        # if not self.window:
+        #     for idac, dac in enumerate(data):
+        #         dac1 = min1 + (idac / ((max2 - min2) / step2 + 1)) * step1
+        #         dac2 = min2 + (idac % ((max2 - min2) / step2 + 1)) * step2
+        #         s = "DACs " + str(dac1) + ":" + str(dac2) + " - "
+        #         for px in dac:
+        #             s += str(px)
+        #         print s
+        #     return
+        c = TCanvas('c', 'c', 1000, 1000)
+        c.SetRightMargin(.12)
 
         # Prepare new numpy matrix:
         bins1 = (max1 - min1) / step1 + 1
@@ -149,10 +164,13 @@ class PxarCoreCmd(cmd.Cmd):
                 d[bin1][bin2] = dac[0].value
 
         plot = Plotter.create_th2(d, min1, max1, min2, max2, name, dac1, dac2, name)
-        self.window.histos.append(plot)
-        self.window.update()
+        plot.Draw('COLZ')
+        self.window = c
+        self.Plots.append(plot)
+        # self.window.histos.append(plot)
+        self.window.Update()
 
-    def do_gui(self):
+    def do_gui(self, line):
         """Open the ROOT results browser"""
         if not gui_available:
             print "No GUI available (missing ROOT library)"
@@ -442,6 +460,42 @@ class PxarCoreCmd(cmd.Cmd):
             length -= 1
         return dec
 
+    def eff_check(self, ntrig=10, col=14, row=14, vcal=200):
+        print 'checking pixel with col {c} and row {r}'.format(c=col, r=row)
+        self.api.HVon()
+        self.api.setDAC('vcal', vcal)
+        self.enable_pix(col, row)
+        self.api.maskAllPixels(0)
+        # self.api.maskPixel(51, 79, 1)
+        self.api.daqStart()
+        self.api.daqTrigger(ntrig, 500)
+        data = self.api.daqGetEventBuffer()
+        good_events = 0
+        for ev in data:
+            for px in ev.pixels:
+                if ntrig <= 50:
+                    print px,
+                if px.column == col and px.row == row and len(ev.pixels) == 1:
+                    good_events += 1
+            if ntrig <= 50:
+                print
+        eff = 100 * good_events / float(ntrig)
+        print '\nEFFICIENCY:\n  {e}/{t} ({p:5.2f}%)'.format(e=good_events, t=ntrig, p=eff)
+        # self.api.HVoff()
+        # self.api.daqStop()
+        return eff
+
+    def getDAC(self, dac, roc_id=0):
+        dacs = self.api.getRocDACs(roc_id)
+        if dac in dacs:
+            return dacs[dac]
+        else:
+            print 'Unknown dac {d}!'.format(d=dac)
+
+    def maskEdges(self, enable=1, rocid=0):
+        for col, row in [(0, 0), (51, 0), (0, 79), (51, 79)]:
+            self.api.maskPixel(col, row, enable, rocid)
+
     # endregion
 
     # ==============================================
@@ -636,15 +690,35 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_maskAllPixels.__doc__, '']
 
     @arity(0, 2, [int, int])
+    def do_maskEdges(self, enable=1, rocid=None):
+        """maskEdges [enable] [rocid]: mask/unmask all pixels on given ROC"""
+        self.maskEdges(enable, rocid)
+
+    def complete_maskEdges(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_maskEdges.__doc__, '']
+
+    @arity(0, 2, [int, int])
     def do_getEfficiencyMap(self, flags=0, nTriggers=10):
         """getEfficiencyMap [flags = 0] [nTriggers = 10]: returns the efficiency map"""
-        self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
+        # self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
         data = self.api.getEfficiencyMap(flags, nTriggers)
+        print data[0], len(data)
         self.plot_map(data, "Efficiency", no_stats=True)
 
     def complete_getEfficiencyMap(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_getEfficiencyMap.__doc__, '']
+
+    @arity(0, 2, [int, int])
+    def do_getXPixelAlive(self, nTriggers=50):
+        """getxPixelAlive [flags = 0] [nTriggers = 10]: returns the efficiency map"""
+        data = self.api.getEfficiencyMap(896, nTriggers)
+        self.plot_map(data, "Efficiency", no_stats=True)
+
+    def complete_getXPixelAlive(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_getXPixelAlive.__doc__, '']
 
     @arity(0, 6, [str, int, int, int, int, int])
     def do_getPulseheightVsDAC(self, dacname="vcal", dacstep=1, dacmin=0, dacmax=255, flags=0, nTriggers=10):
@@ -671,7 +745,7 @@ class PxarCoreCmd(cmd.Cmd):
         """getEfficiencyVsDACDAC [DAC1 name] [step size 1] [min 1] [max 1] [DAC2 name] [step size 2] [min 2] [max 2] [flags = 0] [nTriggers = 10]
         return: the efficiency over a 2D DAC1-DAC2 scan"""
         for roc in xrange(self.api.getNEnabledRocs()):
-            self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
+            # self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
             self.api.testAllPixels(0)
             self.api.testPixel(14, 14, 1, roc)
             data = self.api.getEfficiencyVsDACDAC(dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max, flags, nTriggers)
@@ -794,6 +868,35 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_update_trim_bits(self):
         # return help for the cmd
         return [self.do_update_trim_bits.__doc__, '']
+
+    @arity(0, 1, [int])
+    def do_getRocDacs(self, roc_id=0):
+        """ shows the current settings for dacs"""
+        for dac, value in self.api.getRocDACs(roc_id).iteritems():
+            print dac, value
+
+    def complete_getRocDacs(self):
+        # return help for the cmd
+        return [self.do_getRocDacs.__doc__, '']
+
+    @arity(1, 2, [str, int])
+    def do_getDAC(self, dac, roc_id=0):
+        """ shows the current settings for dacs"""
+        print '{d}: {v}'.format(d=dac, v=self.getDAC(dac, roc_id))
+
+    def complete_getDAC(self):
+        # return help for the cmd
+        return [self.do_getDAC.__doc__, '']
+
+    @arity(0, 1, [str])
+    def do_getTestboardDelays(self, delay=None):
+        """ shows the current settings for dacs"""
+        for dac, value in self.api.getTestboardDelays().iteritems():
+            print dac, value
+
+    def complete_getTestboardDelays(self):
+        # return help for the cmd
+        return [self.do_getTestboardDelays.__doc__, '']
 
     # endregion
 
@@ -2339,6 +2442,107 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_checkADCTimeConstant.__doc__, '']
 
+    @arity(0, 4, [int, int, int, int])
+    def do_efficiency_check(self, ntrig=10, col=14, row=14, vcal=200):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        self.eff_check(ntrig, col, row, vcal)
+        self.api.daqStop()
+
+    def complete_efficiency_check(self):
+        # return help for the cmd
+        return [self.do_efficiency_check.__doc__, '']
+
+    @arity(2, 7, [int, int, str, int, int, int, int])
+    def do_efficiency_scan(self, start, stop, dac_str='vana', ntrig=100, col=14, row=14, vcal=200):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        efficiencies = []
+        for dac in xrange(start, stop):
+            print '\rmeasuring {1}: {0:3d}'.format(dac, dac_str),
+            self.api.setDAC(dac_str, dac)
+            efficiencies.append(self.eff_check(ntrig, col, row, vcal if dac_str != 'vcal' else dac))
+        print
+        gr = Plotter.create_graph(range(start, stop), efficiencies, 'Efficiency Vs {0}'.format(dac_str.title()), '{d} [dac]'.format(d=dac_str), 'Efficiency [%]')
+        self.plot_graph(gr)
+        self.api.daqStop()
+
+    def complete_efficiency_scan(self):
+        # return help for the cmd
+        return [self.do_efficiency_scan.__doc__, '']
+
+    @arity(0, 3, [int, int, int])
+    def do_findThreshold(self, col=14, row=14, ntrig=1000):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        self.enable_pix(row, col)
+        self.api.daqStart()
+        vanas = range(55, 110)
+        thresholds = []
+        for vana in vanas:
+            self.api.setDAC('vana', vana)
+            for vcal in xrange(0, 256):
+                print '\rscanning vcal for vana: {1} {0:3d}'.format(vcal, vana),
+                self.api.setDAC('vcal', vcal)
+                self.api.daqTrigger(ntrig, 500)
+                good_events = 0
+                for i in xrange(ntrig):
+                    good_events += bool(self.api.daqGetEvent().pixels)
+                eff = good_events / float(ntrig)
+                # eff = sum(1 for ev in self.api.daqGetEventBuffer() if ev.pixels) / float(ntrig)
+                print '{0:4.2f}%'.format(eff),
+                stdout.flush()
+                if eff > .99:
+                    thresholds.append(vcal)
+                    break
+                if vcal == 255 and eff < .99:
+                    thresholds.append(0)
+        print
+        gr = Plotter.create_graph(vanas, thresholds, 'Vana vs. Threshold (trimmed to 40 vcal)', 'vana [dac]', 'measured threshold [vcal]')
+        self.plot_graph(gr)
+        self.api.daqStop()
+
+    def complete_findThreshold(self):
+        # return help for the cmd
+        return [self.do_findThreshold.__doc__, '']
+
+    @arity(0, 3, [int, int, int])
+    def do_noisemap(self, col=14, row=14, ntrig=1000):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        self.enable_pix(row, col)
+        self.api.maskAllPixels(0)
+        self.api.daqStart()
+        self.api.daqTrigger(ntrig, 500)
+        d = self.api.daqGetEventBuffer()
+        data = zeros((52, 80))
+        for ev in d:
+            for px in ev.pixels:
+                data[px.column][px.row] += 1
+        th2d = Plotter.create_th2(data, 0, 52, 0, 80, 'Noise Map for Pix {c} {r}'.format(r=row, c=col), 'col', 'row', 'hits')
+        th2d.SetStats(0)
+        self.plot_graph(th2d, .1, .14, 'colz')
+        self.api.daqStop()
+
+    def complete_noisemap(self):
+        # return help for the cmd
+        return [self.do_noisemap.__doc__, '']
+
+    @arity(0, 0, [])
+    def do_anaCurrent(self):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        old_vana = self.getDAC('vana')
+        vanas = range(255)
+        ianas = []
+        for vana in vanas:
+            self.api.setDAC('vana', vana)
+            sleep(.01)
+            iana = mean([self.api.getTBia() for _ in xrange(10)]) * 1000
+            ianas.append(iana)
+        gr = Plotter.create_graph(vanas, ianas, 'Analogue Current', 'vana [dac]', 'iana [mA]')
+        self.plot_graph(gr)
+        self.api.setDAC('vana', old_vana)
+
+    def complete_anaCurrent(self):
+        # return help for the cmd
+        return [self.do_anaCurrent.__doc__, '']
+
     @staticmethod
     def do_quit(q=1):
         """quit: terminates the application"""
@@ -2380,17 +2584,16 @@ def main(argv=None):
     parser = argparse.ArgumentParser(prog=prog_name, description="A Simple Command Line Interface to the pxar API.")
     parser.add_argument('--dir', '-d', metavar="DIR", help="The digit rectory with all required config files.")
     parser.add_argument('--gui', '-g', action="store_true", help="The output verbosity set in the pxar API.")
-    parser.add_argument('--run', '-r', metavar="FILE",
-                        help="Load a cmdline script to be executed before entering the prompt.")
-    parser.add_argument('--verbosity', '-v', metavar="LEVEL", default="INFO",
-                        help="The output verbosity set in the pxar API.")
+    parser.add_argument('--run', '-r', metavar="FILE", help="Load a cmdline script to be executed before entering the prompt.")
+    parser.add_argument('--verbosity', '-v', metavar="LEVEL", default="INFO", help="The output verbosity set in the pxar API.")
+    parser.add_argument('--trim', '-T', nargs='?', default=None, help="The output verbosity set in the pxar API.")
     args = parser.parse_args(argv)
 
     print '\n================================================='
     print '# Extended pXarCore Command Line Interface'
     print '=================================================\n'
 
-    api = PxarStartup(args.dir, args.verbosity)
+    api = PxarStartup(args.dir, args.verbosity, args.trim)
 
     # start command line
     prompt = PxarCoreCmd(api, args.gui, args.dir)

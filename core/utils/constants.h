@@ -10,7 +10,7 @@
 namespace pxar {
 
 // --- Data Transmission settings & flags --------------------------------------
-#define DTB_SOURCE_BLOCK_SIZE  8192
+#define DTB_SOURCE_BLOCK_SIZE  8192*16
 #define DTB_SOURCE_BUFFER_SIZE 50000000
 #define DTB_DAQ_FIFO_OVFL 4 // bit 2 = DAQ fast HW FIFO overflow
 #define DTB_DAQ_MEM_OVFL  2 // bit 1 = DAQ RAM FIFO overflow
@@ -26,7 +26,7 @@ namespace pxar {
 #define TBM_08C            0x25
 #define TBM_09             0x26
 #define TBM_09C            0x27
-#define TBM_10             0x28
+#define TBM_10C            0x28
 
 
 // --- TBM Register -----------------------------------------------------------
@@ -60,6 +60,7 @@ namespace pxar {
 #define ROC_PSI46DIGV21       0x07
 #define ROC_PSI46DIGV21RESPIN 0x08
 #define ROC_PROC600           0x09
+#define ROC_PROC600V2         0x0A
 
 // --- ROC DACs ---------------------------------------------------------------
 #define ROC_DAC_Vdig       0x01

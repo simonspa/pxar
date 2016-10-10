@@ -184,7 +184,7 @@ void PixTestPretest::doTest() {
   PixTest::update();
 
   string tbmtype = fApi->_dut->getTbmType(); //"tbm09c"
-  if ((tbmtype == "tbm09c") || (tbmtype == "tbm08c")) {
+  if ((tbmtype == "tbm09c") || (tbmtype == "tbm08c") || (tbmtype == "tbm10c")) {
     findTiming();
   } else if (tbmtype == "tbm08b" || tbmtype == "tbm08a") {
     setTimings();
@@ -478,7 +478,7 @@ void PixTestPretest::findTiming() {
   PixTestFactory *factory = PixTestFactory::instance(); 
   PixTest *t =  factory->createTest("cmd", fPixSetup);		    
   t->runCommand("timing");
-  delete t; 
+  delete t;
 
   // -- parse output file
   ifstream INS; 
@@ -541,7 +541,7 @@ void PixTestPretest::setTimings() {
   fApi->_dut->maskAllPixels(true);
 
   TLogLevel UserReportingLevel = Log::ReportingLevel();
-  size_t nTBMs = fApi->_dut->getNTbms();
+  size_t nTBMs = fApi->_dut->getNTbmCores();
   if (nTBMs==0) {
     LOG(logINFO) << "Timing test not needed for single ROC.";
     return;
@@ -1179,12 +1179,12 @@ void PixTestPretest::findWorkingPixel() {
       int idac2 = w.first;
       vector<pixel> wpix = w.second;
       for (unsigned ipix = 0; ipix < wpix.size(); ++ipix) {
-	hname = Form("fwp_c%d_r%d_C%d", ic, ir, wpix[ipix].roc());
-	if (maps.count(hname) > 0) {
-	  maps[hname]->Fill(idac1, idac2, wpix[ipix].value());
-	} else {
-	  LOG(logDEBUG) << "bad pixel address decoded: " << hname << ", skipping";
-	}
+          hname = Form("fwp_c%d_r%d_C%d", ic, ir, wpix[ipix].roc());
+          if (maps.count(hname) > 0) {
+	        maps[hname]->Fill(idac1, idac2, wpix[ipix].value());
+	      } else {
+	        LOG(logDEBUG) << "bad pixel address decoded: " << hname << ", skipping";
+	      }
       }
     }
 
@@ -1220,7 +1220,8 @@ void PixTestPretest::findWorkingPixel() {
 
       if (!okVthrComp || !okCalDel) {
 	okAllRocs = false;
-	LOG(logINFO) << hname << " does not pass: vthrComp = " << vthrComp << " Delta(CalDel) = " << cdLast - cdFirst << ", trying another";
+	LOG(logINFO) << hname << " does not pass: vthrComp = " << vthrComp
+		     << " Delta(CalDel) = " << cdLast - cdFirst << ((ifwp != pixelList.size() - 1) ? ", trying another" : ".");
 	break;
       } else{
 	LOG(logDEBUG) << hname << " OK, with vthrComp = " << vthrComp << " and Delta(CalDel) = " << cdLast - cdFirst;
@@ -1243,11 +1244,18 @@ void PixTestPretest::findWorkingPixel() {
       maps.clear();
     }
   }
-
-  LOG(logINFO) << "Found working pixel in all ROCs: col/row = " << ic << "/" << ir;
-  clearSelectedPixels();
-  fPIX.push_back(make_pair(ic, ir));
-  addSelectedPixels(Form("%d,%d", ic, ir));
+  if (maps.size()) {
+    LOG(logINFO) << "Found working pixel in all ROCs: col/row = " << ic << "/" << ir; 
+    clearSelectedPixels();
+    fPIX.push_back(make_pair(ic, ir));
+    addSelectedPixels(Form("%d,%d", ic, ir));
+  } else {
+    LOG(logINFO) << "Something went wrong...";
+    LOG(logINFO) << "Didn't find a working pixel in all ROCs.";
+    for (size_t iroc = 0; iroc < rocIds.size(); iroc++) {
+      LOG(logINFO) << "our roc list from in the dut: " << static_cast<int>(rocIds[iroc]);
+    }
+  }
 
 
   dutCalibrateOff();

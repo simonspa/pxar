@@ -18,6 +18,19 @@ class Plotter(object):
         return th1
 
     @staticmethod
+    def create_graph(x, y, tit='', xtit='', ytit='', yoff=1.4):
+        gr = TGraph(len(x), array.array('d', x), array.array('d', y))
+        gr.SetNameTitle('gr', tit)
+        gr.SetMarkerStyle(20)
+        gr.SetMarkerSize(.5)
+        xax = gr.GetXaxis()
+        xax.SetTitle(xtit)
+        yax = gr.GetYaxis()
+        yax.SetTitle(ytit)
+        yax.SetTitleOffset(yoff)
+        return gr
+
+    @staticmethod
     def create_tgraph(data, name, x_title, y_title, minimum=None, data_x=-1):
         #        xdata = list(xrange(len(data)))
         xdata = data_x
@@ -50,9 +63,10 @@ class Plotter(object):
         th2.GetYaxis().SetTitleOffset(1.3)
         th2.GetZaxis().SetTitle(z_title)
         th2.SetDrawOption('COLZ')
-        for ix, x in enumerate(data):
-            for iy, y in enumerate(x):
+        for ix, x in enumerate(data, 1):
+            for iy, y in enumerate(x, 1):
                 th2.SetBinContent(ix, iy, y)
+        th2.GetZaxis().SetRangeUser(0, th2.GetMaximum())
         return th2
 
     def matrix_to_th2(d, name, x_title, y_title):

@@ -162,29 +162,32 @@ cdef class Statistics:
         def __get__(self): return self.thisobj.errors_roc()
     property errors_pixel:
         def __get__(self): return self.thisobj.errors_pixel()
+    property info_pixels_valid:
+        def __get__(self): return self.thisobj.info_pixels_valid()
 
-        
 
 cdef class PxEvent:
     cdef Event *thisptr      # hold a C++ instance which we're wrapping
     def __cinit__(self):
-            self.thisptr = new Event()
+        self.thisptr = new Event()
     def __dealloc__(self):
         del self.thisptr
     def __str__(self):
-        s = "====== " + hex(self.header) + " ====== "
-        for px in self.pixels:
-            s += str(px)
-        s += " ====== " + hex(self.trailer) + " ======\n"
+        s = "====== "
+        for i in self.header: s += hex(i) + " "
+        s += " ====== "
+        for px in self.pixels: s += str(px)
+        s += " ====== "
+        for i in self.trailer: s += hex(i) + " "
+        s += " ======\n"
         return str(s)
-    cdef c_clone(self, Event* p):
-        del self.thisptr
-        self.thisptr = p
-    cdef fill(self, Event ev):
-        self.thisptr.header = ev.header
-        self.thisptr.trailer = ev.trailer
-        for px in ev.pixels:
-            self.thisptr.pixels.push_back(px)
+    cdef clone(self, Event ev):
+        self.thisptr = new Event(ev)
+    def printHeader(self):
+        self.thisptr.printHeader()
+    def printTrailer(self):
+        self.thisptr.printTrailer()
+
     property pixels:
         def __get__(self):
             r = list()
@@ -200,17 +203,44 @@ cdef class PxEvent:
                 v.push_back( <pixel> px.thisptr[0])
             self.thisptr.pixels = v
     property header:
-        def __get__(self): return self.thisptr.header
-        def __set__(self, value): self.thisptr.header = value
+        def __get__(self): return self.thisptr.getHeaders()
+        def __set__(self, value): self.thisptr.addHeader(value)
     property trailer:
-        def __get__(self): return self.thisptr.trailer
-        def __set__(self, trailer): self.thisptr.trailer = trailer
-    property hasNoTokenPass:
-        def __get__(self): return self.thisptr.hasNoTokenPass()
-    property triggerCount:
-        def __get__(self): return self.thisptr.triggerCount()
-    property stackCount:
-        def __get__(self): return self.thisptr.stackCount()
+        def __get__(self): return self.thisptr.getTrailers()
+        def __set__(self, trailer): self.thisptr.addTrailer(trailer)
+    property haveNoTokenPass:
+        def __get__(self): return self.thisptr.haveNoTokenPass()
+    property haveTokenPass:
+        def __get__(self): return self.thisptr.haveTokenPass()
+    property haveResetTBM:
+        def __get__(self): return self.thisptr.haveResetTBM()
+    property haveResetROC:
+        def __get__(self): return self.thisptr.haveResetROC()
+    property haveSyncError:
+        def __get__(self): return self.thisptr.haveSyncError()
+    property haveSyncTrigger:
+        def __get__(self): return self.thisptr.haveSyncTrigger()
+    property haveClearTriggerCount:
+        def __get__(self): return self.thisptr.haveClearTriggerCount()
+    property haveCalTrigger:
+        def __get__(self): return self.thisptr.haveCalTrigger()
+    property stacksFull:
+        def __get__(self): return self.thisptr.stacksFull()
+    property haveAutoReset:
+        def __get__(self): return self.thisptr.haveAutoReset()
+    property havePkamReset:
+        def __get__(self): return self.thisptr.havePkamReset()
+
+    property triggerCounts:
+        def __get__(self): return self.thisptr.triggerCounts()
+    property triggerPhases:
+        def __get__(self): return self.thisptr.triggerPhases()
+    property dataIDs:
+        def __get__(self): return self.thisptr.dataIDs()
+    property dataValues:
+        def __get__(self): return self.thisptr.dataValues()
+    property stackCounts:
+        def __get__(self): return self.thisptr.stackCounts()
 
 cdef class PyPxarCore:
     cdef pxarCore *thisptr # hold the C++ instance
@@ -251,6 +281,9 @@ cdef class PyPxarCore:
     def setDecodingOffset(self, offset):
         cdef uint8_t os = offset
         self.thisptr.setDecodingOffset(os)
+    def getTestboardDelays(self):
+        r = self.thisptr.getTestboardDelays()
+        return {tup.first: tup.second for tup in r}
     def setTestboardDelays(self, sig_delays):
         """ Initializer method for the testboard
         Parameters are dictionaries in the form {"name":value}:
@@ -429,7 +462,7 @@ cdef class PyPxarCore:
         return rocids
 
     def getNTbms(self):
-        return self.thisptr._dut.getNTbms()
+        return self.thisptr._dut.getNTbmCores()
     def getNRocs(self):
         return self.thisptr._dut.getNRocs()
     def getTbmType(self):
@@ -583,11 +616,11 @@ cdef class PyPxarCore:
     def setSignalMode(self, string signal, string mode, uint8_t speed):
         self.thisptr.setSignalMode(signal, mode, speed)
 
-    def daqStart(self, uint16_t flags=0):
-        return self.thisptr.daqStart(flags)
-
-    def daqStart(self):
-        return self.thisptr.daqStart(0)
+    def daqStart(self, flags = None):
+        if flags is not None:
+            return self.thisptr.daqStart(flags)
+        else:
+            return self.thisptr.daqStart(0)
 
     def daqStatus(self):
         return self.thisptr.daqStatus()
@@ -611,7 +644,7 @@ cdef class PyPxarCore:
         cdef Event r
         r = self.thisptr.daqGetEvent()
         p = PxEvent()
-        p.fill(r)
+        p.clone(r)
         return p
 
     def daqGetEventBuffer(self):
@@ -620,7 +653,7 @@ cdef class PyPxarCore:
         pixelevents = list()
         for event in r:
             p = PxEvent()
-            p.fill(event)
+            p.clone(event)
             pixelevents.append(p)
         return pixelevents
 

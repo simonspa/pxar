@@ -52,9 +52,9 @@ public:
   bool writeDacParameterFile(int iroc, std::vector<std::pair<std::string, uint8_t> > );
   bool writeTrimFile(int iroc, std::vector<pxar::pixelConfig> );
   bool writeTbmParameterFile(int itbm,
-			     std::vector<std::pair<std::string, uint8_t> > , 
-			     std::vector<uint8_t> , 
-			     std::vector<std::pair<std::string, uint8_t> > , 
+			     std::vector<std::pair<std::string, uint8_t> > ,
+			     std::vector<uint8_t> ,
+			     std::vector<std::pair<std::string, uint8_t> > ,
 			     std::vector<uint8_t> );
   bool writeTbParameterFile();
   bool writeTestParameterFile(std::string test="all");
@@ -95,9 +95,9 @@ public:
   void readTrimFile(std::string fname, std::vector<pxar::pixelConfig>&);
 
   std::vector<std::vector<std::pair<int, int> > > readMaskFile(std::string fname);
-  std::vector<std::vector<std::pair<int, int> > > getMaskedPixels() {return fMaskedPixels;} 
-  int nMaskedPixels() {return fMaskedPixels.size();} 
-  bool isMaskedPixel(int roc, int col, int row); 
+  std::vector<std::vector<std::pair<int, int> > > getMaskedPixels() {return fMaskedPixels;}
+  int nMaskedPixels() {return fMaskedPixels.size();}
+  bool isMaskedPixel(int roc, int col, int row);
 
   std::vector<std::vector<pxar::pixelConfig> > getRocPixelConfig();
   std::vector<pxar::pixelConfig> getRocPixelConfig(int i);
@@ -122,8 +122,8 @@ public:
   void setTestParameterFileName(std::string filename) {fTestParametersFileName = filename;}
   void setRootFileName(std::string filename) {fRootFileName = filename;}
   void setLogFileName(std::string filename) {fLogFileName = filename;}
-  void setDebugFileName(std::string filename) {fMaskFileName = filename;}
-  void setMaskFileName(std::string filename) {fDebugFileName = filename;}
+  void setDebugFileName(std::string filename) {fDebugFileName = filename;}
+  void setMaskFileName(std::string filename) {fMaskFileName = filename;}
   void setDirectory(std::string dirname) {fDirectory = dirname;}
 
   void setGuiMode(bool a) {fGuiMode = a;}
@@ -148,12 +148,17 @@ public:
 
   std::vector<uint8_t> getHubIds() {return fHubIds;}
   uint8_t getHubId() {return fHubIds.front();}
-  
   static bool bothAreSpaces(char lhs, char rhs);
   void replaceAll(std::string& str, const std::string& from, const std::string& to);
   void cleanupString(std::string& str);
   void readNrocs(std::string line);
   void readHubIds(std::string line);
+
+  int getGuiX() {return fGuiX;}
+  int getGuiY() {return fGuiY;}
+
+  void setGuiX(int x) {fGuiX = x;}
+  void setGuiY(int x) {fGuiY = x;}
 
 private:
 
@@ -195,6 +200,8 @@ private:
   std::string fDebugFileName;
   std::string fGainPedestalFileName, fGainPedestalParameterFileName;
   std::string fReadbackCalFileName;
+
+  int fGuiX, fGuiY;
 
   static ConfigParameters* fInstance;
 

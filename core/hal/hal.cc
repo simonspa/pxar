@@ -164,7 +164,7 @@ void hal::setTestboardDelays(std::map<uint8_t,uint8_t> sig_delays) {
   _testboard->Deser400_SetPhaseAutoAll();  
   LOG(logDEBUGHAL) << "Defaulting all DESER400 modules to automatic phase selection.";
   
-  // Write testboard delay settings and deserializer phases to the repsective registers:
+  // Write testboard delay settings and deserializer phases to the respective registers:
   for(std::map<uint8_t,uint8_t>::iterator sigIt = sig_delays.begin(); sigIt != sig_delays.end(); ++sigIt) {
 
     if(sigIt->first == SIG_DESER160PHASE) {
@@ -418,7 +418,7 @@ bool hal::CheckCompatibility() {
   }
   else { LOG(logINFO) << "RPC call hashes of host and DTB match: " << hostCmdHash; }
 
-  // We are though all checks, testboard is successfully connected:
+  // We are through all checks, testboard is successfully connected:
   return true;
 }
 
@@ -641,6 +641,10 @@ bool hal::tbmSetReg(uint8_t hubid, uint8_t regId, uint8_t regValue, bool flush) 
   // If requested, flush immediately:
   if(flush) _testboard->Flush();
   return true;
+}
+
+void hal::tbmSelectRDA(uint8_t rda_id) {
+  _testboard->tbm_SelectRDA(rda_id);
 }
 
 void hal::SetupI2CValues(std::vector<uint8_t> roci2cs) {
@@ -1534,17 +1538,26 @@ void hal::daqStart(uint16_t flags, uint8_t deser160phase, uint32_t buffersize) {
   uint8_t rocid_offset = 0;
   for(size_t i = 0; i < m_tokenchains.size(); i++) {
     // Open DAQ in channel i:
-    size_t j = (m_tokenchains.size() == 8 ? (6 + i) % 8 : i);
-    uint32_t allocated_buffer = _testboard->Daq_Open(buffersize,j);
-    LOG(logDEBUGHAL) << "Channel " << j << ": token chain: "
-		     << static_cast<int>(m_tokenchains.at(j))
+    uint32_t allocated_buffer = _testboard->Daq_Open(buffersize,i);
+    LOG(logDEBUGHAL) << "Channel " << i << ": token chain: "
+		     << static_cast<int>(m_tokenchains.at(i))
 		     << " offset " << static_cast<int>(rocid_offset) << " buffer " << allocated_buffer;
     // Initialize the data source, set tokenchain length to zero if no token pass is expected:
-    m_src.at(j) = dtbSource(_testboard,j,m_tokenchains.at(j),rocid_offset,m_tbmtype,m_roctype,true,flags);
-    m_src.at(j) >> m_splitter.at(j);
+    m_src.at(i) = dtbSource(_testboard,i,m_tokenchains.at(i),rocid_offset,m_tbmtype,m_roctype,true,flags);
+    m_src.at(i) >> m_splitter.at(i);
     _testboard->uDelay(100);
     // Increment the ROC id offset by the amount of ROCs expected:
-    rocid_offset += m_tokenchains.at(j);
+    rocid_offset += m_tokenchains.at(i);
+  }
+
+  // For layer 1 modules the numbering of the channels is not intuitive
+  // so we have to shuffle them for easier data processing
+  if ( m_tbmtype == TBM_10C && m_roccount == 16 ) {
+    LOG(logDEBUGHAL) << "Layer 1 module, shuffling the channels...";
+    std::vector<dtbSource> temp_src(m_src);
+    for (uint8_t i = 0; i < m_src.size(); i++) {
+      m_src.at(i) = temp_src.at( (i - 2) % m_src.size());
+    }
   }
 
   // Data acquisition with real TBM:
@@ -1610,12 +1623,15 @@ void hal::daqStart(uint16_t flags, uint8_t deser160phase, uint32_t buffersize) {
 Event hal::daqEvent() {
 
   Event current_Event;
-
+  uint16_t flags = 0;
+  
   // Read the next Event from each of the pipes, copy the data:
   for(size_t ch = 0; ch < m_src.size(); ch++) {
     if(m_src.at(ch).isConnected()) {
       dataSink<Event*> Eventpump;
       m_splitter.at(ch) >> m_decoder.at(ch) >> Eventpump;
+      // Read the supplied DAQ flags:
+      if(ch == 0) { flags = Eventpump.GetFlags(); }
 
       try { current_Event += *Eventpump.Get(); }
       catch (dsBufferEmpty &) {
@@ -1632,12 +1648,20 @@ Event hal::daqEvent() {
       catch (dataPipeException &e) { LOG(logERROR) << e.what(); return current_Event; }
     }
   }
- return current_Event;
+
+  // Check for the channels all reporting the same event number:
+  if((flags & FLAG_DISABLE_EVENTID_CHECK) == 0 && !equalElements(current_Event.triggerCounts())) {
+    LOG(logERROR) << "Channels report mismatching event numbers: " << listVector(current_Event.triggerCounts());
+    throw DataEventNumberMismatch("Channels report mismatching event numbers: " + listVector(current_Event.triggerCounts()));
+  }
+
+  return current_Event;
 }
 
 std::vector<Event> hal::daqAllEvents() {
 
   std::vector<Event> evt;
+  uint16_t flags = 0;
   
   // Prepare channel flags:
   std::vector<bool> done_ch;
@@ -1650,6 +1674,9 @@ std::vector<Event> hal::daqAllEvents() {
       if(m_src.at(ch).isConnected() && (!done_ch.at(ch))) {
 	dataSink<Event*> Eventpump;
 	m_splitter.at(ch) >> m_decoder.at(ch) >> Eventpump;
+
+	// Read the supplied DAQ flags:
+      if(flags == 0 && ch == 0) { flags = Eventpump.GetFlags(); }
 
 	// Add all event data from this channel:
 	try { current_Event += *Eventpump.Get(); }
@@ -1672,7 +1699,15 @@ std::vector<Event> hal::daqAllEvents() {
       LOG(logDEBUGHAL) << "Drained all DAQ channels.";
       break;
     }
-    else { evt.push_back(current_Event); }
+    else {
+      // Check for the channels all reporting the same event number:
+      if((flags & FLAG_DISABLE_EVENTID_CHECK) == 0 && !equalElements(current_Event.triggerCounts())) {
+	LOG(logERROR) << "Channels report mismatching event numbers: " << listVector(current_Event.triggerCounts());
+	throw DataEventNumberMismatch("Channels report mismatching event numbers: " + listVector(current_Event.triggerCounts()));
+      }
+      // Store the event
+      evt.push_back(current_Event);
+    }
   }
   
   if(evt.empty()) throw DataNoEvent("No event available");
@@ -1708,6 +1743,50 @@ rawEvent hal::daqRawEvent() {
   }
 
   return current_Event;
+}
+
+void hal::daqBothEvents(Event& event, rawEvent& rawevent) {
+
+  // Read the next Event from each of the pipes, copy the data:
+  for(size_t ch = 0; ch < m_src.size(); ch++) {
+    if(m_src.at(ch).isConnected()) {
+      //raw event
+      dataSink<rawEvent*> rawpump;
+      m_splitter.at(ch) >> rawpump;
+      //normal event
+      dataSink<Event*> Eventpump;
+      m_splitter.at(ch) >> m_decoder.at(ch) >> Eventpump;
+
+      try { event += *Eventpump.Get(); }
+      catch (dsBufferEmpty &) {
+        // If nothing has been read yet, just throw DataNoevent:
+        if(ch == 0) throw DataNoEvent("No event available");
+
+        // Else the previous channels already got data, so we have to retry:
+        try { event += *Eventpump.Get(); }
+        catch (dsBufferEmpty &) {
+          LOG(logCRITICAL) << "Found data in channel" << (ch > 1 ? std::string("s 0-" + (ch-1)) : std::string(" 0")) << " but not in channel " << ch << "!";
+          throw DataChannelMismatch("No event available in channel " + ch);
+        }
+      }
+      catch (dataPipeException &e) { LOG(logERROR) << e.what();}
+
+      try { rawevent += *rawpump.Get(); }
+        // One of the channels did not return anything!
+      catch (dsBufferEmpty &) {
+        // If nothing has been read yet, just throw DataNoevent:
+        if(ch == 0) throw DataNoEvent("No event available");
+
+        // Else the previous channels already got data, so we have to retry:
+        try { rawevent += *rawpump.Get(); }
+        catch (dsBufferEmpty &) {
+          LOG(logCRITICAL) << "Found data in channel" << (ch > 1 ? std::string("s 0-" + (ch-1)) : std::string(" 0")) << " but not in channel " << ch << "!";
+          throw DataChannelMismatch("No event available in channel " + ch);
+        }
+      }
+      catch (dataPipeException &e) { LOG(logERROR) << e.what();}
+    }
+  }
 }
 
 std::vector<rawEvent> hal::daqAllRawEvents() {
@@ -1752,6 +1831,53 @@ std::vector<rawEvent> hal::daqAllRawEvents() {
 
   if(raw.empty()) throw DataNoEvent("No event available");
   return raw;
+}
+
+
+void hal::daqCombinedEvent(Event& event, rawEvent& rawevent) {
+  rawEvent current_rawEvent;
+  Event current_Event;
+
+  // Read the next Event from each of the pipes, copy the data:
+  for(size_t ch = 0; ch < m_src.size(); ch++) {
+    if(m_src.at(ch).isConnected()) {
+      dataSink<rawEvent*> rawpump;
+      dataSink<Event*> Eventpump;
+      m_splitter.at(ch) >> rawpump;
+      m_splitter.at(ch) >> m_decoder.at(ch) >> Eventpump;
+
+      try { current_rawEvent += *rawpump.Get(); }
+        // One of the channels did not return anything!
+      catch (dsBufferEmpty &) {
+        // If nothing has been read yet, just throw DataNoevent:
+        if(ch == 0) throw DataNoEvent("No event available");
+
+        // Else the previous channels already got data, so we have to retry:
+        try { current_rawEvent += *rawpump.Get(); }
+        catch (dsBufferEmpty &) {
+          LOG(logCRITICAL) << "Found data in channel" << (ch > 1 ? std::string("s 0-" + (ch-1)) : std::string(" 0")) << " but not in channel " << ch << "!";
+          throw DataChannelMismatch("No event available in channel " + ch);
+        }
+      }
+      catch (dataPipeException &e) { LOG(logERROR) << e.what(); }
+
+      try { current_Event += *Eventpump.Get(); }
+      catch (dsBufferEmpty &) {
+        // If nothing has been read yet, just throw DataNoevent:
+        if(ch == 0) throw DataNoEvent("No event available");
+
+        // Else the previous channels already got data, so we have to retry:
+        try { current_Event += *Eventpump.Get(); }
+        catch (dsBufferEmpty &) {
+          LOG(logCRITICAL) << "Found data in channel" << (ch > 1 ? std::string("s 0-" + (ch-1)) : std::string(" 0")) << " but not in channel " << ch << "!";
+          throw DataChannelMismatch("No event available in channel " + ch);
+        }
+      }
+      catch (dataPipeException &e) { LOG(logERROR) << e.what(); }
+    }
+  }
+  rawevent = current_rawEvent;
+  event = current_Event;
 }
 
 std::vector<uint16_t> hal::daqBuffer() {
@@ -1865,6 +1991,7 @@ uint32_t hal::daqBufferStatus() {
   for(uint8_t channel = 0; channel < DTB_DAQ_CHANNELS; channel++) {
     if(m_daqstatus.size() > channel && m_daqstatus.at(channel)) {
       buffered_data += _testboard->Daq_GetSize(channel);
+      LOG(logDEBUGHAL) << "daqbufferstatus" << static_cast<int>(channel) << ": " << _testboard->Daq_GetSize(channel);
     }
   }
   return buffered_data;

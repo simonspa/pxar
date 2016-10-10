@@ -6,6 +6,7 @@ from PyPxarCore import Pixel, PixelConfig, PyPxarCore, PyRegisterDictionary, PyP
 from functools import wraps # used in parameter verification decorator ("arity")
 import os # for file system cmds
 import sys
+import shlex
 
 # "arity": decorator used for parameter parsing/verification on each cmd function call
 # Usually, the cmd module only passes a single string ('line') with all parameters;
@@ -56,7 +57,6 @@ class PxarConfigFile:
     """ class that loads the old-style config files of psi46expert """
     def __init__(self, f):
         self.config = {}
-        import shlex
         thisf = open(f)
         try:
             for line in thisf:
@@ -83,7 +83,6 @@ class PxarParametersFile:
     """ class that loads the old-style parameters files of psi46expert """
     def __init__(self, f):
         self.config = {}
-        import shlex
         thisf = open(f)
         try:
             for line in thisf:
@@ -110,7 +109,6 @@ class PxarMaskFile:
     """ class that loads the mask files of pxarGUI """
     def __init__(self, f):
         self.config = list()
-        import shlex
         thisf = open(f)
         try:
             for line in thisf:
@@ -155,7 +153,6 @@ class PxarTrimFile:
     """ class that loads the old-style trim parameters files of psi46expert """
     def __init__(self, f, roc, masks):
         self.config = list()
-        import shlex
         thisf = open(f)
         try:
             for line in thisf:
@@ -183,7 +180,7 @@ class PxarTrimFile:
     def getAll(self):
         return self.config
 
-def PxarStartup(directory, verbosity):
+def PxarStartup(directory, verbosity, trim=None):
     if not directory or not os.path.isdir(directory):
         print "Error: no or invalid configuration directory specified!"
         sys.exit(404)
@@ -194,10 +191,13 @@ def PxarStartup(directory, verbosity):
     
     # Power settings:
     power_settings = {
-        "va":config.get("va",1.9),
-        "vd":config.get("vd",2.6),
-        "ia":config.get("ia",1.190),
-        "id":config.get("id",1.10)}
+        "va":config.get("va", 1.9),
+        "vd":config.get("vd", 2.6),
+        "ia":config.get("ia", 1.190),
+        "id":config.get("id", 1.10)}
+    if float(power_settings['va']) > 100:
+        print 'INFO: set power settings from [mV] to [V]'
+        power_settings = {key: int(value) / 1000. for key, value in power_settings.iteritems()}
 
     tbmDACs = []
     for tbm in range(int(config.get("nTbms"))):
@@ -234,8 +234,10 @@ def PxarStartup(directory, verbosity):
             i2c = i2cs[roc]
         else:
             i2c = roc
-        dacconfig = PxarParametersFile('%s%s_C%i.dat'%(os.path.join(directory,""),config.get("dacParameters"),i2c))
-        trimconfig = PxarTrimFile('%s%s_C%i.dat'%(os.path.join(directory,""),config.get("trimParameters"),i2c),i2c,masks.get())
+        dac_file = '{dir}/{f}{trim}_C{i2c}.dat'.format(dir=directory, trim=trim if trim is not None else '', i2c=i2c, f=config.get('dacParameters'))
+        trim_file = '{dir}/{f}{trim}_C{i2c}.dat'.format(dir=directory, trim=trim if trim is not None else '', i2c=i2c, f=config.get('trimParameters'))
+        dacconfig = PxarParametersFile(dac_file)
+        trimconfig = PxarTrimFile(trim_file, i2c, masks.get())
         print "We have " + str(len(trimconfig.getAll())) + " pixels for ROC " + str(i2c)
         rocI2C.append(i2c)
         rocDacs.append(dacconfig.getAll())

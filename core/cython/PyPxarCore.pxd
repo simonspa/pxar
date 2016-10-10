@@ -35,13 +35,31 @@ cdef extern from "api.h" namespace "pxar":
 
 cdef extern from "api.h" namespace "pxar":
     cdef cppclass Event:
-        uint16_t header
-        uint16_t trailer
+        vector[uint16_t] getHeaders()
+        vector[uint16_t] getTrailers()
+        void printHeader()
+        void printTrailer()
+        void addHeader(uint16_t data)
+        void addTrailer(uint16_t data)
         vector[pixel] pixels
-        bool hasNoTokenPass()
-        uint8_t stackCount()
-        uint8_t triggerCount()
+        vector[bool] haveNoTokenPass()
+        vector[bool] haveTokenPass()
+        vector[bool] haveResetTBM()
+        vector[bool] haveResetROC()
+        vector[bool] haveSyncError()
+        vector[bool] haveSyncTrigger()
+        vector[bool] haveClearTriggerCount()
+        vector[bool] haveCalTrigger()
+        vector[bool] stacksFull()
+        vector[bool] haveAutoReset()
+        vector[bool] havePkamReset()
+        vector[uint8_t] stackCounts()
+        vector[uint8_t] triggerCounts()
+        vector[uint8_t] triggerPhases()
+        vector[uint8_t] dataIDs()
+        vector[uint8_t] dataValues()
         Event()
+        Event(Event &) except +
 
 cdef extern from "api.h" namespace "pxar":
     cdef cppclass pixelConfig:
@@ -87,6 +105,7 @@ cdef extern from "api.h" namespace "pxar":
         uint32_t errors_tbm()
         uint32_t errors_roc()
         uint32_t errors_pixel()
+        uint32_t info_pixels_valid()
 
 
 cdef extern from "api.h" namespace "pxar":
@@ -98,7 +117,7 @@ cdef extern from "api.h" namespace "pxar":
         int32_t getNMaskedPixels(uint8_t rocid)
         int32_t getNMaskedPixels()
         int32_t getNEnabledTbms()
-        int32_t getNTbms()
+        int32_t getNTbmCores()
         string getTbmType()
         int32_t getNEnabledRocs()
         int32_t getNRocs()
@@ -177,6 +196,7 @@ cdef extern from "api.h" namespace "pxar":
                            vector[pair[string, double] ] power_settings, 
                            vector[pair[string, uint8_t]] pg_setup) except +
         void setTestboardPower(vector[pair[string, double] ] power_settings) except +
+        vector[pair[string,uint8_t]] getTestboardDelays()
         void setTestboardDelays(vector[pair[string, uint8_t] ] sig_delays) except +
         void setPatternGenerator(vector[pair[string, uint8_t] ] pg_setup) except +
         void setDecodingOffset(uint8_t offset)

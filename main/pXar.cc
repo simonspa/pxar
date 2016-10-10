@@ -64,6 +64,8 @@ int main(int argc, char *argv[]){
       cout << "-r rootfilename       set rootfile (and logfile) name" << endl;
       cout << "-t test               run test" << endl;
       cout << "-T [--vcal] XX        read in DAC and Trim parameter files corresponding to trim VCAL = XX" << endl;
+      cout << "-x XX                 x position for GUI placement" << endl;
+      cout << "-y YY                 y position for GUI placement" << endl;
       cout << "-v verbositylevel     set verbosity level: QUIET CRITICAL ERROR WARNING DEBUG DEBUGAPI DEBUGHAL ..." << endl;
       cout << "-L logID              add additional <logID> to log output after the timestamp. ex: pxar -L TB1" << endl;
       return 0;
@@ -97,12 +99,12 @@ int main(int argc, char *argv[]){
     LOG(logINFO) << "terminate and shut down";
   }
 
-
   pxar::pxarCore *api(0);
   if (doUpdateFlash) {
     api = new pxar::pxarCore("*", verbosity);
     struct stat buffer;
     if (stat(flashFile.c_str(), &buffer) == 0) {
+
       api->flashTB(flashFile);
     } else {
       LOG(logINFO) << "error: File " << flashFile << " not found" << endl;
@@ -110,7 +112,6 @@ int main(int argc, char *argv[]){
     delete api;
     return 0;
   }
-
 
   ConfigParameters *configParameters = ConfigParameters::Singleton();
   configParameters->setDirectory(dir);
@@ -154,7 +155,7 @@ int main(int argc, char *argv[]){
   LOG(logINFO) << "*** Welcome to pxar ***";
   LOG(logINFO) << Form("*** Today: %s", tstamp.c_str());
   string version = exec("git describe --abbrev=4 --dirty --always --tags");
-  PixUtil::replaceAll(version, "\n", ""); 
+  PixUtil::replaceAll(version, "\n", "");
   LOG(logINFO) << "*** Version: " << version;
 
   vector<vector<pair<string,uint8_t> > >       rocDACs = configParameters->getRocDacs();
@@ -183,8 +184,8 @@ int main(int argc, char *argv[]){
 		   i2cAddr);
     } else {
       api->initDUT(configParameters->getHubIds(),
-		   configParameters->getTbmType(), tbmDACs, 
-		   configParameters->getRocType(), rocDACs, 
+		   configParameters->getTbmType(), tbmDACs,
+		   configParameters->getRocType(), rocDACs,
 		   rocPixels);
     }
 
@@ -223,7 +224,9 @@ int main(int argc, char *argv[]){
   a.setRootFileUpdate(doUpdateRootFile);
   LOG(logDEBUG) << "Initial Analog Current: " << api->getTBia()*1000 << "mA";
   LOG(logDEBUG) << "Initial Digital Current: " << api->getTBid()*1000 << "mA";
-  if (configParameters->getHdiType() == "fpix") { LOG(logDEBUG) << "Initial Module Temperature: " << Form("%3.1f", a.getPixMonitor()->getTemp()) << " C"; }
+  if (configParameters->getHdiType() == "fpix") {
+    LOG(logDEBUG) << "Initial Module Temperature: " << Form("%3.1f", a.getPixMonitor()->getTemp()) << " C";
+  }
 
   if (doRunGui) {
     runGui(a, argc, argv);
@@ -282,7 +285,6 @@ int main(int argc, char *argv[]){
 	cout << "subtest: ->" << subtest << "<- input: ->" << input << "<-" << endl;
       }
 
-
       if (!parameters.compare("nada")) {
 	LOG(logINFO) << "  test: " << input << " no parameter change";
       } else {
@@ -306,6 +308,11 @@ int main(int argc, char *argv[]){
 	continue;
       }
 
+      if (!input.compare("poff")) {
+	api->Poff();
+	continue;
+      }
+
       if (!input.compare("gui"))  runGui(a, argc, argv);
       if (!input.compare("exit")) stop = true;
       if (!input.compare("quit")) stop = true;
@@ -314,22 +321,22 @@ int main(int argc, char *argv[]){
       if (stop) break;
 
       if (!input.compare("delay")) {
-          int delaySeconds = atoi(parameters.c_str());
-          LOG(logINFO) << "delay test by " << delaySeconds << " seconds...";
-          pxar::mDelay(delaySeconds * 1000); // milliseconds
+	int delaySeconds = atoi(parameters.c_str());
+	LOG(logINFO) << "delay test by " << delaySeconds << " seconds...";
+	pxar::mDelay(delaySeconds * 1000); // milliseconds
       } else {
         LOG(logINFO) << "  running: " << input;
         PixTest *t = factory->createTest(input, &a);
         if (0 == t) t = userfactory->createTest(input, &a);
         if (t) {
-        	if (subtest.compare("nada")) {
-        	  t->runCommand(subtest);
-        	} else {
-        	  t->doTest();
-        	}
-  	     delete t;
+	  if (subtest.compare("nada")) {
+	    t->runCommand(subtest);
+	  } else {
+	    t->doTest();
+	  }
+	  delete t;
         } else {
-  	LOG(logINFO) << "command ->" << input << "<- not known, ignored";
+	  LOG(logINFO) << "command ->" << input << "<- not known, ignored";
         }
       }
     } while (!stop);
@@ -340,7 +347,9 @@ int main(int argc, char *argv[]){
   // -- clean exit (however, you should not get here when running with the GUI)
   LOG(logDEBUG) << "Final Analog Current: " << api->getTBia()*1000 << "mA";
   LOG(logDEBUG) << "Final Digital Current: " << api->getTBid()*1000 << "mA";
-  if (configParameters->getHdiType() == "fpix") { LOG(logDEBUG) << "Final Module Temperature: " << Form("%3.1f", a.getPixMonitor()->getTemp()) << " C"; }
+  if (configParameters->getHdiType() == "fpix") {
+    LOG(logDEBUG) << "Final Module Temperature: " << Form("%3.1f", a.getPixMonitor()->getTemp()) << " C";
+  }
   a.getPixMonitor()->dumpSummaries();
   rfile->Close();
   if (api) delete api;
@@ -352,11 +361,24 @@ int main(int argc, char *argv[]){
 
 
 // ----------------------------------------------------------------------
-void runGui(PixSetup &a, int /*argc*/, char ** /*argv[]*/) {
+void runGui(PixSetup &a, int argc, char *argv[]) {
+
+  int x(a.getConfigParameters()->getGuiX()), y(a.getConfigParameters()->getGuiY());
+  bool changed(false);
+  for (int i = 0; i < argc; i++){
+    if (!strcmp(argv[i], "-x")) {x = atoi(argv[++i]); changed = true; }
+    if (!strcmp(argv[i], "-y")) {y = atoi(argv[++i]); changed = true; }
+  }
+
+  if (changed) {
+    a.getConfigParameters()->setGuiX(x);
+    a.getConfigParameters()->setGuiY(y);
+    a.getConfigParameters()->writeConfigParameterFile();
+  }
 
   TApplication theApp("App", 0, 0);
   theApp.SetReturnFromRun(true);
-  PixGui gui(gClient->GetRoot(), 1300, 800, &a);
+  PixGui gui(gClient->GetRoot(), x, y, &a);
   theApp.Run();
   LOG(logINFO) << "closing down 0 ";
 }
@@ -374,7 +396,8 @@ void createBackup(string rootfile, string logfile) {
   if (1 == result) return;
 
   TDatime d(modtime);
-  string tstamp = Form("_%d%02d%02d_%02d%02d%02d", d.GetYear(), d.GetMonth(), d.GetDay(), d.GetHour(), d.GetMinute(), d.GetSecond());
+  string tstamp = Form("_%d%02d%02d_%02d%02d%02d",
+		       d.GetYear(), d.GetMonth(), d.GetDay(), d.GetHour(), d.GetMinute(), d.GetSecond());
   PixUtil::replaceAll(nrootfile, ".root", tstamp+".root");
   PixUtil::replaceAll(nlogfile, ".log", tstamp+".log");
 
@@ -383,6 +406,7 @@ void createBackup(string rootfile, string logfile) {
   if (!gSystem->AccessPathName(logfile.c_str())) gSystem->Rename(logfile.c_str(), nlogfile.c_str());
 
 }
+
 
 // ----------------------------------------------------------------------
 string exec(string cmd) {
@@ -400,7 +424,7 @@ string exec(string cmd) {
   }
 #if (defined WIN32)
   _pclose(pipe);
-#else 
+#else
   pclose(pipe);
 #endif
   return result;

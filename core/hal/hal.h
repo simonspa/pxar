@@ -14,7 +14,7 @@ namespace pxar {
   {
 
   public:
-    /** Default constructor for cerating a new HAL instance. Takes
+    /** Default constructor for creating a new HAL instance. Takes
      *  a testboard USB ID name as parameter and tries to connect to
      *  the board. Exception is thrown if connection fails.
      */
@@ -117,6 +117,10 @@ namespace pxar {
      *  DACs are provided as map of uint8_t,uint8_t pairs  with DAC Id and DAC value.
      */
     bool rocSetDACs(uint8_t roci2c, std::map< uint8_t, uint8_t > dacPairs);
+
+    /** Select the RDA channel of a layer 1 module for tbm readback
+    */
+    void tbmSelectRDA(uint8_t rda_id);
 
     /** Set a register on a specific TBM at hubid
      */
@@ -359,6 +363,11 @@ namespace pxar {
      */
     rawEvent daqRawEvent();
 
+    /** Return an Event and an rawEvent from the same data
+     */
+    void daqCombinedEvent(Event &event, rawEvent &rawevent);
+    void daqBothEvents(Event &event, rawEvent &rawevent);
+
     /** Read all remaining decoded Events from the FIFO buffer
      */
     std::vector<Event> daqAllEvents();
@@ -434,7 +443,7 @@ namespace pxar {
     bool _initialized;
 
     /** Compatibility status of the HAL RPC calls with the DTB. If not set the
-     *  DTB cannot be initialized, onlz flashing is allowed then.
+     *  DTB cannot be initialized, only flashing is allowed then.
      */
     bool _compatible;
 

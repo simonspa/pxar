@@ -136,7 +136,12 @@ void PixSetup::writeTrimFiles() {
 
 // ----------------------------------------------------------------------
 void PixSetup::writeTbmParameterFiles() {
-  for (unsigned int itbm = 0; itbm < fApi->_dut->getNTbms(); itbm += 2) {
-    fConfigParameters->writeTbmParameterFile(itbm / 2, fApi->_dut->getTbmDACs(itbm), fApi->_dut->getTbmChainLengths(itbm), fApi->_dut->getTbmDACs(itbm+1), fApi->_dut->getTbmChainLengths(itbm+1));
+  for (unsigned int itbm = 0; itbm < fApi->_dut->getNTbmCores(); itbm += 2) {
+    fConfigParameters->writeTbmParameterFile(itbm/2,
+					     fApi->_dut->getTbmDACs(itbm),
+					     fApi->_dut->getTbmChainLengths(itbm),
+					     fApi->_dut->getTbmDACs(itbm+1),
+					     fApi->_dut->getTbmChainLengths(itbm+1)
+					     );
   }
 }

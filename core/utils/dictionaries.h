@@ -253,6 +253,9 @@ namespace pxar {
 
       _registers["vibias_roc"] = dacConfig(ROC_DAC_VIbias_roc,255,ROC_REG);
 
+      // DAC only present in the PROC600, same address as old VIBias_Bus:
+      _registers["vcolorbias"] = dacConfig(ROC_DAC_VIBias_Bus,255,ROC_REG);
+
       // DACs only relevant for analog chips:
       _registers["vnpix"]      = dacConfig(ROC_DAC_Vnpix,255,ROC_REG);
       _registers["vsumcol"]    = dacConfig(ROC_DAC_VsumCol,255,ROC_REG);
@@ -316,6 +319,8 @@ namespace pxar {
       _devices["proc600"]           = ROC_PROC600;
       _devices["psi46digplus"]      = ROC_PROC600;
       _devices["psi46digl1"]        = ROC_PROC600;
+      _devices["proc600v2"]         = ROC_PROC600V2;
+      _devices["proc600_v2"]        = ROC_PROC600V2;
 
       // TBM flavors:
       _devices["notbm"]         = TBM_NONE;
@@ -326,8 +331,7 @@ namespace pxar {
       _devices["tbm08c"]        = TBM_08C;
       _devices["tbm09"]         = TBM_09;
       _devices["tbm09c"]        = TBM_09C;
-      _devices["tbm09d"]        = TBM_10;
-      _devices["tbm10"]        = TBM_10;
+      _devices["tbm10c"]        = TBM_10C;
     }
 
     std::map<std::string, uint8_t> _devices;

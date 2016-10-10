@@ -236,6 +236,10 @@ namespace pxar {
      *  out-of-range, a pxar::InvalidConfig exception is thrown.
      *  The new settings are stored in the pxar::dut object for later reference.
      */
+
+    /** Function to read current test board delay values */
+    std::vector<std::pair<std::string, uint8_t> > getTestboardDelays();
+
     void setTestboardDelays(std::vector<std::pair<std::string,uint8_t> > sig_delays);
 
     /** Update method for testboard pattern generator. This method requires
@@ -430,6 +434,14 @@ namespace pxar {
      *  with even IDs (0,2,...) and TBM Beta cores with odd IDs (1,3,...).
      */
     bool setTbmReg(std::string regName, uint8_t regValue);
+
+    /** Select the RDA channel of a layer 1 module for tbm readback
+    */
+    void selectTbmRDA(uint8_t tbmid);
+
+    /** Manually set the HUB_address in the testboard
+     */
+    void setHubID(uint8_t id);
 
     /** Method to scan a DAC range and measure the pulse height
      *
@@ -753,6 +765,10 @@ namespace pxar {
      */
     rawEvent daqGetRawEvent();
 
+    /** Return an Event and an rawEvent from the same data
+     */
+    void daqGetCombinedEvent(Event& event, rawEvent& rawevent);
+
     /** Function to fire the previously defined pattern command list "nTrig"
      *  times, the function parameter defaults to 1.
      *  The function returns the triggering period actually used after cross-check
@@ -1043,7 +1059,7 @@ namespace pxar {
 
     /** Function returning the number of TBMs:
      */
-    size_t getNTbms();
+    size_t getNTbmCores();
 
     /** Function returning the TBM type programmed:
      */

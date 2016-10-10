@@ -64,6 +64,22 @@ bool pxarCore::initTestboard(std::vector<std::pair<std::string,uint8_t> > sig_de
   return true;
 }
 
+std::vector< std::pair<std::string,uint8_t> > pxarCore::getTestboardDelays() {
+
+  if(status()) {
+    std::vector< std::pair<std::string,uint8_t> > vec;
+
+    // Get singleton DAC dictionary object:
+    RegisterDictionary * _dict = RegisterDictionary::getInstance();
+
+    for(std::map< uint8_t,uint8_t >::iterator it = _dut->sig_delays.begin(); it != _dut->sig_delays.end(); ++it) {
+      vec.push_back(std::make_pair(_dict->getName(it->first, DTB_REG), it->second));
+    }
+    return vec;
+  }
+  else return std::vector< std::pair<std::string,uint8_t> >();
+}
+
 void pxarCore::setTestboardDelays(std::vector<std::pair<std::string,uint8_t> > sig_delays) {
   if(!_hal->status()) {
     LOG(logERROR) << "Signal delays not updated!";
@@ -73,6 +89,7 @@ void pxarCore::setTestboardDelays(std::vector<std::pair<std::string,uint8_t> > s
   _hal->setTestboardDelays(_dut->sig_delays);
   LOG(logDEBUGAPI) << "Testboard signal delays updated.";
 }
+
 void pxarCore::setDecodingOffset(uint8_t offset) {  _hal->setOffset(offset); }
 
 void pxarCore::setPatternGenerator(std::vector<std::pair<std::string,uint8_t> > pg_setup) {
@@ -509,7 +526,7 @@ uint8_t pxarCore::stringToDeviceCode(std::string name) {
   uint8_t _code = _devices->getDevCode(name);
   LOG(logDEBUGAPI) << "Device type return: " << static_cast<int>(_code);
 
-  if(_code == 0x0) {LOG(logERROR) << "Unknown device \"" << static_cast<int>(_code) << "\"!";}
+  if(_code == 0x0) {LOG(logERROR) << "Unknown device: \"" << name << "\" could not be found in the dictionary!";}
   return _code;
 }
 
@@ -798,6 +815,32 @@ bool pxarCore::setTbmReg(std::string regName, uint8_t regValue) {
     if(!setTbmReg(regName, regValue, tbms)) return false;
   }
   return true;
+}
+
+void pxarCore::selectTbmRDA(uint8_t tbmid) {
+  if (tbmid < 2) {
+    uint8_t hubid = _dut->getEnabledTbms().at(tbmid*2).hubid;
+    setHubID(hubid);
+    _hal->tbmSelectRDA(1 - tbmid); // FIXME: change mapping in firmware for better readability
+  }
+  else {
+    LOG(logERROR) << "We don't have a TBM at RDA channel " << int(tbmid);
+  }
+}
+
+void pxarCore::setHubID(uint8_t id) {
+  // check if provided hubid is available
+  std::vector<int> hubids;
+  std::vector<tbmCoreConfig> tbms = _dut->getEnabledTbms();
+  for (unsigned int i = 0; i < tbms.size() / 2; i++) {
+    hubids.push_back(tbms.at(i*2).hubid);
+  }
+  if (std::find(hubids.begin(), hubids.end(), id) != hubids.end()) {
+    _hal->setHubId(id);
+  }
+  else {
+    LOG(logERROR) << "This hubid does not exist in the dut: " << int(id);
+  }
 }
 
 std::vector< std::pair<uint8_t, std::vector<pixel> > > pxarCore::getPulseheightVsDAC(std::string dacName, uint8_t dacMin, uint8_t dacMax, uint16_t flags, uint16_t nTriggers) {
@@ -1546,6 +1589,10 @@ rawEvent pxarCore::daqGetRawEvent() {
   // Return the next raw data record from the FIFO buffer:
   // The HAL function throws pxar::DataNoEvent if no event is available
   return _hal->daqRawEvent();
+}
+
+void pxarCore::daqGetCombinedEvent(Event &event, rawEvent &rawevent) {
+  _hal->daqCombinedEvent(event, rawevent);
 }
 
 bool pxarCore::daqStop() {
@@ -2436,12 +2483,12 @@ uint16_t pxarCore::GetADC( uint8_t rpc_par1 ){
 
 void pxarCore::setReportingLevel(std::string logLevel)
 {
-  LOG(logINFO) << "Change Reporting Level from " << Log::ToString(Log::ReportingLevel()) << " to " << logLevel;
   Log::ReportingLevel() = Log::FromString(logLevel);
+  LOG(logQUIET) << "Changed Reporting Level from " << Log::ToString(Log::ReportingLevel()) << " to " << logLevel;
 }
 
 std::string pxarCore::getReportingLevel()
 {
-  LOG(logINFO) << "Reporting Level is " << Log::ToString(Log::ReportingLevel());
+  LOG(logQUIET) << "Reporting Level is " << Log::ReportingLevel();
   return Log::ToString(Log::ReportingLevel());
 }
