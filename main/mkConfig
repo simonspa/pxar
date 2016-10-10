@@ -850,6 +850,13 @@ rundaqtrg           button
 daqseconds          5
 rundaqseconds       button
 
+-- DoubleColumn
+min                 0
+max                 40
+npix                4
+delay               65
+data                button
+
 
 EOF
 
