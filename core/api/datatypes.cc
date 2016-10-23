@@ -328,6 +328,7 @@ namespace pxar {
     LOG(logINFO) << "\t frame (failed synchr.):   " << this->errors_event_frame();
     LOG(logINFO) << "\t idle data (no TBM trl):   " << this->errors_event_idledata();
     LOG(logINFO) << "\t no data (only TBM hdr):   " << this->errors_event_nodata();
+    LOG(logINFO) << "\t PKAM:                     " << this->errors_event_pkam();
     LOG(logINFO) << "  TBM errors: \t\t           " << this->errors_tbm();
     LOG(logINFO) << "\t flawed TBM headers:       " << this->errors_tbm_header();
     LOG(logINFO) << "\t flawed TBM trailers:      " << this->errors_tbm_trailer();

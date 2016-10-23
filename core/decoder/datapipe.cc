@@ -500,10 +500,11 @@ namespace pxar {
       LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel())
 		    << " detected a PKAM reset, event cleared.";
 
-      // This breaks the readback for the missing roc, let's ignore this readback cycle for all ROCs:
-      std::fill(readback_dirty.begin(), readback_dirty.end(), true);
-      // Clearing event content:
-      roc_Event.Clear();
+        decodingStats.m_errors_event_pkam++;
+        // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
+        std::fill(readback_dirty.begin(), readback_dirty.end(), true);
+        // Clearing event content:
+        roc_Event.Clear();
     }
     // In case of a NoTokenPass flag, no ROC headers are expected
     else if(roc_Event.hasNoTokenPass() && (roc_n+1 > 0)) {
@@ -511,7 +512,7 @@ namespace pxar {
 		    << " has NoTokenPass but " << roc_n+1
 		    << " ROCs were found";
       decodingStats.m_errors_roc_missing++;
-      // This breaks the readback for the missing roc, let's ignore this readback cycle for all ROCs:
+      // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
       std::fill(readback_dirty.begin(), readback_dirty.end(), true);
       // Clearing event content:
       roc_Event.Clear();
@@ -534,7 +535,7 @@ namespace pxar {
           LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
                         << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
           decodingStats.m_errors_roc_missing++;
-          // This breaks the readback for the missing roc, let's ignore this readback cycle for all ROCs:
+          // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
           std::fill(readback_dirty.begin(), readback_dirty.end(), true);
           // Clearing event content:
           roc_Event.Clear();
@@ -544,7 +545,7 @@ namespace pxar {
         LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
                       << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
         decodingStats.m_errors_roc_missing++;
-        // This breaks the readback for the missing roc, let's ignore this readback cycle for all ROCs:
+        // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
         std::fill(readback_dirty.begin(), readback_dirty.end(), true);
         // Clearing event content:
         roc_Event.Clear();

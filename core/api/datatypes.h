@@ -509,6 +509,7 @@ namespace pxar {
       m_errors_event_frame(0),
       m_errors_event_idledata(0),
       m_errors_event_nodata(0),
+      m_errors_event_pkam(0),
       m_errors_tbm_header(0),
       m_errors_tbm_trailer(0),
       m_errors_tbm_eventid_mismatch(0),
@@ -537,6 +538,7 @@ namespace pxar {
       lhs.m_errors_event_frame += rhs.m_errors_event_frame;
       lhs.m_errors_event_idledata += rhs.m_errors_event_idledata;
       lhs.m_errors_event_nodata += rhs.m_errors_event_nodata;
+      lhs.m_errors_event_pkam += rhs.m_errors_event_pkam;
 
       // TBM errors:
       lhs.m_errors_tbm_header += rhs.m_errors_tbm_header;
@@ -598,6 +600,7 @@ namespace pxar {
     uint32_t errors_event_frame() { return m_errors_event_frame; }
     uint32_t errors_event_idledata() { return m_errors_event_idledata; }
     uint32_t errors_event_nodata() { return m_errors_event_nodata; }
+    uint32_t errors_event_pkam() { return m_errors_event_pkam; }
 
     uint32_t errors_tbm_header() { return m_errors_tbm_header; }
     uint32_t errors_tbm_eventid_mismatch() { return m_errors_tbm_eventid_mismatch; }
@@ -637,6 +640,8 @@ namespace pxar {
     uint32_t m_errors_event_idledata;
     // Total number of DESER400 no-data error (only TBM header received):
     uint32_t m_errors_event_nodata;
+    // PKAM events
+    uint32_t m_errors_event_pkam;
 
     // Total number of events with flawed TBM header:
     uint32_t m_errors_tbm_header;
