@@ -539,6 +539,7 @@ namespace pxar {
           std::fill(readback_dirty.begin(), readback_dirty.end(), true);
           // Clearing event content:
           roc_Event.Clear();
+          LOG(logWARNING) << "DATA: " << listVector(sample->data, true);
         }
       }
       else {
