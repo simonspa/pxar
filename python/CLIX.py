@@ -20,7 +20,7 @@ except ImportError:
     gui_available = False
     pass
 if gui_available:
-    from ROOT import PyConfig, gStyle, TCanvas
+    from ROOT import PyConfig, gStyle, TCanvas, gROOT
 
     PyConfig.IgnoreCommandLineOptions = True
     from pxar_gui import PxarGui
@@ -163,11 +163,11 @@ class PxarCoreCmd(cmd.Cmd):
                 bin2 = (idac % ((max2 - min2) / step2 + 1))
                 d[bin1][bin2] = dac[0].value
 
-        plot = Plotter.create_th2(d, min1, max1, min2, max2, name, dac1, dac2, name)
+        plot = Plotter.create_th2(d, min1, max1, min2, max2, name, dac1, dac2, 'Efficiency')
         plot.Draw('COLZ')
+        plot.SetStats(0)
         self.window = c
         self.Plots.append(plot)
-        # self.window.histos.append(plot)
         self.window.Update()
 
     def do_gui(self, line):
@@ -346,6 +346,10 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.testPixel(row, col, 1, roc)
         self.api.maskPixel(row, col, 0, roc)
 
+    def enable_all(self, roc=None):
+        self.api.testAllPixels(1) if roc is None else self.api.testAllPixels(1, roc)
+        self.api.maskAllPixels(0) if roc is None else self.api.maskAllPixels(0, roc)
+
     def vcal_scan(self, vec_ph, average, loops, start=0):
         for vcal in range(256):
             self.api.setDAC("vcal", vcal)
@@ -382,8 +386,11 @@ class PxarCoreCmd(cmd.Cmd):
             if found_values:
                 break
 
-    def activated_pixels(self, roc=0):
-        return 'ROC ' + str(roc) + ' ' + str(self.api.getNEnabledPixels(roc)) + '/' +  str(self.api.getNMaskedPixels(roc))
+    def print_activated(self, roc=None):
+        active = self.api.getNEnabledPixels() if roc is None else self.api.getNEnabledPixels(roc)
+        masked = self.api.getNMaskedPixels() if roc is None else self.api.getNMaskedPixels(roc)
+        print 'Pixels active: {n}'.format(n=active)
+        print 'Pixels masked: {n}'.format(n=masked)
 
     @staticmethod
     def translate_level(level, event, roc=0):
@@ -495,6 +502,51 @@ class PxarCoreCmd(cmd.Cmd):
     def maskEdges(self, enable=1, rocid=0):
         for col, row in [(0, 0), (51, 0), (0, 79), (51, 79)]:
             self.api.maskPixel(col, row, enable, rocid)
+
+    def print_eff(self, data, n_trig):
+        unmasked = 4160 - self.api.getNMaskedPixels()
+        active = self.api.getNEnabledPixels()
+        read_back = sum(px.value for px in data)
+        total = n_trig * (unmasked if unmasked < active else active)
+        print 'Efficiency: {eff:6.2f}% ({rb:5d}/{tot:5d})'.format(eff=100. * read_back / total, rb=int(read_back), tot=total)
+
+    def dac_dac_scan(self, dac1name="caldel", dac1step=1, dac1min=0, dac1max=255, dac2name="vthrcomp", dac2step=1,
+                          dac2min=0, dac2max=255, flags=0, nTriggers=10):
+        for roc in xrange(self.api.getNEnabledRocs()):
+            self.api.testAllPixels(0)
+            self.api.testPixel(14, 14, 1, roc)
+            data = self.api.getEfficiencyVsDACDAC(dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max, flags, nTriggers)
+            name = '{dac1} vs {dac2} Scan for ROC {roc}'.format(dac1=dac1name.title(), dac2=dac2name.title(), roc=roc)
+            self.plot_2d(data, name, dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max)
+            self.enable_all(roc)
+
+    def decode_header(self, string):
+        num = int('0x' + string, 0)
+        print 'Decoding Header:'
+        print '    MMMM 0111 1111 10RB'
+        bin_str = bin(num).replace('0b', '')
+        print 'bin {w}'.format(w=' '.join([bin_str[i:i + 4] for i in xrange(0, len(bin_str), 4)]))
+        print 'hex    {w}'.format(w='    '.join(list(string)))
+        print 'header identifier: {hi} {eq} 0x7f8'.format(hi=hex(num & 0x0ffc), eq='=' if (num & 0x0ffc) == 0x7f8 else '!=')
+        return (num & 0x0ffc) == 0x7f8
+
+    def decode_pixel(self, lst):
+        col, row = None, None
+        for i in xrange(0, len(lst), 2):
+            print '\nDecoding Pixel Hit {n}'.format(n=i / 2 + 1)
+            string = lst[i] + lst[i + 1]
+            raw = int('0x{s}'.format(s=lst[i] + lst[i + 1]), 0)
+            print '    0000 CCC0 CCCR RRR0 MMMM RRRP PPP0 PPPP'
+            bin_str = bin(raw).replace('0b', '').zfill(32)
+            print 'bin {w}'.format(w=' '.join([bin_str[j:j + 4] for j in xrange(0, len(bin_str), 4)]))
+            print 'hex    {w}'.format(w='    '.join(list(string)))
+            ph = (raw & 0x0f) + ((raw >> 1) & 0xf0)
+            col = ((raw >> 21) & 0x07) + ((raw >> 22) & 0x38)
+            row = ((raw >> 9) & 0x07) + ((raw >> 14) & 0x78)
+            print '===== [{c}, {r}, {p}] ====='.format(c=col, r=row, p=ph)
+            if lst[i + 1].startswith('4'):
+                break
+        return col, row
 
     # endregion
 
@@ -703,7 +755,7 @@ class PxarCoreCmd(cmd.Cmd):
         """getEfficiencyMap [flags = 0] [nTriggers = 10]: returns the efficiency map"""
         # self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
         data = self.api.getEfficiencyMap(flags, nTriggers)
-        print data[0], len(data)
+        self.print_eff(data, nTriggers)
         self.plot_map(data, "Efficiency", no_stats=True)
 
     def complete_getEfficiencyMap(self, text, line, start_index, end_index):
@@ -714,6 +766,7 @@ class PxarCoreCmd(cmd.Cmd):
     def do_getXPixelAlive(self, nTriggers=50):
         """getxPixelAlive [flags = 0] [nTriggers = 10]: returns the efficiency map"""
         data = self.api.getEfficiencyMap(896, nTriggers)
+        self.print_eff(data, nTriggers)
         self.plot_map(data, "Efficiency", no_stats=True)
 
     def complete_getXPixelAlive(self, text, line, start_index, end_index):
@@ -739,18 +792,13 @@ class PxarCoreCmd(cmd.Cmd):
                 # return all DACS
                 return dacdict.getAllROCNames()
 
-    @arity(0, 10, [str, int, int, int, str, int, int, int, int, int])
-    def do_dacDacScan(self, dac1name="caldel", dac1step=1, dac1min=0, dac1max=255, dac2name="vthrcomp", dac2step=1,
-                      dac2min=0, dac2max=255, flags=0, nTriggers=10):
+    @arity(0, 10, [int, str, int, int, int, str, int, int, int, int])
+    def do_dacDacScan(self, nTriggers=10, dac1name="caldel", dac1step=1, dac1min=0, dac1max=255, dac2name="vthrcomp", dac2step=1,
+                      dac2min=0, dac2max=255, flags=0):
         """getEfficiencyVsDACDAC [DAC1 name] [step size 1] [min 1] [max 1] [DAC2 name] [step size 2] [min 2] [max 2] [flags = 0] [nTriggers = 10]
         return: the efficiency over a 2D DAC1-DAC2 scan"""
-        for roc in xrange(self.api.getNEnabledRocs()):
-            # self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
-            self.api.testAllPixels(0)
-            self.api.testPixel(14, 14, 1, roc)
-            data = self.api.getEfficiencyVsDACDAC(dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max, flags, nTriggers)
-            name = '{dac1} vs {dac2} Scan for ROC {roc}'.format(dac1=dac1name.title(), dac2=dac2name.title(), roc=roc)
-            self.plot_2d(data, name, dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max)
+        self.dac_dac_scan(dac1name, dac1step, dac1min, dac1max, dac2name, dac2step,
+                      dac2min, dac2max, flags, nTriggers)
 
     def complete_dacDacScan(self, text, line, start_index, end_index):
         if text and len(line.split(" ")) <= 2:  # first argument and started to type
@@ -768,6 +816,15 @@ class PxarCoreCmd(cmd.Cmd):
             else:
                 # return all DACS
                 return dacdict.getAllROCNames()
+
+    @arity(0, 9, [int, str, int, int, int, str, int, int, int])
+    def do_xdacDacScan(self, nTriggers=10, dac1name="caldel", dac1step=1, dac1min=0, dac1max=255, dac2name="vthrcomp", dac2step=1,
+                      dac2min=0, dac2max=255):
+        """getEfficiencyVsDACDAC with unmasked ROC"""
+        self.dac_dac_scan(dac1name, dac1step, dac1min, dac1max, dac2name, dac2step, dac2min, dac2max, flags=896, nTriggers=nTriggers)
+
+    def complete_xdacDacScan(self):
+        return [self.do_xdacDacScan.__doc__, '']
 
     @arity(0, 0, [])
     def do_HVon(self):
@@ -1226,7 +1283,7 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0, 1, [int])
     def do_print_activated_pixels(self, roc=0):
         """print_activated_pixels: prints which pixels are activated"""
-        print self.activated_pixels(roc)
+        print self.print_activated(roc)
 
     def print_activated_pixels(self):
         # return help for the cmd
@@ -1248,7 +1305,7 @@ class PxarCoreCmd(cmd.Cmd):
         print "--> disable and mask all Pixels of all activated ROCs"
         print_string = '--> enable and unmask Pixel ' + str(row) + "/" + str(column) + ' ('
         for roc in range(self.api.getNEnabledRocs()):
-            print_string += self.activated_pixels(roc)
+            print_string += self.print_activated(roc)
             if roc < self.api.getNEnabledRocs() - 1:
                 print_string += ', '
         print_string += ')'
@@ -1258,20 +1315,36 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_enableOnePixel.__doc__, '']
 
-    @arity(1, 3, [int, int, int])
-    def do_xEnableBlock(self, blocksize, row=3, col=3):
-        """xEnableBlock [blocksize] [row] [col] : masks all Pixel; starting from row and col (default 3/3) unmasks block of size blocksize  """
+    @arity(0, 4, [int, int, int, int])
+    def do_enableBlock(self, right=3, up=None, row=3, col=3):
+        """enableBlock [right=3] [up=right] [row=3] [col=3] : unmask all Pixels; starting from row and col enable block of size up * right"""
+        up = right if up is None else up
         self.api.maskAllPixels(1)
-        print "--> all Pixels masked (" + str(self.api.getNMaskedPixels(0)) + ")"
-        for i in range(3, blocksize + 3):
-            for j in range(3, blocksize + 3):
-                self.api.maskPixel(i, j, 0)
-        print "--> unmask Block 3/3 to " + str(blocksize + 3) + "/" + str(blocksize + 3) + " (" + str(
-            self.api.getNMaskedPixels(0)) + " Pixel)"
+        self.api.testAllPixels(1)
+        print '--> mask and enable all pixels!'
+        for i in range(right):
+            for j in range(up):
+                self.api.maskPixel(i + col, j + row, 0)
+        print '--> unmask Block from {c}/{r} to {c1}/{r1}'.format(c=col, r=row, c1=col + right, r1=row + up)
+        self.print_activated()
 
-    def complete_xEnableBlock(self, text, line, start_index, end_index):
-        # return help for the cmd
-        return [self.do_xEnableBlock.__doc__, '']
+    def complete_enableBlock(self):
+        return [self.do_enableBlock.__doc__, '']
+    
+    @arity(0, 4, [int, int, int, int])
+    def do_maskFrame(self, pix=1):
+        """maskFrame [pix=1] : masking outer frame with equal pixel distance"""
+        self.api.maskAllPixels(1)
+        self.api.testAllPixels(1)
+        print '--> mask and enable all pixels!'
+        for i in range(pix, 52 - pix):
+            for j in range(pix, 80 - pix):
+                self.api.maskPixel(i, j, 0)
+        print '--> masking frame of {n} pixels'.format(n=pix)
+        self.print_activated()
+
+    def complete_maskFrame(self):
+        return [self.do_maskFrame.__doc__, '']
 
     @arity(2, 2, [int, int])
     def do_enablePixel(self, row, column):
@@ -1303,12 +1376,11 @@ class PxarCoreCmd(cmd.Cmd):
 
     @arity(0, 0, [])
     def do_PixelActive(self):
-        """PixelActive : shows how many Pixels are acitve and how many masked"""
-        if self.api.getNEnabledPixels() == 1:
-            print "1", "\tPixel active"
-        else:
-            print self.api.getNEnabledPixels(), "\tPixels active"
-        print self.api.getNMaskedPixels(), "\tPixels masked"
+        """PixelActive : shows how many Pixels are active and how many masked"""
+        active = self.api.getNEnabledPixels()
+        masked = self.api.getNMaskedPixels()
+        print 'Pixel{s} active: {n}'.format(s='s' if active > 1 else ' ', n=active)
+        print 'Pixel{s} masked: {n}'.format(s='s' if masked > 1 else ' ', n=masked)
 
     def complete_PixelActive(self, text, line, start_index, end_index):
         # return help for the cmd
@@ -2452,6 +2524,18 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_efficiency_check.__doc__, '']
 
+    @arity(2, 2, [int, int])
+    def do_setZaxis(self, low, high):
+        """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
+        c = gROOT.GetListOfCanvases()[-1]
+        for item in c.GetListOfPrimitives():
+            if item.GetName() not in ['TFrame', 'title']:
+                item.GetZaxis().SetRangeUser(low, high)
+                break
+
+    def complete_setZaxis(self):
+        return [self.do_setZaxis.__doc__, '']
+
     @arity(2, 7, [int, int, str, int, int, int, int])
     def do_efficiency_scan(self, start, stop, dac_str='vana', ntrig=100, col=14, row=14, vcal=200):
         """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
@@ -2542,6 +2626,32 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_anaCurrent(self):
         # return help for the cmd
         return [self.do_anaCurrent.__doc__, '']
+
+    def do_decode_linear(self, sample):
+        words = sample.split(' ')
+        headers = 0
+        good_headers = 0
+        i = 0
+        pixels = {}
+        while i < len(words):
+            if words[i][0] in ['8', 'c']:
+                headers += 1
+                good_headers += self.decode_header(words[i])
+            else:
+                col, row = self.decode_pixel(words[i:])
+                string = '{c} {r}'.format(c=col, r=row)
+                if string not in pixels:
+                    pixels[string] = 0
+                pixels[string] +=1
+                i +=1
+            i += 1
+        print 'Good Headers: {p:4.1f}% ({g}/{h})'.format(p=good_headers / float(headers) * 100, g=good_headers, h=headers)
+        for key, word in pixels.iteritems():
+            print 'Pixel', key, word
+
+
+    def complete_decode_linear(self):
+        return [self.do_decode_linear.__doc__, '']
 
     @staticmethod
     def do_quit(q=1):
