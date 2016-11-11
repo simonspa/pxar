@@ -1794,10 +1794,10 @@ class PxarCoreCmd(cmd.Cmd):
 
 
         # plot wbc_scan
-        self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
+        self.window = TCanvas('c', 'c', 1000, 1000)
         plot = Plotter.create_tgraph(wbc_scan, "wbc scan", "wbc", "evt/trig [%]", min_wbc)
-        self.window.histos.append(plot)
-        self.window.update()
+        self.Plots.append(plot)
+        plot.Draw('ap')
 
     def complete_wbcScan(self):
         # return help for the cmd
