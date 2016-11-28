@@ -20,7 +20,7 @@ except ImportError:
     gui_available = False
     pass
 if gui_available:
-    from ROOT import PyConfig, gStyle, TCanvas, gROOT
+    from ROOT import PyConfig, gStyle, TCanvas, gROOT, TGraph
 
     PyConfig.IgnoreCommandLineOptions = True
     from pxar_gui import PxarGui
@@ -392,6 +392,9 @@ class PxarCoreCmd(cmd.Cmd):
         print 'Pixels active: {n}'.format(n=active)
         print 'Pixels masked: {n}'.format(n=masked)
 
+    def get_activated(self, roc=None):
+        return (self.api.getNEnabledPixels(), self.api.getNMaskedPixels()) if roc is None else (self.api.getNEnabledPixels(roc), self.api.getNMaskedPixels(roc))
+
     @staticmethod
     def translate_level(level, event, roc=0):
         offset = 7
@@ -508,7 +511,9 @@ class PxarCoreCmd(cmd.Cmd):
         active = self.api.getNEnabledPixels()
         read_back = sum(px.value for px in data)
         total = n_trig * (unmasked if unmasked < active else active)
-        print 'Efficiency: {eff:6.2f}% ({rb:5d}/{tot:5d})'.format(eff=100. * read_back / total, rb=int(read_back), tot=total)
+        eff = 100. * read_back / total
+        print 'Efficiency: {eff:6.2f}% ({rb:5d}/{tot:5d})'.format(eff=eff, rb=int(read_back), tot=total)
+        return eff
 
     def dac_dac_scan(self, dac1name="caldel", dac1step=1, dac1min=0, dac1max=255, dac2name="vthrcomp", dac2step=1,
                           dac2min=0, dac2max=255, flags=0, nTriggers=10):
@@ -547,6 +552,39 @@ class PxarCoreCmd(cmd.Cmd):
             if lst[i + 1].startswith('4'):
                 break
         return col, row
+
+    def count_hits(self, duration, wbc):
+        t = time()
+        counts = 0
+        self.api.setDAC('wbc', wbc)
+        self.api.daqTriggerSource('async')
+        self.api.daqStart()
+        while time() - t < duration:
+            sleep(.3)
+            try:
+                data = self.api.daqGetEventBuffer()
+                counts += sum(len(ev.pixels) for ev in data)
+            except RuntimeError:
+                pass
+            t1 = duration - time() + t
+            print '\rTime left: {m:02d}:{s:02d}\tCounts: {c:05d}'.format(m=int(t1 / 60), s=int(t1 % 60), c=counts),
+            sys.stdout.flush()
+        self.api.daqStop()
+        return counts
+
+    def make_canvas(self):
+        c = TCanvas('c', 'c', 1000, 1000)
+        self.window = c
+        return c
+
+    def mask_frame(self, pix=1):
+        self.api.maskAllPixels(1)
+        self.api.testAllPixels(1)
+        print '--> mask and enable all pixels!'
+        for i in range(pix, 52 - pix):
+            for j in range(pix, 80 - pix):
+                self.api.maskPixel(i, j, 0)
+        print '--> masking frame of {n} pixels'.format(n=pix)
 
     # endregion
 
@@ -1291,7 +1329,7 @@ class PxarCoreCmd(cmd.Cmd):
 
     @arity(0, 3, [int, int, int])
     def do_enableOnePixel(self, row=14, column=14, roc=None):
-        """enableOnePixel [row] [column] : enables one Pixel (default 14/14); masks and disables the rest"""
+        """enableOnePixel [row] [column] [roc] : enables one Pixel (default 14/14); masks and disables the rest"""
         if roc is None:
             self.api.testAllPixels(0)
             self.api.maskAllPixels(1)
@@ -1302,13 +1340,9 @@ class PxarCoreCmd(cmd.Cmd):
             self.api.maskAllPixels(1, roc)
             self.api.testPixel(row, column, 1, roc)
             self.api.maskPixel(row, column, 0, roc)
-        print "--> disable and mask all Pixels of all activated ROCs"
-        print_string = '--> enable and unmask Pixel ' + str(row) + "/" + str(column) + ' ('
-        for roc in range(self.api.getNEnabledRocs()):
-            print_string += self.print_activated(roc)
-            if roc < self.api.getNEnabledRocs() - 1:
-                print_string += ', '
-        print_string += ')'
+        print '--> disable and mask all pixels of all activated ROCs'
+        print_string = '--> enable and unmask Pixel {r}/{c}: '.format(r=row, c=column)
+        print_string += '(' + ','.join('ROC {n}: {a}/{m}'.format(n=roc, a=self.get_activated(roc)[0], m=self.get_activated(roc)[1]) for roc in xrange(self.api.getNEnabledRocs())) + ')'
         print print_string
 
     def complete_enableOnePixel(self, text, line, start_index, end_index):
@@ -1319,12 +1353,12 @@ class PxarCoreCmd(cmd.Cmd):
     def do_enableBlock(self, right=3, up=None, row=3, col=3):
         """enableBlock [right=3] [up=right] [row=3] [col=3] : unmask all Pixels; starting from row and col enable block of size up * right"""
         up = right if up is None else up
-        self.api.maskAllPixels(1)
+        self.api.maskAllPixels(0)
         self.api.testAllPixels(1)
         print '--> mask and enable all pixels!'
         for i in range(right):
             for j in range(up):
-                self.api.maskPixel(i + col, j + row, 0)
+                self.api.maskPixel(i + col, j + row, 1)
         print '--> unmask Block from {c}/{r} to {c1}/{r1}'.format(c=col, r=row, c1=col + right, r1=row + up)
         self.print_activated()
 
@@ -1334,13 +1368,7 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0, 4, [int, int, int, int])
     def do_maskFrame(self, pix=1):
         """maskFrame [pix=1] : masking outer frame with equal pixel distance"""
-        self.api.maskAllPixels(1)
-        self.api.testAllPixels(1)
-        print '--> mask and enable all pixels!'
-        for i in range(pix, 52 - pix):
-            for j in range(pix, 80 - pix):
-                self.api.maskPixel(i, j, 0)
-        print '--> masking frame of {n} pixels'.format(n=pix)
+        self.mask_frame(pix)
         self.print_activated()
 
     def complete_maskFrame(self):
@@ -2649,9 +2677,49 @@ class PxarCoreCmd(cmd.Cmd):
         for key, word in pixels.iteritems():
             print 'Pixel', key, word
 
-
     def complete_decode_linear(self):
         return [self.do_decode_linear.__doc__, '']
+
+    @arity(0, 2, [int, int])
+    def do_countHits(self, duration=30, wbc=110):
+        counts = self.count_hits(duration, wbc)
+        print '\n\nTotal Count after {t} seconds: {c}'.format(t=duration, c=counts)
+
+    def complete_countHits(self):
+        return [self.do_countHits.__doc__, '']
+
+    @arity(2, 4, [int, int, int, int])
+    def do_threshVsCounts(self, start, stop, duration=10, wbc=110):
+        gr = TGraph()
+        for i, vthr in enumerate(xrange(start, stop)):
+            self.api.setDAC('vthrcomp', vthr)
+            counts = self.count_hits(duration, wbc)
+            gr.SetPoint(i, vthr, counts)
+        self.make_canvas()
+        self.Plots.append(gr)
+        gr.SetMarkerStyle(20)
+        gr.Draw('alp')
+
+    def complete_threshVsCounts(self):
+        return [self.do_threshVsCounts.__doc__, '']
+
+    @arity(0, 2, [int, int])
+    def do_effVsMaskedPix(self, n=5, n_trig=100):
+        gr = TGraph()
+        for i in xrange(n):
+            self.mask_frame(i)
+            data = self.api.getEfficiencyMap(896, n_trig)
+            eff = self.print_eff(data, n_trig)
+            unmasked = 4180 - self.api.getNMaskedPixels()
+            gr.SetPoint(i, unmasked, eff)
+        self.make_canvas()
+        self.Plots.append(gr)
+        gr.SetMarkerStyle(20)
+        gr.Draw('alp')
+
+
+    def complete_effVsMaskedPix(self):
+        return [self.do_effVsMaskedPix.__doc__, '']
 
     @staticmethod
     def do_quit(q=1):
