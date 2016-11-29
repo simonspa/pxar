@@ -1289,7 +1289,7 @@ void ConfigParameters::setTrimVcalSuffix(string name, bool nocheck) {
 
   stringstream fname;
 
-  fname << fDirectory << "/" << fTrimParametersFileName << name << "_C" << fI2cAddresses.at(0) << ".dat";
+  fname << fDirectory << "/" << fTrimParametersFileName << name << "_C" << uint16_t(fI2cAddresses.at(0)) << ".dat";
   ifstream InputFile;
   InputFile.open((fname.str()).c_str());
   //  cout << "check for " << fname.str() << endl;
