@@ -30,7 +30,7 @@ import cmd  # for command interface and parsing
 import os  # for file system cmds
 import sys
 from time import time, sleep, strftime
-
+from collections import OrderedDict
 
 # set up the DAC and probe dictionaries
 dacdict = PyRegisterDictionary()
@@ -357,19 +357,43 @@ class PxarCoreCmd(cmd.Cmd):
             for i in range(average):
                 self.api.daqTrigger(1, 500)
                 data = self.api.daqGetEvent()
-                for i in range(loops):
-                    if len(data.pixels) > i:
+                for j in range(loops):
+                    if len(data.pixels) > j:
                         row = data.pixels[i].row
                         sum_ph[row] += data.pixels[i].value
             sum_ph /= average
             for row in range(start, loops + start):
                 vec_ph[row].append(sum_ph[row])
 
+    def scan_vcal(self, ctrl_reg, ntrig=10):
+        self.api.setDAC('ctrlreg', ctrl_reg)
+        for vcal in xrange(0, 256):
+            self.api.setDAC('vcal', vcal)
+            self.api.daqTrigger(ntrig, 500)
+        data = self.api.daqGetEventBuffer()
+        values = [[]] * 256
+        for i in xrange(256):
+            values[i] = [px.value for evt in data[(i * ntrig):((i + 1) * ntrig)] for px in evt.pixels]
+        return OrderedDict({vcal: mean(lst) for vcal, lst in enumerate(values) if lst})
+
+    @staticmethod
+    def find_factor(low_vals, high_vals):
+        gr = TGraph()
+        vals = {}
+        for i, scale in enumerate(xrange(600, 800)):
+            vcals = low_vals.keys() + [scale / 100. * key for key in high_vals.keys()]
+            values = low_vals.values() + high_vals.values()
+            g = Plotter.create_graph(vcals, values)
+            fit = g.Fit('pol1', 'qs', '', vcals[0], low_vals.keys()[-1])
+            gr.SetPoint(i, scale / 100., fit.Chi2())
+            vals[fit.Chi2()] = scale / 100.
+        xmin = vals[min(vals.keys())]
+        print xmin
+
     def trim_ver(self, vec_trim, ntrig, start=0, loops=40):
         for vcal in range(256):
             self.api.setDAC('vcal', vcal)
             ph_ver = zeros(80)
-            data = None
             for i in range(ntrig):
                 self.api.daqTrigger(1, 500)
                 data = self.api.daqGetEvent()
@@ -2687,6 +2711,26 @@ class PxarCoreCmd(cmd.Cmd):
 
     def complete_countHits(self):
         return [self.do_countHits.__doc__, '']
+
+    @arity(0, 3, [int, int, int])
+    def do_calcHighVcal(self, col=14, row=14, ntrig=10):
+        self.api.HVon()
+        self.enable_pix(col, row)
+        self.api.daqStart()
+        data_low = self.scan_vcal(0)
+        data_high = self.scan_vcal(4)
+        # gr1 = Plotter.create_graph(data_low.keys(), data_low.values(), 'gr1', xtit='vcal', ytit='adc')
+        # gr2 = Plotter.create_graph(data_high.keys(), data_high.values(), 'gr2', xtit='vcal', ytit='adc')
+        # gr1.SetLineColor(3)
+        # gr1.SetMarkerColor(3)
+        # mg = TMultiGraph()
+        # mg.Add(gr2)
+        # mg.Add(gr1)
+        # self.plot_graph(mg)
+        self.find_factor(data_low, data_high)
+
+    def complete_calcHighVcal(self):
+        return [self.do_calcHighVcal.__doc__, '']
 
     @arity(2, 4, [int, int, int, int])
     def do_threshVsCounts(self, start, stop, duration=10, wbc=110):
