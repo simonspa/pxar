@@ -2,6 +2,8 @@
 build/
 bin/
 lib/
+data/
+pixel-dtb-firmware/
 obj/
 analogue-pxar/
 test/
