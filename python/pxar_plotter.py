@@ -18,9 +18,9 @@ class Plotter(object):
         return th1
 
     @staticmethod
-    def create_graph(x, y, tit='', xtit='', ytit='', yoff=1.4):
+    def create_graph(x, y, name='gr', tit='', xtit='', ytit='', yoff=1.4):
         gr = TGraph(len(x), array.array('d', x), array.array('d', y))
-        gr.SetNameTitle('gr', tit)
+        gr.SetNameTitle(name, tit)
         gr.SetMarkerStyle(20)
         gr.SetMarkerSize(.5)
         xax = gr.GetXaxis()
