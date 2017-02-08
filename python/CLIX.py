@@ -2888,6 +2888,35 @@ class PxarCoreCmd(cmd.Cmd):
 
     def complete_findErrors1(self):
         return [self.do_findErrors1.__doc__, '']
+
+    @arity(0, 1, [int])
+    def do_getTriggerPhase(self, n_events=100):
+        events = 0
+        gROOT.ProcessLine("gErrorIgnoreLevel = kError;")
+        h = TH1I('h_tp', 'Trigger Phases', 10, 0, 10)
+        h.GetXaxis().SetTitle('Trigger Phase')
+        self.api.daqTriggerSource('extern')
+        self.api.daqStart()
+        t = time()
+        values = []
+        while n_events > events:
+        # while time() - t < 30:
+            event = self.converted_raw_event()
+            if event is not None:
+                p.update(events + 1)
+                # print '{0:05d}/{1:05d}'.format(events, n_events)
+                events += 1
+                values.append(event[1])
+                h.Fill(event[1])
+        print
+        print values
+        self.api.daqStop()
+        h.GetYaxis().SetRangeUser(0, h.GetMaximum() * 1.1)
+        self.plot_graph(h, draw_opt='hist')
+
+    def complete_getTriggerPhase(self):
+        return [self.do_getTriggerPhase.__doc__, '']
+
     @staticmethod
     def do_quit(q=1):
         """quit: terminates the application"""
