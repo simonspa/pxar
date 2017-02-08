@@ -979,6 +979,34 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_daqGetRawEvent.__doc__, '']
 
     @arity(0, 0, [])
+    def do_getStatistics(self):
+        """getStatistics: print full statistics accumulated during last DAQ session"""
+        data = self.api.getStatistics()
+        data.dump
+
+    def complete_getStatistics(self):
+        # return help for the cmd
+        return [self.do_getStatistics.__doc__, '']
+
+    @arity(0, 0, [])
+    def do_daqGetBuffer(self):
+        """daqGetBuffer: read full raw data DTB buffer"""
+        try:
+            dat = self.api.daqGetBuffer()
+            s = ""
+            for i in dat:
+                if i & 0x0FF0 == 0x07f0:
+                    s += "\n"
+                    s += '{:04x}'.format(i) + " "
+                    print s
+        except RuntimeError:
+            pass
+
+    def complete_daqGetBuffer(self):
+        # return help for the cmd
+        return [self.do_daqGetBuffer.__doc__, '']
+
+    @arity(0, 0, [])
     def do_daqGetEventBuffer(self):
         """daqGetEventBuffer: read all decoded events from the DTB buffer"""
         data = []
