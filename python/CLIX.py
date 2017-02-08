@@ -1159,7 +1159,7 @@ class PxarCoreCmd(cmd.Cmd):
                     for j in range(5):
                         try:
                             spread_j += abs(event[1 + roc * 3] - event[3 + roc * 3 + n_levels * 6 + j])
-                        except IndexError:
+                        except (IndexError, TypeError):
                             spread_j = 99
                             break
                     sum_spread += spread_j / 5
@@ -1168,7 +1168,7 @@ class PxarCoreCmd(cmd.Cmd):
                     for j in range(len(cols)):
                         try:
                             mean_value[roc][j] += event[5 + roc * 3 + j * 6]
-                        except IndexError:
+                        except (IndexError, TypeError):
                             mean_value[roc][j] = 0
                             stop_loop = True
                             break
