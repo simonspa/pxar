@@ -612,6 +612,22 @@ class PxarCoreCmd(cmd.Cmd):
                 self.api.maskPixel(i, j, 0)
         print '--> masking frame of {n} pixels'.format(n=pix)
 
+    def setPG(self, cal=True, res=True):
+        """ Sets up the trigger pattern generator for ROC testing """
+        pgcal = self.getDAC('wbc') + (6 if 'dig' in self.api.getRocType() else 5)
+        pg_setup = []
+        if res:
+            pg_setup.append(('PG_RESR', 25))
+        pg_setup.append(('PG_CAL', pgcal) if cal else ('DELAY', 15))
+        pg_setup.append(('PG_TRG', 0 if self.api.getNTbms() != 0 else 15))
+        if self.api.getNTbms() == 0:
+            pg_setup.append(('PG_TOK', 0))
+        print pg_setup
+        try:
+            self.api.setPatternGenerator(tuple(pg_setup))
+        except RuntimeError, err:
+            print err
+
     # endregion
 
     # ==============================================
@@ -656,6 +672,15 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_setExternalClock(self):
         # return help for the cmd
         return [self.do_setExternalClock.__doc__, '']
+
+    @arity(0, 2, [int, int])
+    def do_setPG(self, cal=True, res=True):
+        """setPG [enable]: enables the external DTB clock input, switches off the internal clock. Only switches if external clock is present."""
+        self.setPG(cal, res)
+
+    def complete_setPG(self):
+        # return help for the cmd
+        return [self.do_setPG.__doc__, '']
 
     @arity(2, 2, [str, str])
     def do_SignalProbe(self, probe, name):
