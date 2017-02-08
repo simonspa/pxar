@@ -20,7 +20,7 @@ except ImportError:
     gui_available = False
     pass
 if gui_available:
-    from ROOT import PyConfig, gStyle, TCanvas, gROOT, TGraph
+    from ROOT import PyConfig, gStyle, TCanvas, gROOT, TGraph, TMultiGraph, TH1I, gRandom
 
     PyConfig.IgnoreCommandLineOptions = True
     from pxar_gui import PxarGui
@@ -31,6 +31,7 @@ import os  # for file system cmds
 import sys
 from time import time, sleep, strftime
 from collections import OrderedDict
+from progressbar import Bar, ETA, FileTransferSpeed, Percentage, ProgressBar
 
 # set up the DAC and probe dictionaries
 dacdict = PyRegisterDictionary()
@@ -57,10 +58,15 @@ class PxarCoreCmd(cmd.Cmd):
         self.dir = conf_dir
         self.window = None
         self.Plots = []
+        self.ProgressBar = None
         if gui and gui_available:
             self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
         elif gui and not gui_available:
             print "No GUI available (missing ROOT library)"
+
+    def start_pbar(self, n):
+        self.ProgressBar = ProgressBar(widgets=['Progress: ', Percentage(), ' ', Bar(marker='>'), ' ', ETA(), ' ', FileTransferSpeed()], maxval=n)
+        self.ProgressBar.start()
 
     def plot_eventdisplay(self, data):
         pixels = list()
