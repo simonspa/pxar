@@ -2761,16 +2761,8 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.HVon()
         self.enable_pix(col, row)
         self.api.daqStart()
-        data_low = self.scan_vcal(0)
-        data_high = self.scan_vcal(4)
-        # gr1 = Plotter.create_graph(data_low.keys(), data_low.values(), 'gr1', xtit='vcal', ytit='adc')
-        # gr2 = Plotter.create_graph(data_high.keys(), data_high.values(), 'gr2', xtit='vcal', ytit='adc')
-        # gr1.SetLineColor(3)
-        # gr1.SetMarkerColor(3)
-        # mg = TMultiGraph()
-        # mg.Add(gr2)
-        # mg.Add(gr1)
-        # self.plot_graph(mg)
+        data_low = self.scan_vcal(0, ntrig)
+        data_high = self.scan_vcal(4, ntrig)
         self.find_factor(data_low, data_high)
 
     def complete_calcHighVcal(self):
