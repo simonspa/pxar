@@ -231,22 +231,19 @@ class PxarCoreCmd(cmd.Cmd):
         return addresses
 
     def get_levels(self, convert_header=False):
-        event = self.converted_raw_event()
-        if len(event) == 0:
-            raise Exception('Empty Event: %s' % event)
-        rocs = 0
-        ub = event[0]
-        for i in event:
-            if i < ub * 3 / 4:
-                rocs += 1
-        hits = (len(event) - rocs * 3) / 6
+        events = self.converted_raw_event()
+        if len(events) == 0:
+            raise Exception('Empty Event: %s' % events)
+        ub = events[0]
+        rocs = sum(1 for ev in events if ev < ub * .75)
+        hits = (len(events) - rocs * 3) / 6
         for hit in range(hits):
             for level in range(3, 8):
-                event[level + 6 * hit] = self.translate_level(event[level + 6 * hit], event)
-        for i in range(len(event)):
-            if convert_header and event[i] < ub * 3 / 4:
-                event[i], event[i + 1] = self.translate_level(event[i], event, i), self.translate_level(event[i + 1], event, i)
-        return event
+                events[level + 6 * hit] = self.translate_level(events[level + 6 * hit], events)
+        for i in range(len(events)):
+            if convert_header and events[i] < ub * 3 / 4:
+                events[i], events[i + 1] = self.translate_level(events[i], events, i), self.translate_level(events[i + 1], events, i)
+        return events
 
     def address_level_scan(self):
         self.api.daqStart()
