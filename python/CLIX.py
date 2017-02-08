@@ -193,11 +193,10 @@ class PxarCoreCmd(cmd.Cmd):
         return event
 
     def converted_raw_event(self, verbose=False):
-        event = []
         try:
             event = self.api.daqGetRawEvent()
         except RuntimeError:
-            pass
+            return
         if verbose:
             print "raw Event:\t\t", event
         count = 0
