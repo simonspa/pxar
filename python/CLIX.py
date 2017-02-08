@@ -1493,34 +1493,23 @@ class PxarCoreCmd(cmd.Cmd):
         # return help for the cmd
         return [self.do_PixelActive.__doc__, '']
 
+
     @arity(0, 0, [])
     def do_findAnalogueTBDelays(self):
         """findAnalogueTBDelays: configures tindelay and toutdelay"""
-        best_tin = 10  # default value if algorithm should fail
-        best_tout = 20  # default value if algorithm should fail
+        self.api.setTestboardDelays({'tindelay': 0, 'toutdelay': 20})
+        self.enable_all()
+        old_vcal = self.getDAC('vcal')
+        self.api.setDAC('vcal', 0)
+        data = self.daq_converted_raw()
+        tin = data.index([word for word in data if word < -100][0])
+        data.reverse()
+        tout = 20 - data.index([word for word in data if word > 3 * abs(mean(data[:5]))][0])
 
-        # find tindelay
-        print "\nscan tindelay:\ntindelay\ttoutdelay\trawEvent[0]"
-        for tin in range(5, 20):
-            self.api.setTestboardDelays({"tindelay": tin, "toutdelay": 20})
-            event = self.daq_converted_raw()
-            print str(tin) + "\t\t20\t\t" + str(event[0])
-            if (event[0] < -100):  # triggers for UB, the first one should always be UB
-                best_tin = tin
-                break
-
-        # find toutdelay
-        print "\nscan toutdelay:\ntindelay\ttoutdelay\trawEvent[-1]"
-        for i in range(20, -1, -1):
-            self.api.setTestboardDelays({"tindelay": best_tin, "toutdelay": i})
-            event = self.daq_converted_raw()
-            print str(best_tin) + "\t\t" + str(i) + "\t\t" + str(event[-1])
-            if event[-1] > 20:  # triggers for PH, the last one should always be a pos PH
-                best_tout = i
-                break
-
-        print "set tindelay to:  ", best_tin
-        print "set toutdelay to: ", best_tout
+        self.api.setDAC('vcal', old_vcal)
+        self.api.setTestboardDelays({'tindelay': tin, 'toutdelay': tout})
+        print 'set tindelay to:  ', tin
+        print 'set toutdelay to: ', tout
 
     def complete_FindTBDelays(self):
         # return help for the cmd
