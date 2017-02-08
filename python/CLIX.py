@@ -2112,6 +2112,9 @@ class PxarCoreCmd(cmd.Cmd):
     def do_hit_map(self, max_triggers=1000):
         """ do_hitMap [maxTriggers]: collects a certain amount triggers and plots a hitmap"""
 
+        self.api.daqTriggerSource('extern')
+        self.api.setDAC('wbc', 93)
+        self.api.HVon()
         windowsize = 100
         t = time()
         self.api.daqStart()
@@ -2166,11 +2169,8 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.daqStop()
 
         print "\ntest took: ", round(time() - t, 2), "s"
-        self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
-        plot = Plotter.create_th2(d, 0, 417 if module else 53, 0, 161 if module else 81, "hitmap", 'pixels x',
-                                  'pixels y', "hitmap")
-        self.window.histos.append(plot)
-        self.window.update()
+        plot = Plotter.create_th2(d, 0, 417 if module else 53, 0, 161 if module else 81, "hitmap", 'pixels x',  'pixels y', "hitmap")
+        self.plot_graph(plot, draw_opt='hist')
 
     def complete_hit_map(self):
         # return help for the cmd
