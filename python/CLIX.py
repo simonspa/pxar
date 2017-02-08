@@ -1102,14 +1102,14 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_set_tin_tout.__doc__, '']
 
     @arity(1, 1, [int])
-    def do_set_clock_delays(self, value):
+    def do_setClockDelays(self, value):
         """SetClockDelays [value of clk and ctr]: sets the two TB delays clk and ctr """
         print "TB delays clk and ctr set to: ", value
         self.set_clock(value)
 
-    def complete_set_clock_delays(self):
+    def complete_setClockDelays(self):
         # return help for the cmd
-        return [self.do_set_clock_delays.__doc__, '']
+        return [self.do_setClockDelays.__doc__, '']
 
     @arity(0, 3, [int, int, int])
     def do_find_clk_delay(self, n_rocs=1, min_val=0, max_val=25):
