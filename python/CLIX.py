@@ -2816,10 +2816,78 @@ class PxarCoreCmd(cmd.Cmd):
         gr.SetMarkerStyle(20)
         gr.Draw('alp')
 
-
     def complete_effVsMaskedPix(self):
         return [self.do_effVsMaskedPix.__doc__, '']
 
+    @arity(0, 2, [float])
+    def do_findErrors2(self, t=1, n=10000):
+        self.api.HVon()
+        t_start = time()
+        self.setPG(cal=False, res=False)
+        self.api.daqStart()
+        self.start_pbar(t * 600)
+        while time() - t_start < t * 60:
+            self.ProgressBar.update(int((time() - t_start) * 10) + 1)
+            self.api.daqTrigger(n, 500)
+            self.api.daqGetEventBuffer()
+        self.ProgressBar.finish()
+        self.api.daqStop()
+        self.api.HVoff()
+        self.setPG()
+        stats = self.api.getStatistics()
+        stats.dump
+
+    def complete_findErrors2(self):
+        return [self.do_findErrors2.__doc__, '']
+
+    @arity(0, 1, [float])
+    def do_findErrors(self, t=1):
+        t_start = time()
+        errors = [0] * 4
+        n_triggers = 0
+        while time() - t_start < t * 60:
+            self.api.getEfficiencyMap(0, 10)
+            n_triggers += 41600
+            stats = self.api.getStatistics()
+            errors[0] += stats.errors_event
+            errors[1] += stats.errors_tbm
+            errors[2] += stats.errors_roc
+            errors[3] += stats.errors_pixel
+        print 'Number of triggers: ', n_triggers
+        print 'Number of triggers per pixel: ', n_triggers / 4160
+        print 'Errors: ', errors
+
+    def complete_findErrors(self):
+        return [self.do_findErrors.__doc__, '']
+
+    @arity(0, 2, [float, int])
+    def do_findErrors1(self, t=1, n=10000):
+        self.api.HVon()
+        t_start = time()
+        self.api.testAllPixels(0)
+        gRandom.SetSeed(int(time()))
+        for roc in xrange(self.api.getNRocs()):
+            for _ in xrange(1):
+                col, row = [int(gRandom.Rndm() * i) for i in [52, 80]]
+                print col, row
+                self.api.testPixel(col, row, 1, roc)
+        self.api.daqStart()
+        self.start_pbar(t * 600)
+        n_trig = 0
+        while time() - t_start < t * 60:
+            self.ProgressBar.update(int((time() - t_start) * 10) + 1)
+            self.api.daqTrigger(n, 500)
+            n_trig += n
+            self.api.daqGetEventBuffer()
+        self.ProgressBar.finish()
+        self.api.daqStop()
+        self.api.HVoff()
+        stats = self.api.getStatistics()
+        print 'Triggers: {n}'.format(n=n_trig)
+        stats.dump
+
+    def complete_findErrors1(self):
+        return [self.do_findErrors1.__doc__, '']
     @staticmethod
     def do_quit(q=1):
         """quit: terminates the application"""
@@ -2833,7 +2901,7 @@ class PxarCoreCmd(cmd.Cmd):
     do_sd = do_set_tin_tout
     do_dre = do_daqRawEvent
     do_de = do_daqEvent
-    do_sc = do_set_clock_delays
+    do_sc = do_setClockDelays
     do_vc = do_varyClk
     do_arm1 = do_enableOnePixel
     do_arm = do_enablePixel
