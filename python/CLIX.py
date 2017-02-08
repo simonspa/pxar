@@ -2768,6 +2768,25 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_calcHighVcal(self):
         return [self.do_calcHighVcal.__doc__, '']
 
+    @arity(0, 3, [int, int, int])
+    def do_scanVcal(self, col=14, row=14, ntrig=10):
+        self.api.HVon()
+        self.enable_pix(col, row)
+        self.api.daqStart()
+        data_low = self.scan_vcal(0, ntrig)
+        data_high = self.scan_vcal(4, ntrig)
+        gr1 = Plotter.create_graph(data_low.keys(), data_low.values(), 'gr1', xtit='vcal', ytit='adc')
+        gr2 = Plotter.create_graph(data_high.keys(), data_high.values(), 'gr2', xtit='vcal', ytit='adc')
+        gr1.SetLineColor(3)
+        gr1.SetMarkerColor(3)
+        mg = TMultiGraph()
+        mg.Add(gr2)
+        mg.Add(gr1)
+        self.plot_graph(mg)
+
+    def complete_scanVcal(self):
+        return [self.do_scanVcal.__doc__, '']
+
     @arity(2, 4, [int, int, int, int])
     def do_threshVsCounts(self, start, stop, duration=10, wbc=110):
         gr = TGraph()
