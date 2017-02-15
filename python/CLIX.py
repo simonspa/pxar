@@ -20,7 +20,7 @@ except ImportError:
     gui_available = False
     pass
 if gui_available:
-    from ROOT import PyConfig, gStyle, TCanvas, gROOT, TGraph, TMultiGraph, TH1I, gRandom
+    from ROOT import PyConfig, gStyle, TCanvas, gROOT, TGraph, TMultiGraph, TH1I, gRandom, TCutG
 
     PyConfig.IgnoreCommandLineOptions = True
     from pxar_gui import PxarGui
@@ -59,6 +59,8 @@ class PxarCoreCmd(cmd.Cmd):
         self.window = None
         self.Plots = []
         self.ProgressBar = None
+        self.NRows = 80
+        self.NCols = 52
         if gui and gui_available:
             self.window = PxarGui(ROOT.gClient.GetRoot(), 800, 800)
         elif gui and not gui_available:
@@ -121,10 +123,23 @@ class PxarCoreCmd(cmd.Cmd):
             x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
             d[x][y] += 1 if count else px.value
 
+
         plot = Plotter.create_th2(d, 0, 417 if module else 52, 0, 161 if module else 80, name, 'pixels x', 'pixels y', name)
         if no_stats:
             plot.SetStats(0)
         plot.Draw('COLZ')
+        # draw margins of the rocs for the module
+        if module:
+            for i in xrange(2):
+                for j in xrange(8):
+                    rows, cols = self.NRows, self.NCols
+                    x = array([cols * j, cols * (j + 1), cols * (j + 1), cols * j, cols * j ], 'd')
+                    y = array([rows * i, rows * i, rows * (i + 1), rows * (i + 1), rows * i], 'd')
+                    cut = TCutG('r{n}'.format(n=j + (j * i)), 5, x, y)
+                    cut.SetLineColor(1)
+                    cut.SetLineWidth(1)
+                    self.Plots.append(cut)
+                    cut.Draw('same')
         self.window = c
         self.Plots.append(plot)
         # self.window.histos.append(plot)
