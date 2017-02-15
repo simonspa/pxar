@@ -633,7 +633,8 @@ class PxarCoreCmd(cmd.Cmd):
         pg_setup = []
         if res:
             pg_setup.append(('PG_RESR', 25))
-        pg_setup.append(('PG_CAL', pgcal) if cal else ('DELAY', 15))
+        if cal:
+            pg_setup.append(('PG_CAL', pgcal))
         pg_setup.append(('PG_TRG', 0 if self.api.getNTbms() != 0 else 15))
         if self.api.getNTbms() == 0:
             pg_setup.append(('PG_TOK', 0))
