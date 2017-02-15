@@ -162,8 +162,12 @@ cdef class Statistics:
         def __get__(self): return self.thisobj.errors_roc()
     property errors_pixel:
         def __get__(self): return self.thisobj.errors_pixel()
-    property info_pixels_valid:
+    property valid_pixels:
         def __get__(self): return self.thisobj.info_pixels_valid()
+    property total_events:
+        def __get__(self): return self.thisobj.info_events_total()
+    property valid_events:
+        def __get__(self): return self.thisobj.info_events_valid()
 
 
 cdef class PxEvent:

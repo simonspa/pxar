@@ -106,6 +106,8 @@ cdef extern from "api.h" namespace "pxar":
         uint32_t errors_roc()
         uint32_t errors_pixel()
         uint32_t info_pixels_valid()
+        uint32_t info_events_valid()
+        uint32_t info_events_total()
 
 
 cdef extern from "api.h" namespace "pxar":
