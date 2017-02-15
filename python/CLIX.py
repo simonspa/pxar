@@ -2835,23 +2835,30 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_effVsMaskedPix(self):
         return [self.do_effVsMaskedPix.__doc__, '']
 
-    @arity(0, 2, [float])
-    def do_findErrors2(self, t=1, n=10000):
+    @arity(0, 3, [float, int, int])
+    def do_findErrors2(self, t=1, delay=25, n=10000):
         self.api.HVon()
         t_start = time()
         self.setPG(cal=False, res=False)
         self.api.daqStart()
         self.start_pbar(t * 600)
+        data = []
         while time() - t_start < t * 60:
             self.ProgressBar.update(int((time() - t_start) * 10) + 1)
             self.api.daqTrigger(n, 500)
-            self.api.daqGetEventBuffer()
+            data += self.api.daqGetEventBuffer()
         self.ProgressBar.finish()
         self.api.daqStop()
         self.api.HVoff()
         self.setPG()
+        data = [pix for ev in data for pix in ev.pixels]
+        self.plot_map(data, 'Hit Map', count=True, no_stats=True)
         stats = self.api.getStatistics()
+        event_rate = stats.valid_events / (2.5e-8 * stats.total_events / 8.)
+        hit_rate = stats.valid_pixels / (2.5e-8 * stats.total_events / 8.)
         stats.dump
+        print 'Event Rate: {0:5.4f} MHz'.format(event_rate / 1000000)
+        print 'Hit Rate:   {0:5.4f} MHz'.format(hit_rate / 1000000)
 
     def complete_findErrors2(self):
         return [self.do_findErrors2.__doc__, '']
