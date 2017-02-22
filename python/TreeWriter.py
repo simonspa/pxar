@@ -63,8 +63,10 @@ class TreeWriter:
         for key, branch in self.ScalarBranches.iteritems():
             self.Tree.Branch(key, branch, 's')
 
-    def write_tree(self):
-        self.File = TFile('errors.root', 'RECREATE')
+    def write_tree(self, hv, cur):
+        hv_str = '-{v}'.format(v=hv) if hv is not None else ''
+        cur_str = '-{c}'.format(c=cur) if cur is not None else ''
+        self.File = TFile('run{v}{c}.root'.format(v=hv_str, c=cur_str), 'RECREATE')
         self.Tree = TTree('tree', 'The error tree')
         self.set_branches()
         self.start_pbar(len(self.Data))
