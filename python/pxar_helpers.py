@@ -224,8 +224,10 @@ class PxarStatistics:
                 string += '\t{k}{v}\n'.format(k=(key + ':').ljust(20), v=value)
         return string
 
-    def save(self):
-        f = open('stats-{t}.conf'.format(t=datetime.now().strftime('%m-%d_%H_%M_%S')), 'w')
+    def save(self, hv=None, cur=None):
+        hv_str = '-{v}'.format(v=hv) if hv is not None else ''
+        cur_str = '-{c}'.format(c=cur) if cur is not None else ''
+        f = open('stats-{v}-{c}-{t}.conf'.format(t=datetime.now().strftime('%m-%d_%H_%M_%S'), v=hv_str, c=cur_str), 'w')
         p = ConfigParser()
         for head, dic in self.AllDics.iteritems():
             p.add_section(head)

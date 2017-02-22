@@ -32,14 +32,14 @@ prog_name = basename(argv.pop(0))
 class ErrorFinder:
     """Simple command processor for the pxar core API."""
 
-    def __init__(self, conf_dir, verbosity, trim, hv=30, cur=10):
+    def __init__(self, conf_dir, verbosity, trim, hv=None, cur=None):
         # main
         self.api = PxarStartup(conf_dir, verbosity, trim)
         self.Dir = conf_dir
         self.Trim = trim
         self.Verbosity = verbosity
 
-        # Xray
+        # X-ray
         self.HV = hv
         self.Current = cur
         self.XrayMachine = id3003_xray_generator('/dev/ttyID3003') if id3003_xray_generator is not None else None
@@ -214,6 +214,8 @@ if __name__ == '__main__':
     parser.add_argument('--run', '-r', metavar="FILE", help="Load a cmdline script to be executed before entering the prompt.")
     parser.add_argument('--verbosity', '-v', metavar="LEVEL", default="INFO", help="The output verbosity set in the pxar API.")
     parser.add_argument('--trim', '-T', nargs='?', default=None, help="The output verbosity set in the pxar API.")
+    parser.add_argument('--hv', '-v', nargs='?', default=None, help="voltage for the X-ray")
+    parser.add_argument('--cur', '-c', nargs='?', default=None, help="current for the X-ray")
     args = parser.parse_args(argv)
 
     print '\n================================================='
@@ -221,4 +223,6 @@ if __name__ == '__main__':
     print '=================================================\n'
 
     # start command line
-    z = ErrorFinder(args.dir, args.verbosity, args.trim)
+    z = ErrorFinder(args.dir, args.verbosity, args.trim, args.hv, args.cur)
+    if args.hv is not None:
+        z.find_errors(5)
