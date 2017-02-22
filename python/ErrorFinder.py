@@ -11,16 +11,15 @@ from os.path import basename, dirname, realpath, split
 from os.path import join as joinpath
 from sys import argv, path
 from progressbar import Bar, ETA, FileTransferSpeed, Percentage, ProgressBar
-from time import time
+from time import time, sleep
 from TreeWriter import TreeWriter
+lib_dir = joinpath(split(dirname(realpath(__file__)))[0], 'lib')
+path.insert(1, lib_dir)
+# path.insert(1, '/usr/local/bin')
 try:
     from id3003 import id3003_xray_generator
 except ImportError:
     id3003_xray_generator = None
-
-lib_dir = joinpath(split(dirname(realpath(__file__)))[0], 'lib')
-path.insert(1, lib_dir)
-path.insert(1, '/usr/local/bin')
 from pxar_helpers import *
 from pxar_plotter import Plotter
 
@@ -153,11 +152,11 @@ class ErrorFinder:
         self.stop_xray()
 
         writer = TreeWriter(data)
-        writer.write_tree()
+        writer.write_tree(self.HV, self.Current)
         data = [pix for ev in data for pix in ev.pixels]
         self.plot_map(data, 'Hit Map', count=True, no_stats=True)
         print stats
-        stats.save()
+        stats.save(self.HV, self.Current)
         print 'Event Rate: {0:5.4f} MHz'.format(stats.event_rate / 1000000)
         print 'Hit Rate:   {0:5.4f} MHz'.format(stats.hit_rate / 1000000)
 
@@ -183,11 +182,11 @@ class ErrorFinder:
             print 'Did not find Xray module'
             return
         print '{s} Xray Machine'.format(s='Starting' if on else 'Stopping')
-        self.XrayMachine.set_beam_shutter(3, on)
         self.XrayMachine.set_hv(on)
+        self.XrayMachine.set_beam_shutter(3, on)
         if on:
             self.XrayMachine.set_current(self.Current)
-            self.XrayMachine.set_hv(self.HV)
+            self.XrayMachine.set_voltage(self.HV)
 
     def stop_xray(self):
         self.start_xray(False)
@@ -200,7 +199,7 @@ def set_palette(custom=True, pal=1):
         blue = array([0. / 255., 0. / 255., 0. / 255.], 'd')
         red = array([180. / 255., 200. / 255., 0. / 255.], 'd')
         gStyle.SetNumberContours(20)
-        bla = TColor.CreateGradientColorTable(len(stops), stops, red, green, blue, 255, 1)
+        bla = TColor.CreateGradientColorTable(len(stops), stops, red, green, blue, 255)
         color_table = array([bla + ij for ij in xrange(255)], 'i')
         gStyle.SetPalette(len(color_table), color_table)
     else:
@@ -214,7 +213,7 @@ if __name__ == '__main__':
     parser.add_argument('--run', '-r', metavar="FILE", help="Load a cmdline script to be executed before entering the prompt.")
     parser.add_argument('--verbosity', '-v', metavar="LEVEL", default="INFO", help="The output verbosity set in the pxar API.")
     parser.add_argument('--trim', '-T', nargs='?', default=None, help="The output verbosity set in the pxar API.")
-    parser.add_argument('--hv', '-v', nargs='?', default=None, help="voltage for the X-ray")
+    parser.add_argument('--hv', '-vv', nargs='?', default=None, help="voltage for the X-ray")
     parser.add_argument('--cur', '-c', nargs='?', default=None, help="current for the X-ray")
     args = parser.parse_args(argv)
 
@@ -223,6 +222,6 @@ if __name__ == '__main__':
     print '=================================================\n'
 
     # start command line
-    z = ErrorFinder(args.dir, args.verbosity, args.trim, args.hv, args.cur)
-    if args.hv is not None:
-        z.find_errors(5)
+    z = ErrorFinder(args.dir, args.verbosity, args.trim, int(args.hv), int(args.cur))
+    #if args.hv is not None:
+    #    z.find_errors(5)

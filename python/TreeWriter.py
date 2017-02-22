@@ -6,6 +6,8 @@
 
 from ROOT import TTree, TFile, vector
 from progressbar import Bar, ETA, FileTransferSpeed, Percentage, ProgressBar
+from numpy import array
+from collections import OrderedDict
 
 
 class TreeWriter:
@@ -26,31 +28,31 @@ class TreeWriter:
 
     @staticmethod
     def init_vector_branches():
-        dic = {'plane': vector('unsigned short')(),
-               'col': vector('unsigned short')(),
-               'row': vector('unsigned short')(),
-               'adc': vector('short')()}
+        dic = OrderedDict([('plane', vector('unsigned short')()),
+                           ('col', vector('unsigned short')()),
+                           ('row', vector('unsigned short')()),
+                           ('adc', vector('short')()),
+                           ('header', vector('unsigned int')()),
+                           ('trailer', vector('unsigned int')()),
+                           ('pkam', vector('unsigned short')()),
+                           ('token_pass', vector('unsigned short')()),
+                           ('reset_tbm', vector('unsigned short')()),
+                           ('reset_roc', vector('unsigned short')()),
+                           ('auto_reset', vector('unsigned short')()),
+                           ('cal_trigger', vector('unsigned short')()),
+                           ('trigger_count', vector('unsigned short')()),
+                           ('trigger_phase', vector('unsigned short')()),
+                           ('stack_count', vector('unsigned short')())])
         return dic
 
     @staticmethod
     def init_scalar_branches():
-        dic = {'header': 0,
-               'trailer': 0,
-               'pkam': 0,
-               'token_pass': 0,
-               'reset_tbm': 0,
-               'reset_roc': 0,
-               'auto_reset': 0,
-               'cal_trigger': 0,
-               'trigger_count': 0,
-               'trigger_phase': 0,
-               'stack_count': 0,
-               'incomplete_data': 0,
-               'missing_roc_headers': 0,
-               'roc_readback': 0,
-               'invalid_addresses': 0,
-               'invalid_pulse_heights': 0,
-               'buffer_corruptions': 0}
+        dic = {'incomplete_data': array([0], 'ushort'),
+               'missing_roc_headers': array([0], 'ushort'),
+               'roc_readback': array([0], 'ushort'),
+               'invalid_addresses': array([0], 'ushort'),
+               'invalid_pulse_heights': array([0], 'ushort'),
+               'buffer_corruptions': array([0], 'ushort')}
         return dic
 
     def clear_vectors(self):
@@ -61,7 +63,7 @@ class TreeWriter:
         for key, vec in self.VectorBranches.iteritems():
             self.Tree.Branch(key, vec)
         for key, branch in self.ScalarBranches.iteritems():
-            self.Tree.Branch(key, branch, 's')
+            self.Tree.Branch(key, branch, '{k}/s'.format(k=key))
 
     def write_tree(self, hv, cur):
         hv_str = '-{v}'.format(v=hv) if hv is not None else ''
@@ -78,23 +80,24 @@ class TreeWriter:
                 self.VectorBranches['col'].push_back(int(pix.column))
                 self.VectorBranches['row'].push_back(int(pix.row))
                 self.VectorBranches['adc'].push_back(int(pix.value))
-            self.ScalarBranches['header'] = ev.header
-            self.ScalarBranches['trailer'] = ev.trailer
-            self.ScalarBranches['pkam'] = ev.havePkamReset
-            self.ScalarBranches['cal_trigger'] = ev.haveCalTrigger
-            self.ScalarBranches['token_pass'] = ev.haveTokenPass
-            self.ScalarBranches['reset_tbm'] = ev.haveResetTBM
-            self.ScalarBranches['reset_roc'] = ev.haveResetROC
-            self.ScalarBranches['auto_reset'] = ev.haveAutoReset
-            self.ScalarBranches['trigger_count'] = ev.triggerCounts
-            self.ScalarBranches['trigger_phase'] = ev.triggerPhases
-            self.ScalarBranches['stack_count'] = ev.stackCounts
-            self.ScalarBranches['incomplete_data'] = ev.incomplete_data
-            self.ScalarBranches['missing_roc_headers'] = ev.missing_roc_headers
-            self.ScalarBranches['roc_readback'] = ev.roc_readback
-            self.ScalarBranches['invalid_addresses'] = ev.invalid_addresses
-            self.ScalarBranches['invalid_pulse_heights'] = ev.invalid_pulse_heights
-            self.ScalarBranches['stack_buffer_corruptionscount'] = ev.buffer_corruptions
+            for i in xrange(len(ev.header)):
+                self.VectorBranches['header'].push_back(ev.header[i])
+                self.VectorBranches['trailer'].push_back(ev.trailer[i])
+                self.VectorBranches['pkam'].push_back(ev.havePkamReset[i])
+                self.VectorBranches['cal_trigger'].push_back(ev.haveCalTrigger[i])
+                self.VectorBranches['token_pass'].push_back(ev.haveTokenPass[i])
+                self.VectorBranches['reset_tbm'].push_back(ev.haveResetTBM[i])
+                self.VectorBranches['reset_roc'].push_back(ev.haveResetROC[i])
+                self.VectorBranches['auto_reset'].push_back(ev.haveAutoReset[i])
+                self.VectorBranches['trigger_count'].push_back(ev.triggerCounts[i])
+                self.VectorBranches['trigger_phase'].push_back(ev.triggerPhases[i])
+                self.VectorBranches['stack_count'].push_back(ev.stackCounts[i])
+            self.ScalarBranches['incomplete_data'][0] = ev.incomplete_data
+            self.ScalarBranches['missing_roc_headers'][0] = ev.missing_roc_headers
+            self.ScalarBranches['roc_readback'][0] = ev.roc_readback
+            self.ScalarBranches['invalid_addresses'][0] = ev.invalid_addresses
+            self.ScalarBranches['invalid_pulse_heights'][0] = ev.invalid_pulse_heights
+            self.ScalarBranches['buffer_corruptions'][0] = ev.buffer_corruptions
             self.Tree.Fill()
         self.ProgressBar.finish()
         self.File.cd()
