@@ -13,9 +13,14 @@ from sys import argv, path
 from progressbar import Bar, ETA, FileTransferSpeed, Percentage, ProgressBar
 from time import time
 from TreeWriter import TreeWriter
+try:
+    from id3003 import id3003_xray_generator
+except ImportError:
+    id3003_xray_generator = None
 
 lib_dir = joinpath(split(dirname(realpath(__file__)))[0], 'lib')
 path.insert(1, lib_dir)
+path.insert(1, '/usr/local/bin')
 from pxar_helpers import *
 from pxar_plotter import Plotter
 
@@ -27,12 +32,17 @@ prog_name = basename(argv.pop(0))
 class ErrorFinder:
     """Simple command processor for the pxar core API."""
 
-    def __init__(self, conf_dir, verbosity, trim):
+    def __init__(self, conf_dir, verbosity, trim, hv=30, cur=10):
         # main
         self.api = PxarStartup(conf_dir, verbosity, trim)
         self.Dir = conf_dir
         self.Trim = trim
         self.Verbosity = verbosity
+
+        # Xray
+        self.HV = hv
+        self.Current = cur
+        self.XrayMachine = id3003_xray_generator('/dev/ttyID3003') if id3003_xray_generator is not None else None
 
         self.window = None
         self.Plots = []
@@ -120,6 +130,7 @@ class ErrorFinder:
         self.Plots.append(h)
 
     def find_errors(self, t=1, n=10000):
+        self.start_xray()
         set_palette(False)
         self.api.HVon()
         t_start = time()
@@ -139,6 +150,8 @@ class ErrorFinder:
         self.api.daqStop()
         self.api.HVoff()
         self.set_pg()
+        self.stop_xray()
+
         writer = TreeWriter(data)
         writer.write_tree()
         data = [pix for ev in data for pix in ev.pixels]
@@ -164,6 +177,20 @@ class ErrorFinder:
             self.api.setPatternGenerator(tuple(pg_setup))
         except RuntimeError, err:
             print err
+
+    def start_xray(self, on=True):
+        if self.XrayMachine is None:
+            print 'Did not find Xray module'
+            return
+        print '{s} Xray Machine'.format(s='Starting' if on else 'Stopping')
+        self.XrayMachine.set_beam_shutter(3, on)
+        self.XrayMachine.set_hv(on)
+        if on:
+            self.XrayMachine.set_current(self.Current)
+            self.XrayMachine.set_hv(self.HV)
+
+    def stop_xray(self):
+        self.start_xray(False)
 
 
 def set_palette(custom=True, pal=1):
