@@ -202,7 +202,7 @@ namespace pxar {
    */
   class DLLEXPORT Event {
   public:
-  Event() : pixels(), header(), trailer() {}
+  Event() : pixels(), incomplete_data(0), missing_roc_headers(0), roc_readback(0), invalid_addresses(0), invalid_pulse_heights(0), buffer_corruptions(0), header(), trailer() {}
   Event(const Event &evt) {
     pixels = evt.pixels;
     header = evt.header;
@@ -332,6 +332,7 @@ namespace pxar {
     /** Vector of successfully decoded pxar::pixel objects
      */
     std::vector<pixel> pixels;
+    uint8_t incomplete_data, missing_roc_headers, roc_readback, invalid_addresses, invalid_pulse_heights, buffer_corruptions;
 
   private:
 

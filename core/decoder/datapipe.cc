@@ -287,6 +287,7 @@ namespace pxar {
 
 	// Only one word left or unexpected alignment marker:
 	if(sample->data.end() - word < 2 || ((*word) & 0x8000)) {
+    roc_Event.incomplete_data++;
 	  decodingStats.m_errors_pixel_incomplete++;
 	  break;
 	}
@@ -313,14 +314,17 @@ namespace pxar {
 	}
 	catch(DataInvalidAddressError /*&e*/){
 	  // decoding of raw address lead to invalid address
+    roc_Event.invalid_addresses++;
 	  decodingStats.m_errors_pixel_address++;
 	}
 	catch(DataInvalidPulseheightError /*&e*/){
 	  // decoding of pulse height featured non-zero fill bit
+    roc_Event.invalid_pulse_heights++;
 	  decodingStats.m_errors_pixel_pulseheight++;
 	}
 	catch(DataCorruptBufferError /*&e*/){
 	  // decoding returned row 80 - corrupt data buffer
+    roc_Event.buffer_corruptions++;
 	  decodingStats.m_errors_pixel_buffer_corrupt++;
 	}
       }
@@ -511,6 +515,7 @@ namespace pxar {
       LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel())
 		    << " has NoTokenPass but " << roc_n+1
 		    << " ROCs were found";
+      roc_Event.missing_roc_headers++;
       decodingStats.m_errors_roc_missing++;
       // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
       std::fill(readback_dirty.begin(), readback_dirty.end(), true);
@@ -523,6 +528,7 @@ namespace pxar {
       if (sample != (rawEvent *) 1) {
         if (!sample){
           LOG(logWARNING) << "CheckEventValidity: rawEvent pointer sample is Zero - returning";
+          roc_Event.missing_roc_headers++;
           decodingStats.m_errors_roc_missing++;
           // Clearing event content:
           roc_Event.Clear();
@@ -534,6 +540,7 @@ namespace pxar {
         else {
           LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
                         << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
+          roc_Event.missing_roc_headers++;
           decodingStats.m_errors_roc_missing++;
           // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
           std::fill(readback_dirty.begin(), readback_dirty.end(), true);
@@ -545,6 +552,7 @@ namespace pxar {
       else {
         LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
                       << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
+        roc_Event.missing_roc_headers++;
         decodingStats.m_errors_roc_missing++;
         // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
         std::fill(readback_dirty.begin(), readback_dirty.end(), true);
@@ -660,6 +668,7 @@ namespace pxar {
 	  LOG(logWARNING) << "Channel " <<  static_cast<int>(GetChannel()) << " ROC " << static_cast<int>(roc)
 			  << ": Readback start marker after "
 			  << count.at(roc) << " readouts!";
+    roc_Event.roc_readback++;
 	  decodingStats.m_errors_roc_readback++;
 	}
       }
