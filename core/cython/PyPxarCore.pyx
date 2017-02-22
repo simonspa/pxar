@@ -245,6 +245,18 @@ cdef class PxEvent:
         def __get__(self): return self.thisptr.dataValues()
     property stackCounts:
         def __get__(self): return self.thisptr.stackCounts()
+    property incomplete_data:
+        def __get__(self): return self.thisptr.incomplete_data
+    property missing_roc_headers:
+        def __get__(self): return self.thisptr.missing_roc_headers
+    property roc_readback:
+        def __get__(self): return self.thisptr.roc_readback
+    property invalid_addresses:
+        def __get__(self): return self.thisptr.invalid_addresses
+    property invalid_pulse_heights:
+        def __get__(self): return self.thisptr.invalid_pulse_heights
+    property buffer_corruptions:
+        def __get__(self): return self.thisptr.buffer_corruptions
 
 cdef class PyPxarCore:
     cdef pxarCore *thisptr # hold the C++ instance
