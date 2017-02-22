@@ -168,7 +168,44 @@ cdef class Statistics:
         def __get__(self): return self.thisobj.info_events_total()
     property valid_events:
         def __get__(self): return self.thisobj.info_events_valid()
-
+    property empty_events:
+        def __get__(self): return self.thisobj.info_events_empty()
+    property errors_event_start:
+        def __get__(self): return self.thisobj.errors_event_start()
+    property errors_event_stop:
+        def __get__(self): return self.thisobj.errors_event_stop()
+    property errors_event_overflow:
+        def __get__(self): return self.thisobj.errors_event_overflow()
+    property errors_event_invalid_words:
+        def __get__(self): return self.thisobj.errors_event_invalid_words()
+    property errors_event_invalid_xor:
+        def __get__(self): return self.thisobj.errors_event_invalid_xor()
+    property errors_event_frame:
+        def __get__(self): return self.thisobj.errors_event_frame()
+    property errors_event_idledata:
+        def __get__(self): return self.thisobj.errors_event_idledata()
+    property errors_event_nodata:
+        def __get__(self): return self.thisobj.errors_event_nodata()
+    property errors_event_pkam:
+        def __get__(self): return self.thisobj.errors_event_pkam()
+    property errors_tbm_header:
+        def __get__(self): return self.thisobj.errors_tbm_header()
+    property errors_tbm_eventid_mismatch:
+        def __get__(self): return self.thisobj.errors_tbm_eventid_mismatch()
+    property errors_tbm_trailer:
+        def __get__(self): return self.thisobj.errors_tbm_trailer()
+    property errors_roc_missing:
+        def __get__(self): return self.thisobj.errors_roc_missing()
+    property errors_roc_readback:
+        def __get__(self): return self.thisobj.errors_roc_readback()
+    property errors_pixel_incomplete:
+        def __get__(self): return self.thisobj.errors_pixel_incomplete()
+    property errors_pixel_address:
+        def __get__(self): return self.thisobj.errors_pixel_address()
+    property errors_pixel_pulseheight:
+        def __get__(self): return self.thisobj.errors_pixel_pulseheight()
+    property errors_pixel_buffer_corrupt:
+        def __get__(self): return self.thisobj.errors_pixel_buffer_corrupt()
 
 cdef class PxEvent:
     cdef Event *thisptr      # hold a C++ instance which we're wrapping
