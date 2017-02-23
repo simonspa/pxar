@@ -199,6 +199,10 @@ def set_palette(custom=True, pal=1):
     else:
         gStyle.SetPalette(pal)
 
+
+def do_nothing():
+    pass
+
 if __name__ == '__main__':
     # command line argument parsing
 
@@ -215,3 +219,11 @@ if __name__ == '__main__':
 
     # start command line
     z = CLIX(args.dir, args.verbosity, args.trim)
+
+    # shortcuts
+    ga = z.get_efficiency_map
+    ds = z.daq_start
+    st = z.daq_stop
+    ev = z.daq_get_event
+    raw = z.daq_get_raw_event
+    dt = z.daq_trigger
