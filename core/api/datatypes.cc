@@ -310,7 +310,16 @@ namespace pxar {
     LOG(logINFO) << "\t Stack Count \t" << listVector(this->stackCounts(),false,false,true);
   }
 
-  void statistics::dump() {
+    void Event::clearPixelErrors() {
+      buffer_corruptions = 0;
+      incomplete_data = 0;
+      missing_roc_headers = 0; 
+      roc_readback = 0; 
+      invalid_addresses = 0; 
+      invalid_pulse_heights = 0;
+    }
+
+    void statistics::dump() {
     // Print out the full statistics:
     LOG(logINFO) << "Decoding statistics:";
     LOG(logINFO) << "  General information:";

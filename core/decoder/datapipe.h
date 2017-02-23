@@ -203,6 +203,7 @@ namespace pxar {
                       sumUB(0), sumB(0), slidingWindow(0), offsetB(0), total_event(5), flawed_event(0), error_count(0), dump_count(0), event_ringbuffer(7) {};
     void Clear() { decodingStats.clear(); readback.clear(); count.clear(); shiftReg.clear(); eventID = -1; };
     void setOffset(uint8_t decodingOffset) { offsetB = decodingOffset; }
+    void clearErrors() { roc_Event.clearPixelErrors(); }
 
     statistics getStatistics();
     std::vector<std::vector<uint16_t> > getReadback();

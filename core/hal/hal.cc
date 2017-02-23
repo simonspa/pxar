@@ -1626,6 +1626,8 @@ Event hal::daqEvent() {
   uint16_t flags = 0;
   
   // Read the next Event from each of the pipes, copy the data:
+  for(size_t ch = 0; ch < m_src.size(); ch++)
+    m_decoder.at(ch).clearErrors();
   for(size_t ch = 0; ch < m_src.size(); ch++) {
     if(m_src.at(ch).isConnected()) {
       dataSink<Event*> Eventpump;
@@ -1670,6 +1672,8 @@ std::vector<Event> hal::daqAllEvents() {
   while(1) {
     // Read the next Event from each of the pipes:
    Event current_Event;
+    for(size_t ch = 0; ch < m_src.size(); ch++)
+      m_decoder.at(ch).clearErrors();
     for(size_t ch = 0; ch < m_src.size(); ch++) {
       if(m_src.at(ch).isConnected() && (!done_ch.at(ch))) {
 	dataSink<Event*> Eventpump;

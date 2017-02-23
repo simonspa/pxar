@@ -329,6 +329,8 @@ namespace pxar {
      */
     void printTrailer();
 
+    void clearPixelErrors();
+
     /** Vector of successfully decoded pxar::pixel objects
      */
     std::vector<pixel> pixels;
