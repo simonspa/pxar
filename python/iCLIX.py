@@ -46,6 +46,58 @@ class CLIX:
         self.ProgressBar = ProgressBar(widgets=['Progress: ', Percentage(), ' ', Bar(marker='>'), ' ', ETA(), ' ', FileTransferSpeed()], maxval=n)
         self.ProgressBar.start()
 
+    @staticmethod
+    def convert_raw_event(event):
+        for i, word in enumerate(event):
+            word &= 0x0fff
+            if word & 0x0800:
+                word -= 4096
+            event[i] = word
+
+    # -----------------------------------------
+    # region DAQ
+    def daq_start(self, arg=0):
+        self.api.daqStart(arg)
+
+    def daq_stop(self):
+        self.api.daqStop()
+
+    def daq_trigger(self, n_trig=1, period=500):
+        self.api.daqTrigger(n_trig, period)
+
+    def daq_get_event(self):
+        try:
+            data = self.api.daqGetEvent()
+            print data
+        except RuntimeError:
+            pass
+
+    def daq_get_raw_event(self, convert=1):
+        try:
+            event = self.api.daqGetRawEvent()
+        except RuntimeError:
+            return
+        self.convert_raw_event(event) if convert == 1 else do_nothing()
+        print event
+    # endregion
+
+    # -----------------------------------------
+    # region MASK // ENABLE
+    def get_activated(self, roc=None):
+        return self.api.getNEnabledPixels(roc), self.api.getNMaskedPixels(roc)
+
+    def enable_single_pixel(self, row=14, column=14, roc=None):
+        """enableOnePixel [row] [column] [roc] : enables one Pixel (default 14/14); masks and disables the rest"""
+        print '--> disable and mask all pixels of all activated ROCs'
+        self.api.testAllPixels(0, roc)
+        self.api.maskAllPixels(1, roc)
+        self.api.testPixel(row, column, 1, roc)
+        self.api.maskPixel(row, column, 0, roc)
+        print_string = '--> enable and unmask Pixel {r}/{c}: '.format(r=row, c=column)
+        print_string += '(' + ','.join('ROC {n}: {a}/{m}'.format(n=roc, a=self.get_activated(roc)[0], m=self.get_activated(roc)[1]) for roc in xrange(self.api.getNEnabledRocs())) + ')'
+        print print_string
+    # endregion
+
     def get_dac(self, dac, roc_id=0):
         dacs = self.api.getRocDACs(roc_id)
         if dac in dacs:
