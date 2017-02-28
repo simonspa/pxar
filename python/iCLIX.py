@@ -125,15 +125,18 @@ class CLIX:
 
         # Find number of ROCs present:
         module = self.api.getNRocs() > 1
+        proc = 'proc' in self.api.getRocType()
         # Prepare new numpy matrix:
         d = zeros((417 if module else 52, 161 if module else 80))
         for px in data:
-            xoffset = 52 * (px.roc % 8) if module else 0
-            yoffset = 80 * int(px.roc / 8) if module else 0
+            roc = (px.roc - 12) % 16 if proc else 0
+            xoffset = 52 * (roc % 8) if module else 0
+            yoffset = 80 * int(roc / 8) if module else 0
+
             # Flip the ROCs upside down:
-            y = (px.row + yoffset) if (px.roc < 8) else (2 * yoffset - px.row - 1)
+            y = (px.row + yoffset) if (roc < 8) else (2 * yoffset - px.row - 1)
             # Reverse order of the upper ROC row:
-            x = (px.column + xoffset) if (px.roc < 8) else (415 - xoffset - px.column)
+            x = (px.column + xoffset) if (roc < 8) else (415 - xoffset - px.column)
             d[x][y] += 1 if count else px.value
 
         plot = Plotter.create_th2(d, 0, 417 if module else 52, 0, 161 if module else 80, name, 'pixels x', 'pixels y', name)
