@@ -329,17 +329,13 @@ def PxarStartup(directory, verbosity, trim=None):
     rocI2C = []
     config_nrocs = config.get("nrocs").split()
     nrocs = int(config_nrocs[0])
-    i2cs = [i for i in range(nrocs)]
+    i2cs = [i for i in xrange(nrocs)]
     if len(config_nrocs) > 1:
         if config_nrocs[1].startswith('i2c'):
             i2cs = ' '.join(config_nrocs[2:])
             i2cs = [int(i) for i in i2cs.split(',')]
             print "Number of ROCs:", nrocs, "\b; Configured I2C's:", i2cs
-    for roc in xrange(nrocs):
-        if len(i2cs)> roc:
-            i2c = i2cs[roc]
-        else:
-            i2c = roc
+    for i2c in i2cs:
         dac_file = '{dir}/{f}{trim}_C{i2c}.dat'.format(dir=directory, trim=trim if trim is not None else '', i2c=i2c, f=config.get('dacParameters'))
         trim_file = '{dir}/{f}{trim}_C{i2c}.dat'.format(dir=directory, trim=trim if trim is not None else '', i2c=i2c, f=config.get('trimParameters'))
         dacconfig = PxarParametersFile(dac_file)
