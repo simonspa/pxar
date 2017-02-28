@@ -80,18 +80,18 @@ class TreeWriter:
                 self.VectorBranches['col'].push_back(int(pix.column))
                 self.VectorBranches['row'].push_back(int(pix.row))
                 self.VectorBranches['adc'].push_back(int(pix.value))
-            for i in xrange(len(ev.header)):
-                self.VectorBranches['header'].push_back(ev.header[i])
-                self.VectorBranches['trailer'].push_back(ev.trailer[i])
-                self.VectorBranches['pkam'].push_back(ev.havePkamReset[i])
-                self.VectorBranches['cal_trigger'].push_back(ev.haveCalTrigger[i])
-                self.VectorBranches['token_pass'].push_back(ev.haveTokenPass[i])
-                self.VectorBranches['reset_tbm'].push_back(ev.haveResetTBM[i])
-                self.VectorBranches['reset_roc'].push_back(ev.haveResetROC[i])
-                self.VectorBranches['auto_reset'].push_back(ev.haveAutoReset[i])
-                self.VectorBranches['trigger_count'].push_back(ev.triggerCounts[i])
-                self.VectorBranches['trigger_phase'].push_back(ev.triggerPhases[i])
-                self.VectorBranches['stack_count'].push_back(ev.stackCounts[i])
+            for j in xrange(len(ev.header)):
+                self.VectorBranches['header'].push_back(ev.header[j])
+                self.VectorBranches['trailer'].push_back(ev.trailer[j])
+                self.VectorBranches['pkam'].push_back(ev.havePkamReset[j])
+                self.VectorBranches['cal_trigger'].push_back(ev.haveCalTrigger[j])
+                self.VectorBranches['token_pass'].push_back(ev.haveTokenPass[j])
+                self.VectorBranches['reset_tbm'].push_back(ev.haveResetTBM[j])
+                self.VectorBranches['reset_roc'].push_back(ev.haveResetROC[j])
+                self.VectorBranches['auto_reset'].push_back(ev.haveAutoReset[j])
+                self.VectorBranches['trigger_count'].push_back(ev.triggerCounts[j])
+                self.VectorBranches['trigger_phase'].push_back(ev.triggerPhases[j])
+                self.VectorBranches['stack_count'].push_back(ev.stackCounts[j])
             self.ScalarBranches['incomplete_data'][0] = ev.incomplete_data
             self.ScalarBranches['missing_roc_headers'][0] = ev.missing_roc_headers
             self.ScalarBranches['roc_readback'][0] = ev.roc_readback
