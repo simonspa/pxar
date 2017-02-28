@@ -89,8 +89,8 @@ class CLIX:
     def enable_single_pixel(self, row=14, column=14, roc=None):
         """enableOnePixel [row] [column] [roc] : enables one Pixel (default 14/14); masks and disables the rest"""
         print '--> disable and mask all pixels of all activated ROCs'
-        self.api.testAllPixels(0, roc)
-        self.api.maskAllPixels(1, roc)
+        self.api.testAllPixels(0)
+        self.api.maskAllPixels(1)
         self.api.testPixel(row, column, 1, roc)
         self.api.maskPixel(row, column, 0, roc)
         print_string = '--> enable and unmask Pixel {r}/{c}: '.format(r=row, c=column)
