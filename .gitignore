@@ -15,6 +15,7 @@ test/
 *.log
 *.raw
 *.dat
+*.conf
 
 # ignore backup files of any sort of editor:
 ~*
