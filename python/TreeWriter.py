@@ -8,6 +8,7 @@ from ROOT import TTree, TFile, vector
 from progressbar import Bar, ETA, FileTransferSpeed, Percentage, ProgressBar
 from numpy import array
 from collections import OrderedDict
+from os.path import isfile
 
 
 class TreeWriter:
@@ -20,11 +21,31 @@ class TreeWriter:
         self.VectorBranches = self.init_vector_branches()
         self.ScalarBranches = self.init_scalar_branches()
 
+        self.RunFileName = 'runNumber.txt'
+        self.RunNumber = self.load_run_number()
+
         self.ProgressBar = None
 
     def start_pbar(self, n):
         self.ProgressBar = ProgressBar(widgets=['Progress: ', Percentage(), ' ', Bar(marker='>'), ' ', ETA(), ' ', FileTransferSpeed()], maxval=n)
         self.ProgressBar.start()
+
+    def load_run_number(self):
+        if isfile(self.RunFileName):
+            f = open(self.RunFileName)
+            run_number = int(f.readline())
+            f.close()
+            return run_number
+        else:
+            f = open(self.RunFileName, 'w')
+            f.write('1')
+            f.close()
+            return 1
+
+    def save_run_number(self):
+        f = open(self.RunFileName, 'w')
+        f.write('{n}'.format(n=self.RunNumber + 1))
+        f.close()
 
     @staticmethod
     def init_vector_branches():
@@ -68,7 +89,7 @@ class TreeWriter:
     def write_tree(self, hv, cur):
         hv_str = '-{v}'.format(v=hv) if hv is not None else ''
         cur_str = '-{c}'.format(c=cur) if cur is not None else ''
-        self.File = TFile('run{v}{c}.root'.format(v=hv_str, c=cur_str), 'RECREATE')
+        self.File = TFile('run{n}{v}{c}.root'.format(n=str(self.RunNumber).zfill(3), v=hv_str, c=cur_str), 'RECREATE')
         self.Tree = TTree('tree', 'The error tree')
         self.set_branches()
         self.start_pbar(len(self.Data))
@@ -103,3 +124,8 @@ class TreeWriter:
         self.File.cd()
         self.File.Write()
         self.File.Close()
+        self.save_run_number()
+
+
+if __name__ == '__main__':
+    z = TreeWriter(None)
