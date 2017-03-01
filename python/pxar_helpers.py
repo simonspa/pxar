@@ -311,10 +311,11 @@ def PxarStartup(directory, verbosity, trim=None):
             tbmparameters = PxarParametersFile('%s%s'%(os.path.join(directory,""),config.get("tbmParameters") + "_C" + str(tbm) + ("a" if n%2 == 0 else "b") + ".dat"))
             tbmDACs.append(tbmparameters.getAll())
 
-    print "Have DAC config for " + str(len(tbmDACs)) + " TBM cores:"
-    for idx, tbmDAC in enumerate(tbmDACs):
-        for key in tbmDAC:
-            print "  TBM " + str(idx/2) + ("a" if idx%2 == 0 else "b") + " dac: " + str(key) + " = " + str(tbmDAC[key])
+    print 'Found DAC config for {n} TBM cores'.format(n=len(tbmDACs))
+    if verbosity != 'INFO':
+        for idx, tbmDAC in enumerate(tbmDACs):
+            for key in tbmDAC:
+                print "  TBM " + str(idx/2) + ("a" if idx%2 == 0 else "b") + " dac: " + str(key) + " = " + str(tbmDAC[key])
 
     # init pixel list
     pixels = list()
@@ -340,10 +341,15 @@ def PxarStartup(directory, verbosity, trim=None):
         trim_file = '{dir}/{f}{trim}_C{i2c}.dat'.format(dir=directory, trim=trim if trim is not None else '', i2c=i2c, f=config.get('trimParameters'))
         dacconfig = PxarParametersFile(dac_file)
         trimconfig = PxarTrimFile(trim_file, i2c, masks.get())
-        print "We have " + str(len(trimconfig.getAll())) + " pixels for ROC " + str(i2c)
         rocI2C.append(i2c)
         rocDacs.append(dacconfig.getAll())
         rocPixels.append(trimconfig.getAll())
+    n_pixels = [len(pix) for pix in rocPixels]
+    if all(npix == n_pixels[0] for npix in n_pixels):
+        print 'We have {n1} pixels for all {n2} ROCs'.format(n1=n_pixels[0], n2=len(n_pixels))
+    else:
+        for i2c, npix in zip(rocI2C, n_pixels):
+            print 'We have {n} pixels for ROC {i}'.format(n=npix, i=i2c)
 
 
     # set pgcal according to wbc
