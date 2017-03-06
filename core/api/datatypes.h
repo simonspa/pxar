@@ -42,7 +42,8 @@ namespace pxar {
 
     /** Constructor for pixel objects with rawdata pixel address & value and ROC id initialization.
      */
-  pixel(uint32_t rawdata, uint8_t rocid, bool invertAddress = false, bool linearAddress = false) : _roc_id(rocid) {
+  pixel(uint32_t rawdata, uint8_t rocid, bool invertAddress=false, bool linearAddress=false) : _roc_id(rocid), _buffer_corruption(false), _invalid_address(false),
+                                                                                                                  _invalid_pulse_height(false) {
       if(linearAddress) { decodeLinear(rawdata); }
       else { decodeRaw(rawdata,invertAddress); }
     }
@@ -103,6 +104,14 @@ namespace pxar {
      */
     uint32_t encodeLinear();
 
+    /** method to throw the errors after decoding
+     */
+    void throwErrors();
+
+    bool bufferCorruption() { return _buffer_corruption; }
+    bool invalidAddress() { return _invalid_address; }
+    bool invalidPulseHeight() { return _buffer_corruption; }
+
     /** Overloaded comparison operator
      */
     bool operator == (const pixel& px) {
@@ -146,6 +155,10 @@ namespace pxar {
      *  variance
      */
     uint16_t _variance;
+
+    /** decoding errors
+   */
+    bool _buffer_corruption, _invalid_address, _invalid_pulse_height;
 
     /** Decoding function for PSI46 dig raw ROC data. Parameter "invert"
      *  allows decoding of PSI46dig data which has an inverted pixel

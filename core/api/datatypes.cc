@@ -12,7 +12,7 @@ namespace pxar {
     setValue(static_cast<double>((raw & 0x0f) + ((raw >> 1) & 0xf0)));
     if((raw & 0x10) > 0) {
       LOG(logDEBUGAPI) << "invalid pulse-height fill bit from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      throw DataInvalidPulseheightError("Error decoding pixel raw value");
+      _invalid_pulse_height = true;
     }
 
     // Decode the pixel address
@@ -29,8 +29,8 @@ namespace pxar {
     // Perform range checks:
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {
       LOG(logDEBUGAPI) << "Invalid pixel from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      if(_row == ROC_NUMROWS) throw DataCorruptBufferError("Error decoding pixel raw value");
-      else throw DataInvalidAddressError("Error decoding pixel raw value");
+      if(_row == ROC_NUMROWS) _buffer_corruption = true;
+      else _invalid_address = true;
     }
   }
 
@@ -38,26 +38,36 @@ namespace pxar {
     // Get the pulse height:
     setValue(static_cast<double>((raw & 0x0f) + ((raw >> 1) & 0xf0)));
     if((raw & 0x10) > 0) {
-      LOG(logDEBUGAPI) << "invalid pulse-height fill bit from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      throw DataInvalidPulseheightError("Error decoding pixel raw value");
+      LOG(logDEBUGAPI) << "invalid pulse-height fill bit from raw value of " << std::hex << raw << std::dec << ": " << *this;
+      _invalid_pulse_height = true;
+      _row = 99;
+      _column = 99;
     }
 
     // Perform checks on the fill bits:
     if((raw & 0x1000) > 0 || (raw & 0x100000) > 0) {
-      LOG(logDEBUGAPI) << "invalid address fill bit from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      throw DataInvalidAddressError("Error decoding pixel raw value");
+      LOG(logDEBUGAPI) << "invalid address fill bit from raw value of " << std::hex << raw << std::dec << ": " << *this;
+      _invalid_address = true;
+      _row = 99;
+      _column = 99;
     }
 
     // Decode the pixel address
-    _column = ((raw >> 17) & 0x07) + ((raw >> 18) & 0x38);
-    _row = ((raw >> 9) & 0x07) + ((raw >> 10) & 0x78);
+    _column = uint8_t(((raw >> 17) & 0x07) + ((raw >> 18) & 0x38));
+    _row = uint8_t(((raw >> 9) & 0x07) + ((raw >> 10) & 0x78));
     
     // Perform range checks:
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {
-      LOG(logDEBUGAPI) << "Invalid pixel from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      if(_row == ROC_NUMROWS) throw DataCorruptBufferError("Error decoding pixel raw value");
-      else throw DataInvalidAddressError("Error decoding pixel raw value");
+      LOG(logDEBUGAPI) << "Invalid pixel from raw value of " << std::hex << raw << std::dec << ": " << *this;
+      if(_row == ROC_NUMROWS) _buffer_corruption = true;
+      else _invalid_address = true;
     }
+  }
+
+  void pixel::throwErrors() {
+    if (_invalid_address) throw DataInvalidAddressError("Error decoding pixel raw value");
+    else if (_invalid_pulse_height) throw DataInvalidPulseheightError("Error decoding pixel raw value");
+    else if (_buffer_corruption) throw DataCorruptBufferError("Error decoding pixel raw value");
   }
 
   uint8_t pixel::translateLevel(uint16_t x, int16_t level0, int16_t level1, int16_t levelS) {
