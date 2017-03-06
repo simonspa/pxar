@@ -215,17 +215,14 @@ namespace pxar {
    */
   class DLLEXPORT Event {
   public:
-  Event() : pixels(), incomplete_data(0), missing_roc_headers(0), roc_readback(0), invalid_addresses(0), invalid_pulse_heights(0), buffer_corruptions(0), header(), trailer() {}
+  Event() : pixels(), incomplete_data(), missing_roc_headers(), roc_readback(), header(), trailer() {}
   Event(const Event &evt) {
     pixels = evt.pixels;
     header = evt.header;
     trailer = evt.trailer;
-    buffer_corruptions = evt.buffer_corruptions;
     incomplete_data = evt.incomplete_data;
     missing_roc_headers = evt.missing_roc_headers;
     roc_readback = evt.roc_readback;
-    invalid_addresses = evt.invalid_addresses;
-    invalid_pulse_heights = evt.invalid_pulse_heights;
   }
 
     /** Helper function to clear the event content
@@ -353,7 +350,7 @@ namespace pxar {
     /** Vector of successfully decoded pxar::pixel objects
      */
     std::vector<pixel> pixels;
-    uint8_t incomplete_data, missing_roc_headers, roc_readback, invalid_addresses, invalid_pulse_heights, buffer_corruptions;
+    bool incomplete_data, missing_roc_headers, roc_readback;
 
   private:
 
@@ -371,12 +368,9 @@ namespace pxar {
       lhs.pixels.insert(lhs.pixels.end(), rhs.pixels.begin(), rhs.pixels.end());
       lhs.header.insert(lhs.header.end(), rhs.header.begin(), rhs.header.end());
       lhs.trailer.insert(lhs.trailer.end(), rhs.trailer.begin(), rhs.trailer.end());
-      lhs.incomplete_data += rhs.incomplete_data;
-      lhs.missing_roc_headers += rhs.missing_roc_headers;
-      lhs.roc_readback += rhs.roc_readback;
-      lhs.invalid_addresses += rhs.invalid_addresses;
-      lhs.invalid_pulse_heights += rhs.invalid_pulse_heights;
-      lhs.buffer_corruptions += rhs.buffer_corruptions;
+      lhs.incomplete_data = rhs.incomplete_data;
+      lhs.missing_roc_headers = rhs.missing_roc_headers;
+      lhs.roc_readback = rhs.roc_readback;
       return lhs;
     };
 
