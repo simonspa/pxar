@@ -55,6 +55,12 @@ cdef class Pixel:
     property value:
         def __get__(self): return self.thisptr.value()
         def __set__(self, value): self.thisptr.setValue(value)
+    property buffer_corruptions:
+        def __get__(self): return self.thisptr.bufferCorruption()
+    property invalid_addresses:
+        def __get__(self): return self.thisptr.invalidAddress()
+    property invalid_pulse_heights:
+        def __get__(self): return self.thisptr.invalidPulseHeight()
 
 cdef class PixelConfig:
     cdef pixelConfig *thisptr      # hold a C++ instance which we're wrapping
@@ -288,12 +294,6 @@ cdef class PxEvent:
         def __get__(self): return self.thisptr.missing_roc_headers
     property roc_readback:
         def __get__(self): return self.thisptr.roc_readback
-    property invalid_addresses:
-        def __get__(self): return self.thisptr.invalid_addresses
-    property invalid_pulse_heights:
-        def __get__(self): return self.thisptr.invalid_pulse_heights
-    property buffer_corruptions:
-        def __get__(self): return self.thisptr.buffer_corruptions
 
 cdef class PyPxarCore:
     cdef pxarCore *thisptr # hold the C++ instance

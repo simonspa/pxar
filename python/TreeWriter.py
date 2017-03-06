@@ -63,17 +63,17 @@ class TreeWriter:
                            ('cal_trigger', vector('unsigned short')()),
                            ('trigger_count', vector('unsigned short')()),
                            ('trigger_phase', vector('unsigned short')()),
-                           ('stack_count', vector('unsigned short')())])
+                           ('stack_count', vector('unsigned short')()),
+                           ('invalid_addresses', vector('bool')()),
+                           ('invalid_pulse_heights', vector('bool')()),
+                           ('buffer_corruptions', vector('bool')())])
         return dic
 
     @staticmethod
     def init_scalar_branches():
         dic = {'incomplete_data': array([0], 'ushort'),
                'missing_roc_headers': array([0], 'ushort'),
-               'roc_readback': array([0], 'ushort'),
-               'invalid_addresses': array([0], 'ushort'),
-               'invalid_pulse_heights': array([0], 'ushort'),
-               'buffer_corruptions': array([0], 'ushort')}
+               'roc_readback': array([0], 'ushort')}
         return dic
 
     def clear_vectors(self):
@@ -101,6 +101,9 @@ class TreeWriter:
                 self.VectorBranches['col'].push_back(int(pix.column))
                 self.VectorBranches['row'].push_back(int(pix.row))
                 self.VectorBranches['adc'].push_back(int(pix.value))
+                self.VectorBranches['invalid_addresses'].push_back(int(pix.buffer_corruption))
+                self.VectorBranches['invalid_pulse_heights'].push_back(int(pix.invalid_pulse_heights))
+                self.VectorBranches['buffer_corruptions'].push_back(int(pix.buffer_corruptions))
             for j in xrange(len(ev.header)):
                 self.VectorBranches['header'].push_back(ev.header[j])
                 self.VectorBranches['trailer'].push_back(ev.trailer[j])
@@ -116,9 +119,6 @@ class TreeWriter:
             self.ScalarBranches['incomplete_data'][0] = ev.incomplete_data
             self.ScalarBranches['missing_roc_headers'][0] = ev.missing_roc_headers
             self.ScalarBranches['roc_readback'][0] = ev.roc_readback
-            self.ScalarBranches['invalid_addresses'][0] = ev.invalid_addresses
-            self.ScalarBranches['invalid_pulse_heights'][0] = ev.invalid_pulse_heights
-            self.ScalarBranches['buffer_corruptions'][0] = ev.buffer_corruptions
             self.Tree.Fill()
         self.ProgressBar.finish()
         self.File.cd()

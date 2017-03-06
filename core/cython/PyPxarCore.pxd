@@ -25,6 +25,9 @@ cdef extern from "api.h" namespace "pxar":
         uint8_t roc()
         uint8_t column()
         uint8_t row()
+        bool bufferCorruption()
+        bool invalidAddress()
+        bool invalidPulseHeight()
         pixel()
         pixel(int32_t address, int32_t data)
         double value()
@@ -61,9 +64,6 @@ cdef extern from "api.h" namespace "pxar":
         uint8_t incomplete_data
         uint8_t missing_roc_headers
         uint8_t roc_readback
-        uint8_t invalid_addresses
-        uint8_t invalid_pulse_heights
-        uint8_t buffer_corruptions
         Event()
         Event(Event &) except +
 
