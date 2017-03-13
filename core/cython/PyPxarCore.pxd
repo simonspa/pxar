@@ -64,9 +64,9 @@ cdef extern from "api.h" namespace "pxar":
         vector[uint8_t] triggerPhases()
         vector[uint8_t] dataIDs()
         vector[uint8_t] dataValues()
-        uint8_t incomplete_data
-        uint8_t missing_roc_headers
-        uint8_t roc_readback
+        vector[bool] incomplete_data
+        vector[bool] missing_roc_headers
+        vector[bool] roc_readback
         Event()
         Event(Event &) except +
 
