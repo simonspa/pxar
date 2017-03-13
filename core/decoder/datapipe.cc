@@ -287,7 +287,7 @@ namespace pxar {
 
         // Only one word left or unexpected alignment marker:
         if(sample->data.end() - word < 2 || ((*word) & 0x8000)) {
-          roc_Event.incomplete_data = true;
+          roc_Event.incomplete_data.at(uint16_t(roc_n)) = true;
           decodingStats.m_errors_pixel_incomplete++;
           break;
         }
@@ -514,7 +514,7 @@ namespace pxar {
       LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel())
 		    << " has NoTokenPass but " << roc_n+1
 		    << " ROCs were found";
-      roc_Event.missing_roc_headers = true;
+      roc_Event.missing_roc_headers.at(uint16_t(roc_n)) = true;
       decodingStats.m_errors_roc_missing++;
       // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
       std::fill(readback_dirty.begin(), readback_dirty.end(), true);
@@ -527,7 +527,7 @@ namespace pxar {
       if (sample != (rawEvent *) 1) {
         if (!sample){
           LOG(logWARNING) << "CheckEventValidity: rawEvent pointer sample is Zero - returning";
-          roc_Event.missing_roc_headers = true;
+          roc_Event.missing_roc_headers.at(uint16_t(roc_n)) = true;
           decodingStats.m_errors_roc_missing++;
           // Clearing event content:
           roc_Event.Clear();
@@ -539,7 +539,7 @@ namespace pxar {
         else {
           LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
                         << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
-          roc_Event.missing_roc_headers = true;
+          roc_Event.missing_roc_headers.at(uint16_t(roc_n)) = true;
           decodingStats.m_errors_roc_missing++;
           // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
           std::fill(readback_dirty.begin(), readback_dirty.end(), true);
@@ -551,7 +551,7 @@ namespace pxar {
       else {
         LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
                       << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
-        roc_Event.missing_roc_headers = true;
+        roc_Event.missing_roc_headers.at(uint16_t(roc_n)) = true;
         decodingStats.m_errors_roc_missing++;
         // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
         std::fill(readback_dirty.begin(), readback_dirty.end(), true);
@@ -667,7 +667,7 @@ namespace pxar {
 	  LOG(logWARNING) << "Channel " <<  static_cast<int>(GetChannel()) << " ROC " << static_cast<int>(roc)
 			  << ": Readback start marker after "
 			  << count.at(roc) << " readouts!";
-    roc_Event.roc_readback = true;
+    roc_Event.roc_readback.at(roc) = true;
 	  decodingStats.m_errors_roc_readback++;
 	}
       }

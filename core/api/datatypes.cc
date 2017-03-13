@@ -322,9 +322,10 @@ namespace pxar {
   }
 
     void Event::clearPixelErrors() {
-      incomplete_data = false;
-      missing_roc_headers = false;
-      roc_readback = false;
+      incomplete_data.clear();
+      missing_roc_headers.clear();
+      roc_readback.clear();
+    }
     }
 
     void statistics::dump() {
