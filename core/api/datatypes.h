@@ -111,7 +111,7 @@ namespace pxar {
     /** Getter and setter methods for the decoding errors */
     bool bufferCorruption() { return _buffer_corruption; }
     bool invalidAddress() { return _invalid_address; }
-    bool invalidPulseHeight() { return _buffer_corruption; }
+    bool invalidPulseHeight() { return _invalid_pulse_height; }
     void setBufferCorruption(bool value) { _buffer_corruption = value; }
     void setInvalidAddress(bool value) { _invalid_address = value; }
     void setInvalidPulseHeight(bool value) { _invalid_pulse_height = value; }
@@ -219,7 +219,7 @@ namespace pxar {
    */
   class DLLEXPORT Event {
   public:
-  Event() : pixels(), incomplete_data(), missing_roc_headers(), roc_readback(), header(), trailer() {}
+  Event() : pixels(), roc_readback(), missing_roc_headers(), incomplete_data(), header(), trailer() {}
   Event(const Event &evt) {
     pixels = evt.pixels;
     header = evt.header;
@@ -350,11 +350,12 @@ namespace pxar {
     void printTrailer();
 
     void clearPixelErrors();
+    void resizePixelErrors(int16_t);
 
     /** Vector of successfully decoded pxar::pixel objects
      */
     std::vector<pixel> pixels;
-    bool incomplete_data, missing_roc_headers, roc_readback;
+    std::vector<bool> roc_readback, missing_roc_headers, incomplete_data;
 
   private:
 
@@ -372,9 +373,9 @@ namespace pxar {
       lhs.pixels.insert(lhs.pixels.end(), rhs.pixels.begin(), rhs.pixels.end());
       lhs.header.insert(lhs.header.end(), rhs.header.begin(), rhs.header.end());
       lhs.trailer.insert(lhs.trailer.end(), rhs.trailer.begin(), rhs.trailer.end());
-      lhs.incomplete_data = rhs.incomplete_data;
-      lhs.missing_roc_headers = rhs.missing_roc_headers;
-      lhs.roc_readback = rhs.roc_readback;
+      lhs.missing_roc_headers.insert(lhs.missing_roc_headers.end(), rhs.missing_roc_headers.begin(), rhs.missing_roc_headers.end());
+      lhs.roc_readback.insert(lhs.roc_readback.end(), rhs.roc_readback.begin(), rhs.roc_readback.end());
+      lhs.incomplete_data.insert(lhs.incomplete_data.end(), rhs.incomplete_data.begin(), rhs.incomplete_data.end());
       return lhs;
     };
 
@@ -547,6 +548,7 @@ namespace pxar {
       m_errors_pixel_buffer_corrupt(0)
 	{};
     // Print all statistics to stdout:
+    std::string getString();
     void dump();
     friend statistics& operator+=(statistics &lhs, const statistics &rhs) {
       // Informational bits:
