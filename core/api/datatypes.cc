@@ -3,6 +3,7 @@
 #include "log.h"
 #include "exceptions.h"
 #include "constants.h"
+#include "sstream"
 
 namespace pxar {
 
@@ -387,7 +388,41 @@ namespace pxar {
     m_errors_pixel_buffer_corrupt = 0;
   }
 
-  tbmCoreConfig::tbmCoreConfig(uint8_t tbmtype) : dacs(), type(tbmtype), hubid(31), core(0xE0), tokenchains(), enable(true) {
+    std::string statistics::getString() {
+      std::stringstream ss;
+      ss << "Decoding statistics:" << '\n';
+      ss << "  General information:" << '\n';
+      ss << "\t 16bit words read:         " << this->info_words_read() << '\n';
+      ss << "\t valid events total:       " << this->info_events_total() << '\n';
+      ss << "\t empty events:             " << this->info_events_empty() << '\n';
+      ss << "\t valid events with pixels: " << this->info_events_valid() << '\n';
+      ss << "\t valid pixel hits:         " << this->info_pixels_valid() << '\n';
+      ss << "  Event errors: \t           " << this->errors_event() << '\n';
+      ss << "\t start marker:             " << this->errors_event_start() << '\n';
+      ss << "\t stop marker:              " << this->errors_event_stop() << '\n';
+      ss << "\t overflow:                 " << this->errors_event_overflow() << '\n';
+      ss << "\t invalid 5bit words:       " << this->errors_event_invalid_words() << '\n';
+      ss << "\t invalid XOR eye diagram:  " << this->errors_event_invalid_xor() << '\n';
+      ss << "\t frame (failed synchr.):   " << this->errors_event_frame() << '\n';
+      ss << "\t idle data (no TBM trl):   " << this->errors_event_idledata() << '\n';
+      ss << "\t no data (only TBM hdr):   " << this->errors_event_nodata() << '\n';
+      ss << "\t PKAM:                     " << this->errors_event_pkam() << '\n';
+      ss << "  TBM errors: \t\t           " << this->errors_tbm() << '\n';
+      ss << "\t flawed TBM headers:       " << this->errors_tbm_header() << '\n';
+      ss << "\t flawed TBM trailers:      " << this->errors_tbm_trailer() << '\n';
+      ss << "\t event ID mismatches:      " << this->errors_tbm_eventid_mismatch() << '\n';
+      ss << "  ROC errors: \t\t           " << this->errors_roc() << '\n';
+      ss << "\t missing ROC header(s):    " << this->errors_roc_missing() << '\n';
+      ss << "\t misplaced readback start: " << this->errors_roc_readback() << '\n';
+      ss << "  Pixel decoding errors:\t   " << this->errors_pixel() << '\n';
+      ss << "\t pixel data incomplete:    " << this->errors_pixel_incomplete() << '\n';
+      ss << "\t pixel address:            " << this->errors_pixel_address() << '\n';
+      ss << "\t pulse height fill bit:    " << this->errors_pixel_pulseheight() << '\n';
+      ss << "\t buffer corruption:        " << this->errors_pixel_buffer_corrupt() << '\n';
+      return ss.str();
+    }
+
+    tbmCoreConfig::tbmCoreConfig(uint8_t tbmtype) : dacs(), type(tbmtype), hubid(31), core(0xE0), tokenchains(), enable(true) {
 
     if(tbmtype == 0x0) {
       LOG(logCRITICAL) << "Invalid TBM type \"" << tbmtype << "\"";

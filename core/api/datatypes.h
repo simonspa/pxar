@@ -543,6 +543,7 @@ namespace pxar {
       m_errors_pixel_buffer_corrupt(0)
 	{};
     // Print all statistics to stdout:
+    std::string getString();
     void dump();
     friend statistics& operator+=(statistics &lhs, const statistics &rhs) {
       // Informational bits:
