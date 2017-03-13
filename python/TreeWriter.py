@@ -6,7 +6,6 @@
 
 from ROOT import TTree, TFile, vector
 from progressbar import Bar, ETA, FileTransferSpeed, Percentage, ProgressBar
-from numpy import array
 from collections import OrderedDict
 from os.path import isfile
 
@@ -19,7 +18,6 @@ class TreeWriter:
         self.File = None
         self.Tree = None
         self.VectorBranches = self.init_vector_branches()
-        self.ScalarBranches = self.init_scalar_branches()
 
         self.RunFileName = 'runNumber.txt'
         self.RunNumber = self.load_run_number()
@@ -66,14 +64,10 @@ class TreeWriter:
                            ('stack_count', vector('unsigned short')()),
                            ('invalid_address', vector('bool')()),
                            ('invalid_pulse_height', vector('bool')()),
-                           ('buffer_corruption', vector('bool')())])
-        return dic
-
-    @staticmethod
-    def init_scalar_branches():
-        dic = {'incomplete_data': array([0], 'bool'),
-               'missing_roc_headers': array([0], 'bool'),
-               'roc_readback': array([0], 'bool')}
+                           ('buffer_corruption', vector('bool')()),
+                           ('incomplete_data', vector('bool')()),
+                           ('missing_roc_headers', vector('bool')()),
+                           ('roc_readback', vector('bool')())])
         return dic
 
     def clear_vectors(self):
@@ -83,8 +77,6 @@ class TreeWriter:
     def set_branches(self):
         for key, vec in self.VectorBranches.iteritems():
             self.Tree.Branch(key, vec)
-        for key, branch in self.ScalarBranches.iteritems():
-            self.Tree.Branch(key, branch, '{k}/s'.format(k=key))
 
     def write_tree(self, hv, cur):
         hv_str = '-{v}'.format(v=hv) if hv is not None else ''
@@ -116,9 +108,9 @@ class TreeWriter:
                 self.VectorBranches['trigger_count'].push_back(ev.triggerCounts[j])
                 self.VectorBranches['trigger_phase'].push_back(ev.triggerPhases[j])
                 self.VectorBranches['stack_count'].push_back(ev.stackCounts[j])
-            self.ScalarBranches['incomplete_data'][0] = ev.incomplete_data
-            self.ScalarBranches['missing_roc_headers'][0] = ev.missing_roc_headers
-            self.ScalarBranches['roc_readback'][0] = ev.roc_readback
+                self.VectorBranches['incomplete_data'].push_back(ev.incomplete_data[j])
+                self.VectorBranches['missing_roc_headers'].push_back(ev.missing_roc_headers[j])
+                self.VectorBranches['roc_readback'].push_back(ev.roc_readback[j])
             self.Tree.Fill()
         self.ProgressBar.finish()
         self.File.cd()
