@@ -40,6 +40,9 @@ cdef class Pixel:
         self.thisptr.setColumn(p.column())
         self.thisptr.setRow(p.row())
         self.thisptr.setValue(p.value())
+        self.thisptr.setBufferCorruption(p.bufferCorruption())
+        self.thisptr.setInvalidAddress(p.invalidAddress())
+        self.thisptr.setInvalidPulseHeight(p.invalidPulseHeight())
     cdef c_clone(self, pixel* p):
         del self.thisptr
         self.thisptr = p
@@ -55,12 +58,15 @@ cdef class Pixel:
     property value:
         def __get__(self): return self.thisptr.value()
         def __set__(self, value): self.thisptr.setValue(value)
-    property buffer_corruptions:
+    property buffer_corruption:
         def __get__(self): return self.thisptr.bufferCorruption()
-    property invalid_addresses:
+        def __set__(self, value): self.thisptr.setBufferCorruption(value)
+    property invalid_address:
         def __get__(self): return self.thisptr.invalidAddress()
-    property invalid_pulse_heights:
+        def __set__(self, value): self.thisptr.setInvalidAddress(value)
+    property invalid_pulse_height:
         def __get__(self): return self.thisptr.invalidPulseHeight()
+        def __set__(self, value): self.thisptr.setInvalidPulseHeight(value)
 
 cdef class PixelConfig:
     cdef pixelConfig *thisptr      # hold a C++ instance which we're wrapping

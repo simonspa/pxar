@@ -25,16 +25,19 @@ cdef extern from "api.h" namespace "pxar":
         uint8_t roc()
         uint8_t column()
         uint8_t row()
-        bool bufferCorruption()
+        uint8_t bufferCorruption()
         bool invalidAddress()
         bool invalidPulseHeight()
         pixel()
         pixel(int32_t address, int32_t data)
         double value()
-        void setValue(double val)
+        void setValue(double val)Fr
         void setRoc(uint8_t roc)
         void setColumn(uint8_t column)
         void setRow(uint8_t row)
+        void setBufferCorruption(bool value)
+        void setInvalidAddress(bool value)
+        void setInvalidPulseHeight(bool value)
 
 cdef extern from "api.h" namespace "pxar":
     cdef cppclass Event:

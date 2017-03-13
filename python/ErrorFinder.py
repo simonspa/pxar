@@ -217,6 +217,7 @@ if __name__ == '__main__':
     parser.add_argument('--trim', '-T', nargs='?', default=None, help="The output verbosity set in the pxar API.")
     parser.add_argument('--hv', '-vv', nargs='?', default=None, help="voltage for the X-ray")
     parser.add_argument('--cur', '-c', nargs='?', default=None, help="current for the X-ray")
+    parser.add_argument('--start', '-s', default=False, action='store_true', help="start the error finder")
     args = parser.parse_args(argv)
 
     print '\n================================================='
@@ -225,5 +226,5 @@ if __name__ == '__main__':
 
     # start command line
     z = ErrorFinder(args.dir, args.verbosity, args.trim, int(args.hv), int(args.cur))
-    if args.hv is not None:
+    if args.hv is not None and args.start:
         z.find_errors(5)

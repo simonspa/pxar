@@ -64,16 +64,16 @@ class TreeWriter:
                            ('trigger_count', vector('unsigned short')()),
                            ('trigger_phase', vector('unsigned short')()),
                            ('stack_count', vector('unsigned short')()),
-                           ('invalid_addresses', vector('bool')()),
-                           ('invalid_pulse_heights', vector('bool')()),
-                           ('buffer_corruptions', vector('bool')())])
+                           ('invalid_address', vector('bool')()),
+                           ('invalid_pulse_height', vector('bool')()),
+                           ('buffer_corruption', vector('bool')())])
         return dic
 
     @staticmethod
     def init_scalar_branches():
-        dic = {'incomplete_data': array([0], 'ushort'),
-               'missing_roc_headers': array([0], 'ushort'),
-               'roc_readback': array([0], 'ushort')}
+        dic = {'incomplete_data': array([0], 'bool'),
+               'missing_roc_headers': array([0], 'bool'),
+               'roc_readback': array([0], 'bool')}
         return dic
 
     def clear_vectors(self):
@@ -101,9 +101,9 @@ class TreeWriter:
                 self.VectorBranches['col'].push_back(int(pix.column))
                 self.VectorBranches['row'].push_back(int(pix.row))
                 self.VectorBranches['adc'].push_back(int(pix.value))
-                self.VectorBranches['invalid_addresses'].push_back(int(pix.buffer_corruption))
-                self.VectorBranches['invalid_pulse_heights'].push_back(int(pix.invalid_pulse_heights))
-                self.VectorBranches['buffer_corruptions'].push_back(int(pix.buffer_corruptions))
+                self.VectorBranches['invalid_address'].push_back(bool(pix.invalid_address))
+                self.VectorBranches['invalid_pulse_height'].push_back(bool(pix.invalid_pulse_height))
+                self.VectorBranches['buffer_corruption'].push_back(bool(pix.buffer_corruption))
             for j in xrange(len(ev.header)):
                 self.VectorBranches['header'].push_back(ev.header[j])
                 self.VectorBranches['trailer'].push_back(ev.trailer[j])

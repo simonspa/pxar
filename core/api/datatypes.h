@@ -34,7 +34,7 @@ namespace pxar {
 
     /** Default constructor for pixel objects, defaulting all member variables to zero
      */
-  pixel() : _roc_id(0), _column(0), _row(0), _mean(0), _variance(0) {}
+  pixel() : _roc_id(0), _column(0), _row(0), _mean(0), _variance(0), _buffer_corruption(false), _invalid_address(false), _invalid_pulse_height(false) {}
 
     /** Constructor for pixel objects with address and value initialization.
      */
@@ -108,9 +108,13 @@ namespace pxar {
      */
     void throwErrors();
 
+    /** Getter and setter methods for the decoding errors */
     bool bufferCorruption() { return _buffer_corruption; }
     bool invalidAddress() { return _invalid_address; }
     bool invalidPulseHeight() { return _buffer_corruption; }
+    void setBufferCorruption(bool value) { _buffer_corruption = value; }
+    void setInvalidAddress(bool value) { _invalid_address = value; }
+    void setInvalidPulseHeight(bool value) { _invalid_pulse_height = value; }
 
     /** Overloaded comparison operator
      */
