@@ -31,7 +31,7 @@ cdef extern from "api.h" namespace "pxar":
         pixel()
         pixel(int32_t address, int32_t data)
         double value()
-        void setValue(double val)Fr
+        void setValue(double val)
         void setRoc(uint8_t roc)
         void setColumn(uint8_t column)
         void setRow(uint8_t row)
