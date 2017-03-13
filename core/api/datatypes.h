@@ -350,6 +350,7 @@ namespace pxar {
     void printTrailer();
 
     void clearPixelErrors();
+    void resizePixelErrors(int16_t);
 
     /** Vector of successfully decoded pxar::pixel objects
      */

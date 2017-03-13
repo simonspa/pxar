@@ -326,6 +326,14 @@ namespace pxar {
       missing_roc_headers.clear();
       roc_readback.clear();
     }
+
+    void Event::resizePixelErrors(int16_t roc) {
+
+      if (missing_roc_headers.size() <= uint16_t(roc)) {
+        roc_readback.resize(uint16_t(roc + 1), false);
+        missing_roc_headers.resize(uint16_t(roc + 1), false);
+        incomplete_data.resize(uint16_t(roc + 1), false);
+      }
     }
 
     void statistics::dump() {

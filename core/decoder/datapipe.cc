@@ -258,6 +258,9 @@ namespace pxar {
         // Count ROC Headers up:
         roc_n++;
 
+        // reserve space in the error vector
+        roc_Event.resizePixelErrors(roc_n);
+
         // Maybe store the XOR sum:
         if((GetFlags() & FLAG_ENABLE_XORSUM_LOGGING) != 0) { xorsum.push_back(((*word) & 0x0ff0) >> 4); }
       
