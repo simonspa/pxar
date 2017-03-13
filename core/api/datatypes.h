@@ -111,7 +111,7 @@ namespace pxar {
     /** Getter and setter methods for the decoding errors */
     bool bufferCorruption() { return _buffer_corruption; }
     bool invalidAddress() { return _invalid_address; }
-    bool invalidPulseHeight() { return _buffer_corruption; }
+    bool invalidPulseHeight() { return _invalid_pulse_height; }
     void setBufferCorruption(bool value) { _buffer_corruption = value; }
     void setInvalidAddress(bool value) { _invalid_address = value; }
     void setInvalidPulseHeight(bool value) { _invalid_pulse_height = value; }
