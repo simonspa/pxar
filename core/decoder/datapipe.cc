@@ -445,6 +445,7 @@ namespace pxar {
 	uint32_t raw = (((*word) & 0x0fff) << 12) + ((*(++word)) & 0x0fff);
 	try {
 	  pixel pix(raw,roc_n,invertedAddress,linearAddress);
+    pix.throwErrors();
 	  roc_Event.pixels.push_back(pix);
 	  decodingStats.m_info_pixels_valid++;
 	}
