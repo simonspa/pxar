@@ -219,7 +219,7 @@ namespace pxar {
    */
   class DLLEXPORT Event {
   public:
-  Event() : pixels(), roc_readback(), missing_roc_headers(), incomplete_data(), header(), trailer() {}
+  Event() : pixels(), roc_readback(), missing_roc_headers(), incomplete_data(), eventid_mismatch(), no_data(), header(), trailer() {}
   Event(const Event &evt) {
     pixels = evt.pixels;
     header = evt.header;
@@ -227,6 +227,8 @@ namespace pxar {
     incomplete_data = evt.incomplete_data;
     missing_roc_headers = evt.missing_roc_headers;
     roc_readback = evt.roc_readback;
+    eventid_mismatch = evt.eventid_mismatch;
+    no_data = evt.no_data;
   }
 
     /** Helper function to clear the event content
@@ -355,7 +357,7 @@ namespace pxar {
     /** Vector of successfully decoded pxar::pixel objects
      */
     std::vector<pixel> pixels;
-    std::vector<bool> roc_readback, missing_roc_headers, incomplete_data;
+    std::vector<bool> roc_readback, missing_roc_headers, incomplete_data, eventid_mismatch, no_data;
 
   private:
 
@@ -376,6 +378,8 @@ namespace pxar {
       lhs.missing_roc_headers.insert(lhs.missing_roc_headers.end(), rhs.missing_roc_headers.begin(), rhs.missing_roc_headers.end());
       lhs.roc_readback.insert(lhs.roc_readback.end(), rhs.roc_readback.begin(), rhs.roc_readback.end());
       lhs.incomplete_data.insert(lhs.incomplete_data.end(), rhs.incomplete_data.begin(), rhs.incomplete_data.end());
+      lhs.eventid_mismatch.insert(lhs.eventid_mismatch.end(), rhs.eventid_mismatch.begin(), rhs.eventid_mismatch.end());
+      lhs.no_data.insert(lhs.no_data.end(), rhs.no_data.begin(), rhs.no_data.end());
       return lhs;
     };
 

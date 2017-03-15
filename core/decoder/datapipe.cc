@@ -216,6 +216,10 @@ namespace pxar {
   void dtbEventDecoder::ProcessTBM(rawEvent * sample) {
     LOG(logDEBUGPIPES) << "Processing TBM header and trailer...";
 
+    // Initilise the errors:
+    roc_Event.eventid_mismatch.push_back(false);
+    roc_Event.no_data.push_back(false);
+
     // Check if the data is long enough to hold header and trailer:
     if(sample->GetSize() < 4) {
       decodingStats.m_errors_tbm_header++;
@@ -488,6 +492,7 @@ namespace pxar {
       if(roc_Event.triggerCount() != (eventID%256)) {
 	LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel()) << " Event ID mismatch:  local ID (" << static_cast<int>(eventID)
 		      << ") !=  TBM ID (" << static_cast<int>(roc_Event.triggerCount()) << ")";
+    roc_Event.eventid_mismatch.back() = true;
 	decodingStats.m_errors_tbm_eventid_mismatch++;
 	// To continue readout, set event ID to the currently decoded one:
 	eventID = roc_Event.triggerCount();
@@ -547,7 +552,8 @@ namespace pxar {
           // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
           std::fill(readback_dirty.begin(), readback_dirty.end(), true);
           // Clearing event content:
-          roc_Event.Clear();
+//        LOG(logWARNING) << "clearing event " << atEvent;
+//          roc_Event.Clear();
           LOG(logWARNING) << "DATA: " << listVector(sample->data, true);
         }
       }
@@ -559,7 +565,8 @@ namespace pxar {
         // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
         std::fill(readback_dirty.begin(), readback_dirty.end(), true);
         // Clearing event content:
-        roc_Event.Clear();
+//        LOG(logWARNING) << "clearing event " << atEvent;
+//        roc_Event.Clear();
       }
     }
     // Count empty events
@@ -598,6 +605,7 @@ namespace pxar {
     if((data & 0x0100) != 0x0000) {
       decodingStats.m_errors_event_nodata++;
       //LOG(logWARNING) << "Detected DESER400 trailer error bits: \"NO DATA\"";
+      roc_Event.no_data.back() = true;
       throw DataDeserializerError("No data");
     }
     if((data & 0x0200) != 0x0000) {
