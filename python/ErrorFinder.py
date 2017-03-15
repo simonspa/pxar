@@ -228,4 +228,4 @@ if __name__ == '__main__':
     # start command line
     z = ErrorFinder(args.dir, args.verbosity, args.trim, int(args.hv), int(args.cur))
     if args.hv is not None and args.start:
-        z.find_errors(5, show=False)
+        z.find_errors(1, show=False)
