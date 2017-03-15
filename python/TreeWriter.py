@@ -67,7 +67,9 @@ class TreeWriter:
                            ('buffer_corruption', vector('bool')()),
                            ('incomplete_data', vector('bool')()),
                            ('missing_roc_headers', vector('bool')()),
-                           ('roc_readback', vector('bool')())])
+                           ('roc_readback', vector('bool')()),
+                           ('no_data', vector('bool')()),
+                           ('eventid_mismatch', vector('bool')())])
         return dic
 
     def clear_vectors(self):
@@ -96,6 +98,14 @@ class TreeWriter:
                 self.VectorBranches['invalid_address'].push_back(bool(pix.invalid_address))
                 self.VectorBranches['invalid_pulse_height'].push_back(bool(pix.invalid_pulse_height))
                 self.VectorBranches['buffer_corruption'].push_back(bool(pix.buffer_corruption))
+            for k in xrange(len(ev.roc_readback)):
+                self.VectorBranches['roc_readback'].push_back(ev.roc_readback[k])
+                self.VectorBranches['incomplete_data'].push_back(ev.incomplete_data[k])
+                self.VectorBranches['missing_roc_headers'].push_back(ev.missing_roc_headers[k])
+            for err in ev.eventid_mismatch:
+                self.VectorBranches['eventid_mismatch'].push_back(err)
+            for err in ev.no_data:
+                self.VectorBranches['no_data'].push_back(err)
             for j in xrange(len(ev.header)):
                 self.VectorBranches['header'].push_back(ev.header[j])
                 self.VectorBranches['trailer'].push_back(ev.trailer[j])
@@ -108,9 +118,6 @@ class TreeWriter:
                 self.VectorBranches['trigger_count'].push_back(ev.triggerCounts[j])
                 self.VectorBranches['trigger_phase'].push_back(ev.triggerPhases[j])
                 self.VectorBranches['stack_count'].push_back(ev.stackCounts[j])
-                self.VectorBranches['incomplete_data'].push_back(ev.incomplete_data[j])
-                self.VectorBranches['missing_roc_headers'].push_back(ev.missing_roc_headers[j])
-                self.VectorBranches['roc_readback'].push_back(ev.roc_readback[j])
             self.Tree.Fill()
         self.ProgressBar.finish()
         self.File.cd()
