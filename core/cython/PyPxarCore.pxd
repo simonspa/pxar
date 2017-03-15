@@ -26,8 +26,8 @@ cdef extern from "api.h" namespace "pxar":
         uint8_t column()
         uint8_t row()
         uint8_t bufferCorruption()
-        bool invalidAddress()
-        bool invalidPulseHeight()
+        uint8_t invalidAddress()
+        uint8_t invalidPulseHeight()
         pixel()
         pixel(int32_t address, int32_t data)
         double value()
@@ -35,9 +35,9 @@ cdef extern from "api.h" namespace "pxar":
         void setRoc(uint8_t roc)
         void setColumn(uint8_t column)
         void setRow(uint8_t row)
-        void setBufferCorruption(bool value)
-        void setInvalidAddress(bool value)
-        void setInvalidPulseHeight(bool value)
+        void setBufferCorruption(bool bufcor)
+        void setInvalidAddress(bool invaladd)
+        void setInvalidPulseHeight(bool invalph)
 
 cdef extern from "api.h" namespace "pxar":
     cdef cppclass Event:
@@ -67,6 +67,8 @@ cdef extern from "api.h" namespace "pxar":
         vector[bool] incomplete_data
         vector[bool] missing_roc_headers
         vector[bool] roc_readback
+        vector[bool] no_data
+        vector[bool] eventid_mismatch
         Event()
         Event(Event &) except +
 

@@ -283,7 +283,6 @@ cdef class PxEvent:
         def __get__(self): return self.thisptr.haveAutoReset()
     property havePkamReset:
         def __get__(self): return self.thisptr.havePkamReset()
-
     property triggerCounts:
         def __get__(self): return self.thisptr.triggerCounts()
     property triggerPhases:
@@ -300,6 +299,10 @@ cdef class PxEvent:
         def __get__(self): return self.thisptr.missing_roc_headers
     property roc_readback:
         def __get__(self): return self.thisptr.roc_readback
+    property no_data:
+        def __get__(self): return self.thisptr.no_data
+    property eventid_mismatch:
+        def __get__(self): return self.thisptr.eventid_mismatch
 
 cdef class PyPxarCore:
     cdef pxarCore *thisptr # hold the C++ instance
