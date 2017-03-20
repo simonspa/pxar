@@ -325,6 +325,8 @@ namespace pxar {
       incomplete_data.clear();
       missing_roc_headers.clear();
       roc_readback.clear();
+      eventid_mismatch.clear();
+      no_data.clear();
     }
 
     void Event::resizePixelErrors(int16_t roc) {

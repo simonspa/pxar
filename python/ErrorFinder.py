@@ -130,7 +130,7 @@ class ErrorFinder:
         h.Draw('colz')
         self.Plots.append(h)
 
-    def find_errors(self, t=1, n=10000):
+    def find_errors(self, t=1, n=10000, show=True):
         self.start_xray()
         set_palette(False)
         self.api.HVon()
@@ -155,8 +155,9 @@ class ErrorFinder:
 
         writer = TreeWriter(data)
         writer.write_tree(self.HV, self.Current)
-        data = [pix for ev in data for pix in ev.pixels]
-        self.plot_map(data, 'Hit Map', count=True, no_stats=True)
+        if show:
+            data = [pix for ev in data for pix in ev.pixels]
+            self.plot_map(data, 'Hit Map', count=True, no_stats=True)
         print stats
         stats.save(self.HV, self.Current)
         print 'Event Rate: {0:5.4f} MHz'.format(stats.event_rate / 1000000)
@@ -227,4 +228,4 @@ if __name__ == '__main__':
     # start command line
     z = ErrorFinder(args.dir, args.verbosity, args.trim, int(args.hv), int(args.cur))
     if args.hv is not None and args.start:
-        z.find_errors(5)
+        z.find_errors(1, show=False)
