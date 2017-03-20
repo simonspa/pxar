@@ -433,6 +433,9 @@ namespace pxar {
       if(((*word) & 0x0ffc) == 0x07f8) {
 	roc_n++;
 
+        // reserve space in the error vector
+        roc_Event.resizePixelErrors(roc_n);
+
 	// Decode the readback bits in the ROC header:
 	if(GetDeviceType() >= ROC_PSI46DIGV2) { evalReadback(roc_n,(*word) & 0x0fff); }
       }
