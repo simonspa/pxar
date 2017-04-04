@@ -216,10 +216,6 @@ namespace pxar {
   void dtbEventDecoder::ProcessTBM(rawEvent * sample) {
     LOG(logDEBUGPIPES) << "Processing TBM header and trailer...";
 
-    // Initilise the errors:
-    roc_Event.eventid_mismatch.push_back(false);
-    roc_Event.no_data.push_back(false);
-
     // Check if the data is long enough to hold header and trailer:
     if(sample->GetSize() < 4) {
       decodingStats.m_errors_tbm_header++;
@@ -262,9 +258,6 @@ namespace pxar {
         // Count ROC Headers up:
         roc_n++;
 
-        // reserve space in the error vector
-        roc_Event.resizePixelErrors(roc_n);
-
         // Maybe store the XOR sum:
         if((GetFlags() & FLAG_ENABLE_XORSUM_LOGGING) != 0) { xorsum.push_back(((*word) & 0x0ff0) >> 4); }
       
@@ -294,7 +287,6 @@ namespace pxar {
 
         // Only one word left or unexpected alignment marker:
         if(sample->data.end() - word < 2 || ((*word) & 0x8000)) {
-          roc_Event.incomplete_data.at(uint16_t(roc_n)) = true;
           decodingStats.m_errors_pixel_incomplete++;
           break;
         }
@@ -316,8 +308,8 @@ namespace pxar {
           // TBM08x: channel 0: 0-7, channel 1: 8-15
           // TBM09x: channel 0: 0-3, channel 1: 4-7, channel 2: 8-11, channel 3: 12-15
           pixel pix(raw,static_cast<uint8_t>(roc_n + GetTokenChainOffset()), invertedAddress, linearAddress);
-          roc_Event.pixels.push_back(pix);
           pix.throwErrors();
+          roc_Event.pixels.push_back(pix);
           decodingStats.m_info_pixels_valid++;
         }
         catch(DataInvalidAddressError /*&e*/){
@@ -437,9 +429,6 @@ namespace pxar {
       if(((*word) & 0x0ffc) == 0x07f8) {
 	roc_n++;
 
-        // reserve space in the error vector
-        roc_Event.resizePixelErrors(roc_n);
-
 	// Decode the readback bits in the ROC header:
 	if(GetDeviceType() >= ROC_PSI46DIGV2) { evalReadback(roc_n,(*word) & 0x0fff); }
       }
@@ -495,7 +484,6 @@ namespace pxar {
       if(roc_Event.triggerCount() != (eventID%256)) {
 	LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel()) << " Event ID mismatch:  local ID (" << static_cast<int>(eventID)
 		      << ") !=  TBM ID (" << static_cast<int>(roc_Event.triggerCount()) << ")";
-    roc_Event.eventid_mismatch.back() = true;
 	decodingStats.m_errors_tbm_eventid_mismatch++;
 	// To continue readout, set event ID to the currently decoded one:
 	eventID = roc_Event.triggerCount();
@@ -525,7 +513,6 @@ namespace pxar {
       LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel())
 		    << " has NoTokenPass but " << roc_n+1
 		    << " ROCs were found";
-      roc_Event.missing_roc_headers.at(uint16_t(roc_n)) = true;
       decodingStats.m_errors_roc_missing++;
       // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
       std::fill(readback_dirty.begin(), readback_dirty.end(), true);
@@ -538,7 +525,6 @@ namespace pxar {
       if (sample != (rawEvent *) 1) {
         if (!sample){
           LOG(logWARNING) << "CheckEventValidity: rawEvent pointer sample is Zero - returning";
-          roc_Event.missing_roc_headers.at(uint16_t(roc_n)) = true;
           decodingStats.m_errors_roc_missing++;
           // Clearing event content:
           roc_Event.Clear();
@@ -550,26 +536,22 @@ namespace pxar {
         else {
           LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
                         << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
-          roc_Event.missing_roc_headers.at(uint16_t(roc_n)) = true;
           decodingStats.m_errors_roc_missing++;
           // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
           std::fill(readback_dirty.begin(), readback_dirty.end(), true);
           // Clearing event content:
-//        LOG(logWARNING) << "clearing event " << atEvent;
-//          roc_Event.Clear();
+          roc_Event.Clear();
           LOG(logWARNING) << "DATA: " << listVector(sample->data, true);
         }
       }
       else {
         LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
                       << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
-        roc_Event.missing_roc_headers.at(uint16_t(roc_n)) = true;
         decodingStats.m_errors_roc_missing++;
         // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
         std::fill(readback_dirty.begin(), readback_dirty.end(), true);
         // Clearing event content:
-//        LOG(logWARNING) << "clearing event " << atEvent;
-//        roc_Event.Clear();
+        roc_Event.Clear();
       }
     }
     // Count empty events
@@ -608,7 +590,6 @@ namespace pxar {
     if((data & 0x0100) != 0x0000) {
       decodingStats.m_errors_event_nodata++;
       //LOG(logWARNING) << "Detected DESER400 trailer error bits: \"NO DATA\"";
-      roc_Event.no_data.back() = true;
       throw DataDeserializerError("No data");
     }
     if((data & 0x0200) != 0x0000) {
@@ -681,7 +662,6 @@ namespace pxar {
 	  LOG(logWARNING) << "Channel " <<  static_cast<int>(GetChannel()) << " ROC " << static_cast<int>(roc)
 			  << ": Readback start marker after "
 			  << count.at(roc) << " readouts!";
-    roc_Event.roc_readback.at(roc) = true;
 	  decodingStats.m_errors_roc_readback++;
 	}
       }
