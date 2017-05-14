@@ -340,9 +340,10 @@ cdef class PyPxarCore:
         for key, value in power_settings.items():
             ps.push_back((key,float(value)))
         self.thisptr.setTestboardPower(ps)
-    def setDecodingOffset(self, offset):
+    def setDecodingOffset(self, offset, roc_n):
         cdef uint8_t os = offset
-        self.thisptr.setDecodingOffset(os)
+        cdef int16_t rocn = roc_n
+        self.thisptr.setDecodingOffset(os, rocn)
     def getTestboardDelays(self):
         r = self.thisptr.getTestboardDelays()
         return {tup.first: tup.second for tup in r}
