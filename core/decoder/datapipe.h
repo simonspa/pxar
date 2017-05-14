@@ -214,6 +214,7 @@ namespace pxar {
     void Clear() { decodingStats.clear(); readback.clear(); count.clear(); shiftReg.clear(); eventID = -1; };
     void setOffset(uint8_t decodingOffset, int16_t roc_n) { offsetB.at(roc_n) = decodingOffset; }
     void clearErrors() { roc_Event.clearPixelErrors(); }
+    bool foundHeader(int16_t, int16_t, int16_t);
 
     statistics getStatistics();
     std::vector<std::vector<uint16_t> > getReadback();
