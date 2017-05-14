@@ -195,7 +195,7 @@ int main(int argc, char *argv[]){
     api->SignalProbe("d1", configParameters->getProbe("d1"));
     api->SignalProbe("d2", configParameters->getProbe("d2"));
 
-    api->setDecodingOffset(configParameters->getDecodingOffset());
+//    api->setDecodingOffset(configParameters->getDecodingOffset());
 
     LOG(logINFO) << "DUT info: ";
     api->_dut->info();

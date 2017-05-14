@@ -90,7 +90,7 @@ void pxarCore::setTestboardDelays(std::vector<std::pair<std::string,uint8_t> > s
   LOG(logDEBUGAPI) << "Testboard signal delays updated.";
 }
 
-void pxarCore::setDecodingOffset(uint8_t offset) {  _hal->setOffset(offset); }
+void pxarCore::setDecodingOffset(uint8_t offset, int16_t roc_n) { _hal->setOffset(offset, roc_n); }
 
 void pxarCore::setPatternGenerator(std::vector<std::pair<std::string,uint8_t> > pg_setup) {
   if(!_hal->status()) {
