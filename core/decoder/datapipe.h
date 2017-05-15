@@ -208,8 +208,8 @@ namespace pxar {
     levelS.resize(16, 0);
     offsetB.push_back(25);
     offsetB.push_back(25);
-    offsetB.push_back(29);
-    offsetB.push_back(31);
+    offsetB.push_back(25);
+    offsetB.push_back(25);
   };
     void Clear() { decodingStats.clear(); readback.clear(); count.clear(); shiftReg.clear(); eventID = -1; };
     void setOffset(uint8_t decodingOffset, int16_t roc_n) { offsetB.at(roc_n) = decodingOffset; }
