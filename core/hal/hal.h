@@ -428,7 +428,7 @@ namespace pxar {
      */
     uint16_t GetADC(uint8_t rpc_par1);
 
-    void setOffset(uint8_t offsetDec, int16_t roc_n) { m_decoder[0].setOffset(offsetDec, roc_n); }
+    void setOffset(uint8_t offsetDec) { m_decoder[0].setOffset(offsetDec); }
 
   private:
 

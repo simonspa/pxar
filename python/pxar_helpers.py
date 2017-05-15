@@ -382,7 +382,7 @@ def PxarStartup(directory, verbosity, trim=None):
 
     if not any(word in config.get('rocType') for word in ['dig', 'proc']):
         print 'Analogue decodingOffset set to:', int(config.get("decodingOffset", 0))
-        api.setDecodingOffset(int(config.get("decodingOffset", int(0))), 0)
+        api.setDecodingOffset(int(config.get("decodingOffset", int(0))))
     print "And we have just initialized " + str(len(pixels)) + " pixel configs to be used for every ROC!"
 
     hubids = [int(i) for i in config.get("hubId",31).split(',')]

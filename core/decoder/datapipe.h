@@ -188,7 +188,7 @@ namespace pxar {
     std::vector<float> ultraBlack, black;
     std::vector<int16_t> levelS;
     std::vector<size_t> slidingWindow;
-    std::vector<uint8_t> offsetB;
+    uint8_t offsetB;
 
     // Last DAC storage for analog ROCs:
     void evalLastDAC(uint8_t roc, uint16_t val);
@@ -206,13 +206,9 @@ namespace pxar {
     black.resize(16, 0);
     slidingWindow.resize(16, 0);
     levelS.resize(16, 0);
-    offsetB.push_back(25);
-    offsetB.push_back(25);
-    offsetB.push_back(25);
-    offsetB.push_back(25);
   };
     void Clear() { decodingStats.clear(); readback.clear(); count.clear(); shiftReg.clear(); eventID = -1; };
-    void setOffset(uint8_t decodingOffset, int16_t roc_n) { offsetB.at(roc_n) = decodingOffset; }
+    void setOffset(uint8_t decodingOffset) { offsetB = decodingOffset; }
     void clearErrors() { roc_Event.clearPixelErrors(); }
     bool foundHeader(int16_t, int16_t, int16_t);
 
