@@ -41,6 +41,9 @@ probedict = PyProbeDictionary()
 palette = array([632, 810, 807, 797, 800, 400, 830, 827, 817, 417], 'i')
 gStyle.SetPalette(len(palette), palette)
 
+def do_nothing():
+    pass
+
 
 class PxarCoreCmd(cmd.Cmd):
     """Simple command processor for the pxar core API."""
@@ -406,6 +409,7 @@ class PxarCoreCmd(cmd.Cmd):
             vals[fit.Chi2()] = scale / 100.
         xmin = vals[min(vals.keys())]
         print xmin
+        return xmin
 
     def trim_ver(self, vec_trim, ntrig, start=0, loops=40):
         for vcal in range(256):
@@ -866,6 +870,19 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_getEfficiencyMap(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_getEfficiencyMap.__doc__, '']
+
+    @arity(0, 2, [int, int])
+    def do_getPulseheightMap(self, flags=0, nTriggers=10):
+        """getPulseheightMap [flags = 0] [nTriggers = 10]: returns the Pulseheight map"""
+        # self.window = PxarGui(ROOT.gClient.GetRoot(), 1000, 800)
+        gStyle.SetPalette(55)
+        data = self.api.getPulseheightMap(flags, nTriggers)
+        self.print_eff(data, nTriggers)
+        self.plot_map(data, "Pulseheight", no_stats=True)
+
+    def complete_getPulseheightMap(self, text, line, start_index, end_index):
+        # return help for the cmd
+        return [self.do_getPulseheightMap.__doc__, '']
 
     @arity(0, 2, [int, int])
     def do_getXPixelAlive(self, nTriggers=50):
@@ -2637,12 +2654,13 @@ class PxarCoreCmd(cmd.Cmd):
         return [self.do_efficiency_check.__doc__, '']
 
     @arity(2, 2, [int, int])
-    def do_setZaxis(self, low, high):
+    def do_setZaxis(self, low, high, cont=None):
         """ checkADCTimeConstant [vcal=200] [ntrig=10]: sends an amount of triggers for a fixed vcal in high/low region and prints adc values"""
         c = gROOT.GetListOfCanvases()[-1]
         for item in c.GetListOfPrimitives():
             if item.GetName() not in ['TFrame', 'title']:
                 item.GetZaxis().SetRangeUser(low, high)
+                item.SetContour(cont) if cont is not None else do_nothing()
                 break
 
     def complete_setZaxis(self):
@@ -2791,14 +2809,19 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.daqStart()
         data_low = self.scan_vcal(0, ntrig)
         data_high = self.scan_vcal(4, ntrig)
+        high_factor = self.find_factor(data_low, data_high)
         gr1 = Plotter.create_graph(data_low.keys(), data_low.values(), 'gr1', xtit='vcal', ytit='adc')
-        gr2 = Plotter.create_graph(data_high.keys(), data_high.values(), 'gr2', xtit='vcal', ytit='adc')
+        gr2 = Plotter.create_graph([k * high_factor for k in data_high.keys()], data_high.values(), 'gr2', xtit='vcal', ytit='adc')
         gr1.SetLineColor(3)
         gr1.SetMarkerColor(3)
-        mg = TMultiGraph()
+        mg = TMultiGraph('mg_sv', 'ADC Calibration')
         mg.Add(gr2)
         mg.Add(gr1)
         self.plot_graph(mg)
+        sleep(.2)
+        mg.GetXaxis().SetTitle('Vcal')
+        mg.GetYaxis().SetTitle('ADC')
+        mg.GetYaxis().SetTitleOffset(1.5)
 
     def complete_scanVcal(self):
         return [self.do_scanVcal.__doc__, '']
