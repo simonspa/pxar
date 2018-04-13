@@ -20,7 +20,7 @@ except ImportError:
     gui_available = False
     pass
 if gui_available:
-    from ROOT import PyConfig, gStyle, TCanvas, gROOT, TGraph, TMultiGraph, TH1I, gRandom, TCutG
+    from ROOT import PyConfig, gStyle, TCanvas, gROOT, TGraph, TMultiGraph, TH1I, gRandom, TCutG, TF1
 
     PyConfig.IgnoreCommandLineOptions = True
     from pxar_gui import PxarGui
@@ -2815,6 +2815,10 @@ class PxarCoreCmd(cmd.Cmd):
         gr1.SetLineColor(3)
         gr1.SetMarkerColor(3)
         mg = TMultiGraph('mg_sv', 'ADC Calibration')
+        fit = TF1('fit', '[3]*(TMath::Erf((x-[0])/[1])+[2])', 0, 2000)
+        fit.SetNpx(1000)
+        fit.SetParameters(500,600,1,80)
+        gr2.Fit('fit')
         mg.Add(gr2)
         mg.Add(gr1)
         self.plot_graph(mg)
@@ -2962,6 +2966,24 @@ class PxarCoreCmd(cmd.Cmd):
 
     def complete_getTriggerPhase(self):
         return [self.do_getTriggerPhase.__doc__, '']
+    
+    @arity(0, 5, [int, int, int, bool, int])
+    def do_adc_disto(self, vcal=50, col=14, row=14, high=False, n_trig=10000):
+        self.api.setDAC('ctrlreg', 4 if high else 0)
+        self.api.setDAC('vcal', vcal)
+        self.api.daqStart()
+        self.api.daqTrigger(n_trig, 500)
+        self.enable_pix(col, row)
+        data = self.api.daqGetEventBuffer()
+        self.api.daqStop()
+        adcs = [px.value for evt in data for px in evt.pixels]
+        h = TH1I('h_adc', 'ACD Distribution for vcal {v} in {h} Range'.format(v=vcal, h='high' if high else 'low'), 255, 0, 255)
+        for adc in adcs:
+            h.Fill(adc)
+        self.plot_graph(h, draw_opt='')
+
+    def complete_adc_disto(self):
+        return [self.do_adc_disto.__doc__, '']
 
     @staticmethod
     def do_quit(q=1):
