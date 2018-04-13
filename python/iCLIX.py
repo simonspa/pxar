@@ -4,7 +4,7 @@
 # created on February 23rd 2017 by M. Reichmann (remichae@phys.ethz.ch)
 # --------------------------------------------------------
 
-from ROOT import TCanvas, TCutG, gStyle, TColor, TH2F, TF2
+from ROOT import TCanvas, TCutG, gStyle, TColor, TH2F, TF2, TH1I
 from argparse import ArgumentParser
 from numpy import zeros, array
 from os.path import basename, dirname, realpath, split
@@ -15,6 +15,7 @@ lib_dir = joinpath(split(dirname(realpath(__file__)))[0], 'lib')
 path.insert(1, lib_dir)
 from pxar_helpers import *
 from pxar_plotter import Plotter
+from time import time
 
 dacdict = PyRegisterDictionary()
 probedict = PyProbeDictionary()
@@ -53,6 +54,16 @@ class CLIX:
             if word & 0x0800:
                 word -= 4096
             event[i] = word
+
+    # -----------------------------------------
+    # region API
+    def get_dac(self, dac, roc_id=0):
+        dacs = self.api.getRocDACs(roc_id)
+        if dac in dacs:
+            return dacs[dac]
+        else:
+            print 'Unknown dac {d}!'.format(d=dac)
+    # endregion
 
     # -----------------------------------------
     # region DAQ
@@ -96,14 +107,24 @@ class CLIX:
         print_string = '--> enable and unmask Pixel {r}/{c}: '.format(r=row, c=column)
         print_string += '(' + ','.join('ROC {n}: {a}/{m}'.format(n=roc, a=self.get_activated(roc)[0], m=self.get_activated(roc)[1]) for roc in xrange(self.api.getNEnabledRocs())) + ')'
         print print_string
-    # endregion
 
-    def get_dac(self, dac, roc_id=0):
-        dacs = self.api.getRocDACs(roc_id)
-        if dac in dacs:
-            return dacs[dac]
-        else:
-            print 'Unknown dac {d}!'.format(d=dac)
+    def set_pattern_gen(self, cal=True, res=True):
+        """ Sets up the trigger pattern generator for ROC testing """
+        pgcal = self.get_dac('wbc') + (6 if 'dig' in self.api.getRocType() else 5)
+        pg_setup = []
+        if res:
+            pg_setup.append(('PG_RESR', 25))
+        if cal:
+            pg_setup.append(('PG_CAL', pgcal))
+        pg_setup.append(('PG_TRG', 0 if self.api.getNTbms() != 0 else 15))
+        if self.api.getNTbms() == 0:
+            pg_setup.append(('PG_TOK', 0))
+        print pg_setup
+        try:
+            self.api.setPatternGenerator(tuple(pg_setup))
+        except RuntimeError, err:
+            print err
+    # endregion
 
     def get_efficiency_map(self, flags=0, n_triggers=10):
         data = self.api.getEfficiencyMap(flags, n_triggers)
@@ -119,19 +140,27 @@ class CLIX:
         print 'Efficiency: {eff:6.2f}% ({rb:5d}/{tot:5d})'.format(eff=eff, rb=int(read_back), tot=total)
         return eff
 
+    def plot_graph(self, gr, lm=.12, rm=.1, draw_opt='alp'):
+        c = TCanvas('c', 'c', 1000, 1000)
+        c.SetMargin(lm, rm, .1, .1)
+        gr.Draw(draw_opt)
+        self.window = c
+        self.Plots.append(gr)
+        self.window.Update()
+
     def plot_map(self, data, name, count=False, no_stats=False):
         c = TCanvas('c', 'c', 1000, 1000)
         c.SetRightMargin(.12)
 
         # Find number of ROCs present:
-        module = self.api.getNRocs() > 1
+        is_module = self.api.getNRocs() > 1
         proc = 'proc' in self.api.getRocType()
         # Prepare new numpy matrix:
-        d = zeros((417 if module else 52, 161 if module else 80))
+        d = zeros((417 if is_module else 52, 161 if is_module else 80))
         for px in data:
             roc = (px.roc - 12) % 16 if proc else 0
-            xoffset = 52 * (roc % 8) if module else 0
-            yoffset = 80 * int(roc / 8) if module else 0
+            xoffset = 52 * (roc % 8) if is_module else 0
+            yoffset = 80 * int(roc / 8) if is_module else 0
 
             # Flip the ROCs upside down:
             y = (px.row + yoffset) if (roc < 8) else (2 * yoffset - px.row - 1)
@@ -139,12 +168,12 @@ class CLIX:
             x = (px.column + xoffset) if (roc < 8) else (415 - xoffset - px.column)
             d[x][y] += 1 if count else px.value
 
-        plot = Plotter.create_th2(d, 0, 417 if module else 52, 0, 161 if module else 80, name, 'pixels x', 'pixels y', name)
+        plot = Plotter.create_th2(d, 0, 417 if is_module else 52, 0, 161 if is_module else 80, name, 'pixels x', 'pixels y', name)
         if no_stats:
             plot.SetStats(0)
         plot.Draw('COLZ')
         # draw margins of the ROCs for the module
-        self.draw_module_grid(module)
+        self.draw_module_grid(is_module)
         self.window = c
         self.Plots.append(plot)
         self.window.Update()
@@ -163,6 +192,30 @@ class CLIX:
                 self.Plots.append(cut)
                 cut.Draw('same')
 
+    def hitmap(self, t=1, n=10000):
+        self.api.HVon()
+        t_start = time()
+        self.set_pattern_gen(cal=False, res=False)
+        self.api.daqStart()
+        self.start_pbar(t * 600)
+        data = []
+        while time() - t_start < t * 60:
+            self.ProgressBar.update(int((time() - t_start) * 10) + 1)
+            self.api.daqTrigger(n, 500)
+            data += self.api.daqGetEventBuffer()
+        self.ProgressBar.finish()
+        self.api.daqStop()
+        self.api.HVoff()
+        self.set_pattern_gen()
+        data = [pix for event in data for pix in event.pixels]
+        self.plot_map(data, 'Hit Map', count=True, no_stats=True)
+        stats = self.api.getStatistics()
+        event_rate = stats.valid_events / (2.5e-8 * stats.total_events / 8.)
+        hit_rate = stats.valid_pixels / (2.5e-8 * stats.total_events / 8.)
+        stats.dump
+        print 'Event Rate: {0:5.4f} MHz'.format(event_rate / 1000000)
+        print 'Hit Rate:   {0:5.4f} MHz'.format(hit_rate / 1000000)
+
     def test(self):
         h = TH2F('h', 'h', 100, 0., 10., 100, 0., 10.)
         f = TF2("xyg", "xygaus", 0, 10, 0, 10)
@@ -171,22 +224,19 @@ class CLIX:
         h.Draw('colz')
         self.Plots.append(h)
 
-    def set_pg(self, cal=True, res=True):
-        """ Sets up the trigger pattern generator for ROC testing """
-        pgcal = self.get_dac('wbc') + (6 if 'dig' in self.api.getRocType() else 5)
-        pg_setup = []
-        if res:
-            pg_setup.append(('PG_RESR', 25))
-        if cal:
-            pg_setup.append(('PG_CAL', pgcal))
-        pg_setup.append(('PG_TRG', 0 if self.api.getNTbms() != 0 else 15))
-        if self.api.getNTbms() == 0:
-            pg_setup.append(('PG_TOK', 0))
-        print pg_setup
-        try:
-            self.api.setPatternGenerator(tuple(pg_setup))
-        except RuntimeError, err:
-            print err
+    def do_adc_disto(self, vcal=50, col=14, row=14, high=False, n_trig=10000):
+        self.api.setDAC('ctrlreg', 4 if high else 0)
+        self.api.setDAC('vcal', vcal)
+        self.api.daqStart()
+        self.api.daqTrigger(n_trig, 500)
+        self.enable_single_pixel(col, row)
+        data = self.api.daqGetEventBuffer()
+        self.api.daqStop()
+        adcs = [px.value for evt in data for px in evt.pixels]
+        h = TH1I('h_adc', 'ACD Distribution for vcal {v} in {h} Range'.format(v=vcal, h='high' if high else 'low'), 255, 0, 255)
+        for adc in adcs:
+            h.Fill(adc)
+        self.plot_graph(h, draw_opt='')
 
 
 def set_palette(custom=True, pal=1):
@@ -206,6 +256,7 @@ def set_palette(custom=True, pal=1):
 def do_nothing():
     pass
 
+
 if __name__ == '__main__':
     # command line argument parsing
 
@@ -224,6 +275,9 @@ if __name__ == '__main__':
     z = CLIX(args.dir, args.verbosity, args.trim)
 
     # shortcuts
+
+    on = z.api.HVon
+    off = z.api.HVoff
     ga = z.get_efficiency_map
     ds = z.daq_start
     st = z.daq_stop
