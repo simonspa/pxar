@@ -1,7 +1,7 @@
 #include <iostream>
 #include <stdlib.h>
-#include <algorithm> 
-#include <fstream> 
+#include <algorithm>
+#include <fstream>
 
 #include <TColor.h>
 #include <TStyle.h>
@@ -23,11 +23,11 @@ ClassImp(PixTestPretest)
 
 // ----------------------------------------------------------------------
 PixTestPretest::PixTestPretest( PixSetup *a, std::string name) :
-PixTest(a, name), 
-  fTargetIa(24), fNoiseWidth(22), fNoiseMargin(10), 
-  fParNtrig(1), 
-  fParVcal(200), 
-  fParDeltaVthrComp(-50), 
+PixTest(a, name),
+  fTargetIa(24), fNoiseWidth(22), fNoiseMargin(10),
+  fParNtrig(1),
+  fParVcal(200),
+  fParDeltaVthrComp(-50),
   fParFracCalDel(0.5),
   fIgnoreProblems(0) {
   PixTest::init();
@@ -161,9 +161,9 @@ void PixTestPretest::doTest() {
   if (fProblem) {
     if (fIgnoreProblems) {
       bigBanner("ERROR: some ROCs are not programmable; NOT stopping because you chose not to");
-      fProblem = false; 
+      fProblem = false;
     } else {
-      bigBanner("ERROR: some ROCs are not programmable; stop"); 
+      bigBanner("ERROR: some ROCs are not programmable; stop");
       return;
     }
   }
@@ -172,14 +172,14 @@ void PixTestPretest::doTest() {
   if (fProblem) {
     if (fIgnoreProblems) {
       bigBanner("ERROR: turning off some ROCs lead to less I(ana) current drop than expected; NOT stopping because you chose not to");
-      fProblem = false; 
+      fProblem = false;
     } else {
-      bigBanner("ERROR: turning off some ROCs lead to less I(ana) current drop than expected; stop"); 
+      bigBanner("ERROR: turning off some ROCs lead to less I(ana) current drop than expected; stop");
       return;
     }
   }
 
-  h1 = (*fDisplayedHist); 
+  h1 = (*fDisplayedHist);
   h1->Draw(getHistOption(h1).c_str());
   PixTest::update();
 
@@ -216,7 +216,7 @@ void PixTestPretest::doTest() {
 
   // -- save DACs and TBM parameters!
   saveDacs();
-  if ((tbmtype == "tbm09c") || (tbmtype == "tbm08c")) {
+  if ((tbmtype == "tbm09c") || (tbmtype == "tbm08c") || (tbmtype == "tbm10c")) {
     saveTbmParameters();
   }
 
@@ -271,7 +271,7 @@ void PixTestPretest::runCommand(std::string command) {
 
 // ----------------------------------------------------------------------
 void PixTestPretest::setVana() {
-  fStopTest = false; 
+  fStopTest = false;
   cacheDacs();
   fDirectory->cd();
   PixTest::update();
@@ -427,15 +427,15 @@ void PixTestPretest::setVana() {
 
   // -- test that current drops when turning off single ROCs
   cacheDacs();
-  double iAll = fApi->getTBia()*1E3; 
-  sw.Start(kTRUE); 
+  double iAll = fApi->getTBia()*1E3;
+  sw.Start(kTRUE);
   do {
-    sw.Start(kFALSE); 
+    sw.Start(kFALSE);
     iAll = fApi->getTBia()*1E3;
   } while (sw.RealTime() < 0.1);
 
-  double iMinus1(0), vanaOld(0); 
-  vector<double> iLoss; 
+  double iMinus1(0), vanaOld(0);
+  vector<double> iLoss;
   for (int iroc = 0; iroc < nRocs; ++iroc) {
     vanaOld = fApi->_dut->getDAC(iroc, "vana");
     fApi->setDAC("vana", 0, iroc);
@@ -446,18 +446,18 @@ void PixTestPretest::setVana() {
       sw.Start(kFALSE); // continue
       iMinus1 = fApi->getTBia()*1E3; // [mA]
     } while (sw.RealTime() < 0.1);
-    iLoss.push_back(iAll-iMinus1); 
-    
+    iLoss.push_back(iAll-iMinus1);
+
     fApi->setDAC("vana", vanaOld, iroc);
   }
 
-  string vanaString(""), vthrcompString(""); 
+  string vanaString(""), vthrcompString("");
   for (int iroc = 0; iroc < nRocs; ++iroc){
     if (iLoss[iroc] < 15) {
-      vanaString += Form("  ->%3.1f<-", iLoss[iroc]); 
-      fProblem = true; 
+      vanaString += Form("  ->%3.1f<-", iLoss[iroc]);
+      fProblem = true;
     } else {
-      vanaString += Form("  %3.1f", iLoss[iroc]); 
+      vanaString += Form("  %3.1f", iLoss[iroc]);
     }
   }
   // -- summary printout
@@ -474,38 +474,38 @@ void PixTestPretest::setVana() {
 // this is quite horrible, but a consequence of the parallel world in PixTestCmd which I do not intend to duplicate here
 void PixTestPretest::findTiming() {
 
-  banner(Form("PixTestPretest::findTiming() ")); 
-  PixTestFactory *factory = PixTestFactory::instance(); 
-  PixTest *t =  factory->createTest("cmd", fPixSetup);		    
+  banner(Form("PixTestPretest::findTiming() "));
+  PixTestFactory *factory = PixTestFactory::instance();
+  PixTest *t =  factory->createTest("cmd", fPixSetup);
   t->runCommand("timing");
   delete t;
 
   // -- parse output file
-  ifstream INS; 
+  ifstream INS;
   char buffer[1000];
-  string sline, sparameters, ssuccess; 
+  string sline, sparameters, ssuccess;
   string::size_type s1;
   vector<double> x;
-  INS.open("pxar_timing.log"); 
+  INS.open("pxar_timing.log");
   while (INS.getline(buffer, 1000, '\n')) {
-    sline = buffer; 
-    s1 = sline.find("selecting"); 
+    sline = buffer;
+    s1 = sline.find("selecting");
     if (string::npos == s1) continue;
     sparameters = sline;
     INS.getline(buffer, 1000, '\n');
-    ssuccess = buffer; 
+    ssuccess = buffer;
   }
   INS.close();
 
   // -- parse relevant lines
-  int tries(-1), success(-1); 
+  int tries(-1), success(-1);
   istringstream istring(ssuccess);
-  istring >> sline >> sline >> success >> sline >> tries; 
-  istring.clear(); 
-  istring.str(sparameters); 
-  int i160(-1), i400(-1), iroc(-1), iht(-1), itoken(-1), iwidth(-1); 
-  istring >> sline >> i160 >> i400 >> iroc >> iht >> itoken >> sline >> sline >> iwidth; 
-  LOG(logINFO) << "TBM phases:  160MHz: " << i160 << ", 400MHz: " << i400 
+  istring >> sline >> sline >> success >> sline >> tries;
+  istring.clear();
+  istring.str(sparameters);
+  int i160(-1), i400(-1), iroc(-1), iht(-1), itoken(-1), iwidth(-1);
+  istring >> sline >> i160 >> i400 >> iroc >> iht >> itoken >> sline >> sline >> iwidth;
+  LOG(logINFO) << "TBM phases:  160MHz: " << i160 << ", 400MHz: " << i400
 	       << ", TBM delays: ROC(0/1):" << iroc << ", header/trailer: " << iht << ", token: " << itoken;
   LOG(logINFO) << "(success/tries = " << success << "/" << tries << "), width = " << iwidth;
 
@@ -524,7 +524,7 @@ void PixTestPretest::findTiming() {
   }
   tbmSet("base4", 2, 0x80); // reset once after changing phases
 
-  if (success < 0) fProblem = true; 
+  if (success < 0) fProblem = true;
 
 }
 
@@ -532,7 +532,7 @@ void PixTestPretest::findTiming() {
 // ----------------------------------------------------------------------
 void PixTestPretest::setTimings() {
 
-  fStopTest = false; 
+  fStopTest = false;
   // Start test timer
   timer t;
 
@@ -575,12 +575,12 @@ void PixTestPretest::setTimings() {
 
   if (GoodDelaySettings) banner("Current timings are good. No timing scan needed.");
   else  banner("Current timings are not Good. Starting timing scan.");
-  
+
   // Loop through selected TBM Phases settings.
   int PLL160Phases[4] = {6,5,7,0};
   int PLL400Phases[7] = {2,6,1,3,5,7};
   int ROCDelays[6] = {4,3,5,2,6,1};
-    
+
   for (int ipll160 = 0; ipll160 < 4 && !GoodDelaySettings; ipll160++) {
     for (int ipll400 = 0; ipll400 < 7 && !GoodDelaySettings; ipll400++) {
       //Apply TBM Phase Settings
@@ -631,7 +631,7 @@ void PixTestPretest::setTimings() {
 void PixTestPretest::setVthrCompCalDel() {
   uint16_t FLAGS = FLAG_FORCE_MASKED;
 
-  fStopTest = false; 
+  fStopTest = false;
   gStyle->SetPalette(1);
   cacheDacs();
   fDirectory->cd();
@@ -682,7 +682,7 @@ void PixTestPretest::setVthrCompCalDel() {
   vector<pair<uint8_t, pair<uint8_t, vector<pixel> > > >  rresults;
   while (!done) {
     rresults.clear();
-    int cnt(0); 
+    int cnt(0);
     gSystem->ProcessEvents();
     if (fStopTest) break;
 
@@ -749,8 +749,8 @@ void PixTestPretest::setVthrCompCalDel() {
 
     h2->Draw(getHistOption(h2).c_str());
     PixTest::update();
-    
-    fHistList.push_back(h2); 
+
+    fHistList.push_back(h2);
   }
 
   fHistList.push_back(h1);
@@ -783,7 +783,7 @@ void PixTestPretest::setVthrCompCalDel() {
 // ----------------------------------------------------------------------
 void PixTestPretest::setVthrCompId() {
 
-  fStopTest = false; 
+  fStopTest = false;
   cacheDacs();
   fDirectory->cd();
   PixTest::update();
@@ -808,7 +808,7 @@ void PixTestPretest::setVthrCompId() {
 
   fApi->_dut->testAllPixels(true); // enable all pix: more noise
   fApi->_dut->maskAllPixels(false); // enable all pix: more noise
-  maskPixels(); 
+  maskPixels();
 
   for (int roc = 0; roc < nRocs; ++roc) {
     fApi->setDAC("Vsf", 33, roc); // small
@@ -909,7 +909,7 @@ void PixTestPretest::setVthrCompId() {
 void PixTestPretest::setCalDel() {
   uint16_t FLAGS = FLAG_FORCE_SERIAL | FLAG_FORCE_MASKED; // required for manual loop over ROCs
 
-  fStopTest = false; 
+  fStopTest = false;
   cacheDacs();
   fDirectory->cd();
   PixTest::update();
@@ -1038,16 +1038,16 @@ void PixTestPretest::setCalDel() {
 
 // ----------------------------------------------------------------------
 void PixTestPretest::programROC() {
-  fStopTest = false; 
+  fStopTest = false;
   cacheDacs();
   fDirectory->cd();
   PixTest::update();
-  banner(Form("PixTestPretest::programROC() ")); 
+  banner(Form("PixTestPretest::programROC() "));
 
   fApi->_dut->testAllPixels(false);
   fApi->_dut->maskAllPixels(true);
-  
-  vector<uint8_t> rocIds = fApi->_dut->getEnabledRocIDs(); 
+
+  vector<uint8_t> rocIds = fApi->_dut->getEnabledRocIDs();
   unsigned int nRocs = rocIds.size();
   TH1D *h1 = bookTH1D("programROC", "#Delta(Iana) vs ROC", nRocs, 0., nRocs);
   fHistList.push_back(h1);
@@ -1103,7 +1103,7 @@ void PixTestPretest::programROC() {
   fDisplayedHist = find(fHistList.begin(), fHistList.end(), h1);
   PixTest::update();
 
-  dutCalibrateOff();  
+  dutCalibrateOff();
   restoreDacs();
 }
 
@@ -1244,8 +1244,9 @@ void PixTestPretest::findWorkingPixel() {
       maps.clear();
     }
   }
+
   if (maps.size()) {
-    LOG(logINFO) << "Found working pixel in all ROCs: col/row = " << ic << "/" << ir; 
+    LOG(logINFO) << "Found working pixel in all ROCs: col/row = " << ic << "/" << ir;
     clearSelectedPixels();
     fPIX.push_back(make_pair(ic, ir));
     addSelectedPixels(Form("%d,%d", ic, ir));
@@ -1256,7 +1257,6 @@ void PixTestPretest::findWorkingPixel() {
       LOG(logINFO) << "our roc list from in the dut: " << static_cast<int>(rocIds[iroc]);
     }
   }
-
 
   dutCalibrateOff();
   restoreDacs();

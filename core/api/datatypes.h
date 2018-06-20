@@ -34,7 +34,7 @@ namespace pxar {
 
     /** Default constructor for pixel objects, defaulting all member variables to zero
      */
-  pixel() : _roc_id(0), _column(0), _row(0), _mean(0), _variance(0) {}
+  pixel() : _roc_id(0), _column(0), _row(0), _mean(0), _variance(0), _buffer_corruption(false), _invalid_address(false), _invalid_pulse_height(false) {}
 
     /** Constructor for pixel objects with address and value initialization.
      */
@@ -42,7 +42,8 @@ namespace pxar {
 
     /** Constructor for pixel objects with rawdata pixel address & value and ROC id initialization.
      */
-  pixel(uint32_t rawdata, uint8_t rocid, bool invertAddress = false, bool linearAddress = false) : _roc_id(rocid) {
+  pixel(uint32_t rawdata, uint8_t rocid, bool invertAddress=false, bool linearAddress=false) : _roc_id(rocid), _buffer_corruption(false), _invalid_address(false),
+                                                                                                                  _invalid_pulse_height(false) {
       if(linearAddress) { decodeLinear(rawdata); }
       else { decodeRaw(rawdata,invertAddress); }
     }
@@ -103,6 +104,18 @@ namespace pxar {
      */
     uint32_t encodeLinear();
 
+    /** method to throw the errors after decoding
+     */
+    void throwErrors();
+
+    /** Getter and setter methods for the decoding errors */
+    bool bufferCorruption() { return _buffer_corruption; }
+    bool invalidAddress() { return _invalid_address; }
+    bool invalidPulseHeight() { return _invalid_pulse_height; }
+    void setBufferCorruption(bool value) { _buffer_corruption = value; }
+    void setInvalidAddress(bool value) { _invalid_address = value; }
+    void setInvalidPulseHeight(bool value) { _invalid_pulse_height = value; }
+
     /** Overloaded comparison operator
      */
     bool operator == (const pixel& px) {
@@ -146,6 +159,10 @@ namespace pxar {
      *  variance
      */
     uint16_t _variance;
+
+    /** decoding errors
+   */
+    bool _buffer_corruption, _invalid_address, _invalid_pulse_height;
 
     /** Decoding function for PSI46 dig raw ROC data. Parameter "invert"
      *  allows decoding of PSI46dig data which has an inverted pixel
@@ -202,11 +219,16 @@ namespace pxar {
    */
   class DLLEXPORT Event {
   public:
-  Event() : pixels(), header(), trailer() {}
+  Event() : pixels(), roc_readback(), missing_roc_headers(), incomplete_data(), eventid_mismatch(), no_data(), header(), trailer() {}
   Event(const Event &evt) {
     pixels = evt.pixels;
     header = evt.header;
     trailer = evt.trailer;
+    incomplete_data = evt.incomplete_data;
+    missing_roc_headers = evt.missing_roc_headers;
+    roc_readback = evt.roc_readback;
+    eventid_mismatch = evt.eventid_mismatch;
+    no_data = evt.no_data;
   }
 
     /** Helper function to clear the event content
@@ -329,9 +351,13 @@ namespace pxar {
      */
     void printTrailer();
 
+    void clearPixelErrors();
+    void resizePixelErrors(int16_t);
+
     /** Vector of successfully decoded pxar::pixel objects
      */
     std::vector<pixel> pixels;
+    std::vector<bool> roc_readback, missing_roc_headers, incomplete_data, eventid_mismatch, no_data;
 
   private:
 
@@ -349,6 +375,11 @@ namespace pxar {
       lhs.pixels.insert(lhs.pixels.end(), rhs.pixels.begin(), rhs.pixels.end());
       lhs.header.insert(lhs.header.end(), rhs.header.begin(), rhs.header.end());
       lhs.trailer.insert(lhs.trailer.end(), rhs.trailer.begin(), rhs.trailer.end());
+      lhs.missing_roc_headers.insert(lhs.missing_roc_headers.end(), rhs.missing_roc_headers.begin(), rhs.missing_roc_headers.end());
+      lhs.roc_readback.insert(lhs.roc_readback.end(), rhs.roc_readback.begin(), rhs.roc_readback.end());
+      lhs.incomplete_data.insert(lhs.incomplete_data.end(), rhs.incomplete_data.begin(), rhs.incomplete_data.end());
+      lhs.eventid_mismatch.insert(lhs.eventid_mismatch.end(), rhs.eventid_mismatch.begin(), rhs.eventid_mismatch.end());
+      lhs.no_data.insert(lhs.no_data.end(), rhs.no_data.begin(), rhs.no_data.end());
       return lhs;
     };
 
@@ -521,6 +552,7 @@ namespace pxar {
       m_errors_pixel_buffer_corrupt(0)
 	{};
     // Print all statistics to stdout:
+    std::string getString();
     void dump();
     friend statistics& operator+=(statistics &lhs, const statistics &rhs) {
       // Informational bits:

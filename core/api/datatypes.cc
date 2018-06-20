@@ -3,6 +3,7 @@
 #include "log.h"
 #include "exceptions.h"
 #include "constants.h"
+#include "sstream"
 
 namespace pxar {
 
@@ -12,7 +13,7 @@ namespace pxar {
     setValue(static_cast<double>((raw & 0x0f) + ((raw >> 1) & 0xf0)));
     if((raw & 0x10) > 0) {
       LOG(logDEBUGAPI) << "invalid pulse-height fill bit from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      throw DataInvalidPulseheightError("Error decoding pixel raw value");
+      _invalid_pulse_height = true;
     }
 
     // Decode the pixel address
@@ -29,8 +30,8 @@ namespace pxar {
     // Perform range checks:
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {
       LOG(logDEBUGAPI) << "Invalid pixel from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      if(_row == ROC_NUMROWS) throw DataCorruptBufferError("Error decoding pixel raw value");
-      else throw DataInvalidAddressError("Error decoding pixel raw value");
+      if(_row == ROC_NUMROWS) _buffer_corruption = true;
+      else _invalid_address = true;
     }
   }
 
@@ -38,26 +39,36 @@ namespace pxar {
     // Get the pulse height:
     setValue(static_cast<double>((raw & 0x0f) + ((raw >> 1) & 0xf0)));
     if((raw & 0x10) > 0) {
-      LOG(logDEBUGAPI) << "invalid pulse-height fill bit from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      throw DataInvalidPulseheightError("Error decoding pixel raw value");
+      LOG(logDEBUGAPI) << "invalid pulse-height fill bit from raw value of " << std::hex << raw << std::dec << ": " << *this;
+      _invalid_pulse_height = true;
+      _row = 99;
+      _column = 99;
     }
 
     // Perform checks on the fill bits:
     if((raw & 0x1000) > 0 || (raw & 0x100000) > 0) {
-      LOG(logDEBUGAPI) << "invalid address fill bit from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      throw DataInvalidAddressError("Error decoding pixel raw value");
+      LOG(logDEBUGAPI) << "invalid address fill bit from raw value of " << std::hex << raw << std::dec << ": " << *this;
+      _invalid_address = true;
+      _row = 99;
+      _column = 99;
     }
 
     // Decode the pixel address
-    _column = ((raw >> 17) & 0x07) + ((raw >> 18) & 0x38);
-    _row = ((raw >> 9) & 0x07) + ((raw >> 10) & 0x78);
+    _column = uint8_t(((raw >> 17) & 0x07) + ((raw >> 18) & 0x38));
+    _row = uint8_t(((raw >> 9) & 0x07) + ((raw >> 10) & 0x78));
     
     // Perform range checks:
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {
-      LOG(logDEBUGAPI) << "Invalid pixel from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      if(_row == ROC_NUMROWS) throw DataCorruptBufferError("Error decoding pixel raw value");
-      else throw DataInvalidAddressError("Error decoding pixel raw value");
+      LOG(logDEBUGAPI) << "Invalid pixel from raw value of " << std::hex << raw << std::dec << ": " << *this;
+      if(_row == ROC_NUMROWS) _buffer_corruption = true;
+      else _invalid_address = true;
     }
+  }
+
+  void pixel::throwErrors() {
+    if (_invalid_address) throw DataInvalidAddressError("Error decoding pixel raw value");
+    else if (_invalid_pulse_height) throw DataInvalidPulseheightError("Error decoding pixel raw value");
+    else if (_buffer_corruption) throw DataCorruptBufferError("Error decoding pixel raw value");
   }
 
   uint8_t pixel::translateLevel(uint16_t x, int16_t level0, int16_t level1, int16_t levelS) {
@@ -310,7 +321,24 @@ namespace pxar {
     LOG(logINFO) << "\t Stack Count \t" << listVector(this->stackCounts(),false,false,true);
   }
 
-  void statistics::dump() {
+    void Event::clearPixelErrors() {
+      incomplete_data.clear();
+      missing_roc_headers.clear();
+      roc_readback.clear();
+      eventid_mismatch.clear();
+      no_data.clear();
+    }
+
+    void Event::resizePixelErrors(int16_t roc) {
+
+      if (missing_roc_headers.size() <= uint16_t(roc)) {
+        roc_readback.resize(uint16_t(roc + 1), false);
+        missing_roc_headers.resize(uint16_t(roc + 1), false);
+        incomplete_data.resize(uint16_t(roc + 1), false);
+      }
+    }
+
+    void statistics::dump() {
     // Print out the full statistics:
     LOG(logINFO) << "Decoding statistics:";
     LOG(logINFO) << "  General information:";
@@ -371,7 +399,41 @@ namespace pxar {
     m_errors_pixel_buffer_corrupt = 0;
   }
 
-  tbmCoreConfig::tbmCoreConfig(uint8_t tbmtype) : dacs(), type(tbmtype), hubid(31), core(0xE0), tokenchains(), enable(true) {
+    std::string statistics::getString() {
+      std::stringstream ss;
+      ss << "Decoding statistics:" << '\n';
+      ss << "  General information:" << '\n';
+      ss << "\t 16bit words read:         " << this->info_words_read() << '\n';
+      ss << "\t valid events total:       " << this->info_events_total() << '\n';
+      ss << "\t empty events:             " << this->info_events_empty() << '\n';
+      ss << "\t valid events with pixels: " << this->info_events_valid() << '\n';
+      ss << "\t valid pixel hits:         " << this->info_pixels_valid() << '\n';
+      ss << "  Event errors: \t           " << this->errors_event() << '\n';
+      ss << "\t start marker:             " << this->errors_event_start() << '\n';
+      ss << "\t stop marker:              " << this->errors_event_stop() << '\n';
+      ss << "\t overflow:                 " << this->errors_event_overflow() << '\n';
+      ss << "\t invalid 5bit words:       " << this->errors_event_invalid_words() << '\n';
+      ss << "\t invalid XOR eye diagram:  " << this->errors_event_invalid_xor() << '\n';
+      ss << "\t frame (failed synchr.):   " << this->errors_event_frame() << '\n';
+      ss << "\t idle data (no TBM trl):   " << this->errors_event_idledata() << '\n';
+      ss << "\t no data (only TBM hdr):   " << this->errors_event_nodata() << '\n';
+      ss << "\t PKAM:                     " << this->errors_event_pkam() << '\n';
+      ss << "  TBM errors: \t\t           " << this->errors_tbm() << '\n';
+      ss << "\t flawed TBM headers:       " << this->errors_tbm_header() << '\n';
+      ss << "\t flawed TBM trailers:      " << this->errors_tbm_trailer() << '\n';
+      ss << "\t event ID mismatches:      " << this->errors_tbm_eventid_mismatch() << '\n';
+      ss << "  ROC errors: \t\t           " << this->errors_roc() << '\n';
+      ss << "\t missing ROC header(s):    " << this->errors_roc_missing() << '\n';
+      ss << "\t misplaced readback start: " << this->errors_roc_readback() << '\n';
+      ss << "  Pixel decoding errors:\t   " << this->errors_pixel() << '\n';
+      ss << "\t pixel data incomplete:    " << this->errors_pixel_incomplete() << '\n';
+      ss << "\t pixel address:            " << this->errors_pixel_address() << '\n';
+      ss << "\t pulse height fill bit:    " << this->errors_pixel_pulseheight() << '\n';
+      ss << "\t buffer corruption:        " << this->errors_pixel_buffer_corrupt() << '\n';
+      return ss.str();
+    }
+
+    tbmCoreConfig::tbmCoreConfig(uint8_t tbmtype) : dacs(), type(tbmtype), hubid(31), core(0xE0), tokenchains(), enable(true) {
 
     if(tbmtype == 0x0) {
       LOG(logCRITICAL) << "Invalid TBM type \"" << tbmtype << "\"";

@@ -184,13 +184,12 @@ namespace pxar {
     std::vector<uint8_t> xorsum;
     
     // Analog level averaging:
-    void AverageAnalogLevel(int16_t word1, int16_t word2);
-    float ultrablack, black;
-    int16_t levelS;
-    int32_t sumUB, sumB;
-    size_t slidingWindow;
+    void AverageAnalogLevel(int16_t word1, int16_t word2, int16_t roc_n);
+    std::vector<float> ultraBlack, black;
+    std::vector<int16_t> levelS;
+    std::vector<size_t> slidingWindow;
     uint8_t offsetB;
-    
+
     // Last DAC storage for analog ROCs:
     void evalLastDAC(uint8_t roc, uint16_t val);
 
@@ -199,10 +198,19 @@ namespace pxar {
     std::vector<std::string> event_ringbuffer;
 
   public:
-  dtbEventDecoder() : decodingStats(), readback_dirty(), count(), shiftReg(), readback(), eventID(-1), ultrablack(0xfff), black(0xfff), levelS(0),
-                      sumUB(0), sumB(0), slidingWindow(0), offsetB(0), total_event(5), flawed_event(0), error_count(0), dump_count(0), event_ringbuffer(7) {};
+  dtbEventDecoder() : decodingStats(), readback_dirty(), count(), shiftReg(), readback(), eventID(-1), offsetB(0), total_event(5), flawed_event(0),
+                      error_count(0), dump_count(0), event_ringbuffer(7) {
+
+    /** initialise vectors */
+    ultraBlack.resize(16, 0);
+    black.resize(16, 0);
+    slidingWindow.resize(16, 0);
+    levelS.resize(16, 0);
+  };
     void Clear() { decodingStats.clear(); readback.clear(); count.clear(); shiftReg.clear(); eventID = -1; };
     void setOffset(uint8_t decodingOffset) { offsetB = decodingOffset; }
+    void clearErrors() { roc_Event.clearPixelErrors(); }
+    bool foundHeader(int16_t, int16_t, int16_t);
 
     statistics getStatistics();
     std::vector<std::vector<uint16_t> > getReadback();

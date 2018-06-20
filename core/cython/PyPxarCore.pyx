@@ -40,6 +40,9 @@ cdef class Pixel:
         self.thisptr.setColumn(p.column())
         self.thisptr.setRow(p.row())
         self.thisptr.setValue(p.value())
+        self.thisptr.setBufferCorruption(p.bufferCorruption())
+        self.thisptr.setInvalidAddress(p.invalidAddress())
+        self.thisptr.setInvalidPulseHeight(p.invalidPulseHeight())
     cdef c_clone(self, pixel* p):
         del self.thisptr
         self.thisptr = p
@@ -55,6 +58,15 @@ cdef class Pixel:
     property value:
         def __get__(self): return self.thisptr.value()
         def __set__(self, value): self.thisptr.setValue(value)
+    property buffer_corruption:
+        def __get__(self): return self.thisptr.bufferCorruption()
+        def __set__(self, value): self.thisptr.setBufferCorruption(value)
+    property invalid_address:
+        def __get__(self): return self.thisptr.invalidAddress()
+        def __set__(self, value): self.thisptr.setInvalidAddress(value)
+    property invalid_pulse_height:
+        def __get__(self): return self.thisptr.invalidPulseHeight()
+        def __set__(self, value): self.thisptr.setInvalidPulseHeight(value)
 
 cdef class PixelConfig:
     cdef pixelConfig *thisptr      # hold a C++ instance which we're wrapping
@@ -162,9 +174,50 @@ cdef class Statistics:
         def __get__(self): return self.thisobj.errors_roc()
     property errors_pixel:
         def __get__(self): return self.thisobj.errors_pixel()
-    property info_pixels_valid:
+    property valid_pixels:
         def __get__(self): return self.thisobj.info_pixels_valid()
-
+    property total_events:
+        def __get__(self): return self.thisobj.info_events_total()
+    property valid_events:
+        def __get__(self): return self.thisobj.info_events_valid()
+    property empty_events:
+        def __get__(self): return self.thisobj.info_events_empty()
+    property errors_event_start:
+        def __get__(self): return self.thisobj.errors_event_start()
+    property errors_event_stop:
+        def __get__(self): return self.thisobj.errors_event_stop()
+    property errors_event_overflow:
+        def __get__(self): return self.thisobj.errors_event_overflow()
+    property errors_event_invalid_words:
+        def __get__(self): return self.thisobj.errors_event_invalid_words()
+    property errors_event_invalid_xor:
+        def __get__(self): return self.thisobj.errors_event_invalid_xor()
+    property errors_event_frame:
+        def __get__(self): return self.thisobj.errors_event_frame()
+    property errors_event_idledata:
+        def __get__(self): return self.thisobj.errors_event_idledata()
+    property errors_event_nodata:
+        def __get__(self): return self.thisobj.errors_event_nodata()
+    property errors_event_pkam:
+        def __get__(self): return self.thisobj.errors_event_pkam()
+    property errors_tbm_header:
+        def __get__(self): return self.thisobj.errors_tbm_header()
+    property errors_tbm_eventid_mismatch:
+        def __get__(self): return self.thisobj.errors_tbm_eventid_mismatch()
+    property errors_tbm_trailer:
+        def __get__(self): return self.thisobj.errors_tbm_trailer()
+    property errors_roc_missing:
+        def __get__(self): return self.thisobj.errors_roc_missing()
+    property errors_roc_readback:
+        def __get__(self): return self.thisobj.errors_roc_readback()
+    property errors_pixel_incomplete:
+        def __get__(self): return self.thisobj.errors_pixel_incomplete()
+    property errors_pixel_address:
+        def __get__(self): return self.thisobj.errors_pixel_address()
+    property errors_pixel_pulseheight:
+        def __get__(self): return self.thisobj.errors_pixel_pulseheight()
+    property errors_pixel_buffer_corrupt:
+        def __get__(self): return self.thisobj.errors_pixel_buffer_corrupt()
 
 cdef class PxEvent:
     cdef Event *thisptr      # hold a C++ instance which we're wrapping
@@ -230,7 +283,6 @@ cdef class PxEvent:
         def __get__(self): return self.thisptr.haveAutoReset()
     property havePkamReset:
         def __get__(self): return self.thisptr.havePkamReset()
-
     property triggerCounts:
         def __get__(self): return self.thisptr.triggerCounts()
     property triggerPhases:
@@ -241,6 +293,16 @@ cdef class PxEvent:
         def __get__(self): return self.thisptr.dataValues()
     property stackCounts:
         def __get__(self): return self.thisptr.stackCounts()
+    property incomplete_data:
+        def __get__(self): return self.thisptr.incomplete_data
+    property missing_roc_headers:
+        def __get__(self): return self.thisptr.missing_roc_headers
+    property roc_readback:
+        def __get__(self): return self.thisptr.roc_readback
+    property no_data:
+        def __get__(self): return self.thisptr.no_data
+    property eventid_mismatch:
+        def __get__(self): return self.thisptr.eventid_mismatch
 
 cdef class PyPxarCore:
     cdef pxarCore *thisptr # hold the C++ instance
