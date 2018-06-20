@@ -53,6 +53,18 @@ class CLIX:
         self.ProgressBar.start()
 
     @staticmethod
+    def run(filename):
+        print '\nReading commands from file...\n'
+        if not file_exists(filename):
+            'File {} does not exit'.format(filename)
+        f = open(filename)
+        for line in f.readlines():
+            if line.startswith('#'):
+                continue
+            print line.strip('\n\r')
+            data = line.split()
+            arguments = [float(word) if is_num(word) else word for word in data[1:]]
+            exec 'z.{f}({args})'.format(f=data[0], args=dumps(arguments).strip('[]'))
     def convert_raw_event(event):
         for i, word in enumerate(event):
             word &= 0x0fff
@@ -262,28 +274,33 @@ def do_nothing():
     pass
 
 
+def bit_shift(value, shift):
+    return (value >> shift) & 0b0111
+
+
 if __name__ == '__main__':
     # command line argument parsing
 
     parser = ArgumentParser(prog=prog_name, description="A Simple Command Line Interface to the pxar API.")
     parser.add_argument('--dir', '-d', metavar="DIR", help="The digit rectory with all required config files.")
-    parser.add_argument('--run', '-r', metavar="FILE", help="Load a cmdline script to be executed before entering the prompt.")
+    parser.add_argument('--run', '-r', metavar="FILE", help="Load a cmdline script to be executed before entering the prompt.", default='')
     parser.add_argument('--verbosity', '-v', metavar="LEVEL", default="INFO", help="The output verbosity set in the pxar API.")
     parser.add_argument('--trim', '-T', nargs='?', default=None, help="The output verbosity set in the pxar API.")
     args = parser.parse_args(argv)
 
-    print '\n================================================='
-    print '# STARTING Error Finder'
-    print '=================================================\n'
+    print_banner('# STARTING ipython pXar Command Line Interface')
 
     # start command line
     z = CLIX(args.dir, args.verbosity, args.trim)
+    print
+    if args.run:
+        z.run(args.run)
 
     # shortcuts
 
-    on = z.api.HVon
-    off = z.api.HVoff
-    ga = z.get_efficiency_map
+    hvon = z.api.HVon
+    hvoff = z.api.HVoff
+    ge = z.get_efficiency_map
     ds = z.daq_start
     st = z.daq_stop
     ev = z.daq_get_event
