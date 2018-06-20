@@ -25,7 +25,7 @@ CUSB::CUSB(){
   ftHandle = 0;
   ftdiStatus = 0;
   enumPos = enumCount = 0;
-  m_timeout = 150000; // maximum time to wait for read call in ms
+  m_timeout = 250000; // maximum time to wait for read call in ms
  }
 
  CUSB::~CUSB(){
@@ -265,7 +265,7 @@ bool CUSB::FillBuffer(uint32_t minBytesToRead)
         if (m_sizeR < bytesToRead) {
           LOG(logCRITICAL) << "Requested to read " << bytesToRead 
 			   << "b, but read " << m_sizeR 
-			   << "b - " << (bytesToRead-m_sizeR) << "b missing!";
+			   << "b -> " << (bytesToRead-m_sizeR) << "b missing!";
         }
 	m_posR = 0;
 	if (ftdiStatus != FT_OK)

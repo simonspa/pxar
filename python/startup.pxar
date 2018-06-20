@@ -1,0 +1,3 @@
+probes
+daqTriggerSource extern
+setDAC wbc 102

@@ -91,7 +91,7 @@ class PxarCoreCmd(cmd.Cmd):
 
     def plot_1d(self,data,name,dacname,min,max):
         if(not self.window):
-            print_data(self.fullOutput,data,(max-min)/len(data))
+            print_data(self.fullOutput,data,(max-min)/(len(data)-1))
             return
 
         # Prepare new numpy matrix:
@@ -110,8 +110,11 @@ class PxarCoreCmd(cmd.Cmd):
                 dac1 = min1 + (idac/((max2-min2)/step2+1))*step1
                 dac2 = min2 + (idac%((max2-min2)/step2+1))*step2
                 s = "DACs " + str(dac1) + ":" + str(dac2) + " - "
-                for px in dac:
-                    s += str(px)
+                if self.fullOutput:
+                    for px in dac:
+                        s += str(px)
+                else:
+                    s += str(len(dac)) + " pixels"
                 print s
             return
 
@@ -132,7 +135,7 @@ class PxarCoreCmd(cmd.Cmd):
 
     def varyDelays(self,tindelay,toutdelay,verbose=False):
         self.api.setTestboardDelays({"tindelay":tindelay,"toutdelay":toutdelay})
-        self.api.daqStart()
+        self.api.daqStart(0)
         self.api.daqTrigger(1, 500)
 
         try:
@@ -757,6 +760,16 @@ class PxarCoreCmd(cmd.Cmd):
                 # return all DACS
                 return dacdict.getAllROCNames()
 
+    @arity(0,1,[int])
+    def do_tornadoPlot(self, nTriggers=10):
+        """tornadoPlot [nTriggers = 10]: returns the 2D caldel-vthrcomp scan"""
+        data = self.api.getEfficiencyVsDACDAC('caldel', 1, 0, 255, 'vthrcomp', 1, 0, 255, 0, nTriggers)
+        self.plot_2d(data,"Efficiency",'caldel', 1, 0, 255, 'vthrcomp', 1, 0, 255)
+
+    def complete_tornadoPlot(self):
+        # return help for the cmd
+        return [self.do_tornadoPlot.__doc__, '']
+
     @arity(0,0,[])
     def do_analogLevelScan(self):
         """analogLevelScan: scan the ADC levels of an analog ROC"""
@@ -767,7 +780,7 @@ class PxarCoreCmd(cmd.Cmd):
         self.window.histos.append(plot)
         self.window.update()
 
-    def complete_analogLevelScan(self, text, line, start_index, end_index):
+    def complete_analogLevelScan(self):
         # return help for the cmd
         return [self.do_analogLevelScan.__doc__, '']
 
@@ -902,9 +915,12 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(1,1,[int])
     def do_getTbmDACs(self, tbmid):
         """getTbmDACs [id]: get the currently programmed register settings for TBM #id"""
-        print self.api.getTbmDACs(tbmid)
+        dacs = self.api.getTbmDACs(tbmid)
+        for dac, value in dacs.iteritems():
+            print '{dac}: {value:08b}'.format(dac=dac.rjust(7), value=value)
+        return dacs
 
-    def complete_getTbmDACs(self, text, line, start_index, end_index):
+    def complete_getTbmDACs(self):
         # return help for the cmd
         return [self.do_getTbmDACs.__doc__, '']
 
@@ -975,6 +991,30 @@ class PxarCoreCmd(cmd.Cmd):
     def complete_testPixel(self, text, line, start_index, end_index):
         # return help for the cmd
         return [self.do_testPixel.__doc__, '']
+
+    @arity(2,4,[int, int, int, int])
+    def do_enablePixel(self, col, row, enable=True, rocid=None):
+        self.api.testPixel(col, row, enable, rocid)
+        self.api.maskPixel(col, row, not enable, rocid)
+
+    @arity(0,2,[int, int])
+    def do_enableAllPixels(self, enable=True, rocid=None):
+        self.api.testAllPixels(enable, rocid)
+        self.api.maskAllPixels(not enable, rocid)
+
+    @arity(0,4,[int, int])
+    def do_enableCluster(self, dc, row, enable=True, rocid=None):
+        for col in [dc, dc + 1]:
+            for row_ in [row, row + 1]:
+                self.api.testPixel(col, row_, enable, rocid)
+                self.api.maskPixel(col, row_, not enable, rocid)
+
+    @arity(0,3,[int, int, int])
+    def do_enableDC(self, dc, row=80, enable=True, rocid=None):
+        for col in [dc, dc + 1]:
+            for row_ in xrange(row):
+                self.api.testPixel(col, row_, enable, rocid)
+                self.api.maskPixel(col, row_, not enable, rocid)
 
     @arity(1,2,[int, int])
     def do_testAllPixels(self, enable, rocid = None):
@@ -1116,7 +1156,7 @@ class PxarCoreCmd(cmd.Cmd):
             self.window.histos.append(plot)
             self.window.update()
 
-    def complete_wbcScan(self, text, line, start_index, end_index):
+    def complete_wbcScan(self):
         # return help for the cmd
         return [self.do_wbcScan.__doc__, '']
 
@@ -1320,6 +1360,12 @@ class PxarCoreCmd(cmd.Cmd):
 
     # shortcuts
     do_q = do_quit
+    do_exit = do_quit
+    do_exot = do_quit
+    do_ds = do_daqStart
+    do_st = do_daqStop
+    do_dt = do_daqTrigger
+    do_eb = do_daqGetEventBuffer
 
 def main(argv=None):
     if argv is None:

@@ -40,6 +40,9 @@ cdef class Pixel:
         self.thisptr.setColumn(p.column())
         self.thisptr.setRow(p.row())
         self.thisptr.setValue(p.value())
+        self.thisptr.setBufferCorruption(p.bufferCorruption())
+        self.thisptr.setInvalidAddress(p.invalidAddress())
+        self.thisptr.setInvalidPulseHeight(p.invalidPulseHeight())
     cdef c_clone(self, pixel* p):
         del self.thisptr
         self.thisptr = p
@@ -55,6 +58,15 @@ cdef class Pixel:
     property value:
         def __get__(self): return self.thisptr.value()
         def __set__(self, value): self.thisptr.setValue(value)
+    property buffer_corruption:
+        def __get__(self): return self.thisptr.bufferCorruption()
+        def __set__(self, value): self.thisptr.setBufferCorruption(value)
+    property invalid_address:
+        def __get__(self): return self.thisptr.invalidAddress()
+        def __set__(self, value): self.thisptr.setInvalidAddress(value)
+    property invalid_pulse_height:
+        def __get__(self): return self.thisptr.invalidPulseHeight()
+        def __set__(self, value): self.thisptr.setInvalidPulseHeight(value)
 
 cdef class PixelConfig:
     cdef pixelConfig *thisptr      # hold a C++ instance which we're wrapping
@@ -111,14 +123,14 @@ cdef class RocConfig:
     def __dealloc__(self):
         del self.thisptr
     property column:
-        def __get__(self): 
+        def __get__(self):
             r = list()
             for p in self.thisptr.pixels:
                 P = PixelConfig()
                 P.c_clone(&p)
                 r.append(P)
             return r
-        def __set__(self, value): 
+        def __set__(self, value):
             cdef vector[pixelConfig] v
             cdef PixelConfig pc
             for pc in value:
@@ -162,56 +174,135 @@ cdef class Statistics:
         def __get__(self): return self.thisobj.errors_roc()
     property errors_pixel:
         def __get__(self): return self.thisobj.errors_pixel()
-    property info_pixels_valid:
+    property valid_pixels:
         def __get__(self): return self.thisobj.info_pixels_valid()
-
+    property total_events:
+        def __get__(self): return self.thisobj.info_events_total()
+    property valid_events:
+        def __get__(self): return self.thisobj.info_events_valid()
+    property empty_events:
+        def __get__(self): return self.thisobj.info_events_empty()
+    property errors_event_start:
+        def __get__(self): return self.thisobj.errors_event_start()
+    property errors_event_stop:
+        def __get__(self): return self.thisobj.errors_event_stop()
+    property errors_event_overflow:
+        def __get__(self): return self.thisobj.errors_event_overflow()
+    property errors_event_invalid_words:
+        def __get__(self): return self.thisobj.errors_event_invalid_words()
+    property errors_event_invalid_xor:
+        def __get__(self): return self.thisobj.errors_event_invalid_xor()
+    property errors_event_frame:
+        def __get__(self): return self.thisobj.errors_event_frame()
+    property errors_event_idledata:
+        def __get__(self): return self.thisobj.errors_event_idledata()
+    property errors_event_nodata:
+        def __get__(self): return self.thisobj.errors_event_nodata()
+    property errors_event_pkam:
+        def __get__(self): return self.thisobj.errors_event_pkam()
+    property errors_tbm_header:
+        def __get__(self): return self.thisobj.errors_tbm_header()
+    property errors_tbm_eventid_mismatch:
+        def __get__(self): return self.thisobj.errors_tbm_eventid_mismatch()
+    property errors_tbm_trailer:
+        def __get__(self): return self.thisobj.errors_tbm_trailer()
+    property errors_roc_missing:
+        def __get__(self): return self.thisobj.errors_roc_missing()
+    property errors_roc_readback:
+        def __get__(self): return self.thisobj.errors_roc_readback()
+    property errors_pixel_incomplete:
+        def __get__(self): return self.thisobj.errors_pixel_incomplete()
+    property errors_pixel_address:
+        def __get__(self): return self.thisobj.errors_pixel_address()
+    property errors_pixel_pulseheight:
+        def __get__(self): return self.thisobj.errors_pixel_pulseheight()
+    property errors_pixel_buffer_corrupt:
+        def __get__(self): return self.thisobj.errors_pixel_buffer_corrupt()
 
 cdef class PxEvent:
     cdef Event *thisptr      # hold a C++ instance which we're wrapping
     def __cinit__(self):
-            self.thisptr = new Event()
+        self.thisptr = new Event()
     def __dealloc__(self):
         del self.thisptr
     def __str__(self):
-        s = "====== " + hex(self.header) + " ====== "
-        for px in self.pixels:
-            s += str(px)
-        s += " ====== " + hex(self.trailer) + " ======\n"
+        s = "====== "
+        for i in self.header: s += hex(i) + " "
+        s += " ====== "
+        for px in self.pixels: s += str(px)
+        s += " ====== "
+        for i in self.trailer: s += hex(i) + " "
+        s += " ======\n"
         return str(s)
-    cdef c_clone(self, Event* p):
-        del self.thisptr
-        self.thisptr = p
-    cdef fill(self, Event ev):
-        self.thisptr.header = ev.header
-        self.thisptr.trailer = ev.trailer
-        for px in ev.pixels:
-            self.thisptr.pixels.push_back(px)
+    cdef clone(self, Event ev):
+        self.thisptr = new Event(ev)
+    def printHeader(self):
+        self.thisptr.printHeader()
+    def printTrailer(self):
+        self.thisptr.printTrailer()
+
     property pixels:
-        def __get__(self): 
+        def __get__(self):
             r = list()
             for p in self.thisptr.pixels:
                 P = Pixel()
                 P.fill(p)
                 r.append(P)
             return r
-        def __set__(self, value): 
+        def __set__(self, value):
             cdef vector[pixel] v
             cdef Pixel px
             for px in value:
                 v.push_back( <pixel> px.thisptr[0])
             self.thisptr.pixels = v
     property header:
-        def __get__(self): return self.thisptr.header
-        def __set__(self, value): self.thisptr.header = value
+        def __get__(self): return self.thisptr.getHeaders()
+        def __set__(self, value): self.thisptr.addHeader(value)
     property trailer:
-        def __get__(self): return self.thisptr.trailer
-        def __set__(self, trailer): self.thisptr.trailer = trailer
-    property hasNoTokenPass:
-        def __get__(self): return self.thisptr.hasNoTokenPass()
-    property triggerCount:
-        def __get__(self): return self.thisptr.triggerCount()
-    property stackCount:
-        def __get__(self): return self.thisptr.stackCount()
+        def __get__(self): return self.thisptr.getTrailers()
+        def __set__(self, trailer): self.thisptr.addTrailer(trailer)
+    property haveNoTokenPass:
+        def __get__(self): return self.thisptr.haveNoTokenPass()
+    property haveTokenPass:
+        def __get__(self): return self.thisptr.haveTokenPass()
+    property haveResetTBM:
+        def __get__(self): return self.thisptr.haveResetTBM()
+    property haveResetROC:
+        def __get__(self): return self.thisptr.haveResetROC()
+    property haveSyncError:
+        def __get__(self): return self.thisptr.haveSyncError()
+    property haveSyncTrigger:
+        def __get__(self): return self.thisptr.haveSyncTrigger()
+    property haveClearTriggerCount:
+        def __get__(self): return self.thisptr.haveClearTriggerCount()
+    property haveCalTrigger:
+        def __get__(self): return self.thisptr.haveCalTrigger()
+    property stacksFull:
+        def __get__(self): return self.thisptr.stacksFull()
+    property haveAutoReset:
+        def __get__(self): return self.thisptr.haveAutoReset()
+    property havePkamReset:
+        def __get__(self): return self.thisptr.havePkamReset()
+    property triggerCounts:
+        def __get__(self): return self.thisptr.triggerCounts()
+    property triggerPhases:
+        def __get__(self): return self.thisptr.triggerPhases()
+    property dataIDs:
+        def __get__(self): return self.thisptr.dataIDs()
+    property dataValues:
+        def __get__(self): return self.thisptr.dataValues()
+    property stackCounts:
+        def __get__(self): return self.thisptr.stackCounts()
+    property incomplete_data:
+        def __get__(self): return self.thisptr.incomplete_data
+    property missing_roc_headers:
+        def __get__(self): return self.thisptr.missing_roc_headers
+    property roc_readback:
+        def __get__(self): return self.thisptr.roc_readback
+    property no_data:
+        def __get__(self): return self.thisptr.no_data
+    property eventid_mismatch:
+        def __get__(self): return self.thisptr.eventid_mismatch
 
 cdef class PyPxarCore:
     cdef pxarCore *thisptr # hold the C++ instance
@@ -249,6 +340,12 @@ cdef class PyPxarCore:
         for key, value in power_settings.items():
             ps.push_back((key,float(value)))
         self.thisptr.setTestboardPower(ps)
+    def setDecodingOffset(self, offset):
+        cdef uint8_t os = offset
+        self.thisptr.setDecodingOffset(os)
+    def getTestboardDelays(self):
+        r = self.thisptr.getTestboardDelays()
+        return {tup.first: tup.second for tup in r}
     def setTestboardDelays(self, sig_delays):
         """ Initializer method for the testboard
         Parameters are dictionaries in the form {"name":value}:
@@ -341,7 +438,7 @@ cdef class PyPxarCore:
             pc = pixelConfig(trimming[line][0][0], trimming[line][1][0], trimming[line][2][0])
             v.push_back(pc)
         self.thisptr._dut.updateTrimBits(v, rocid)
-    
+
     def info(self):
         self.thisptr._dut.info()
 
@@ -427,7 +524,7 @@ cdef class PyPxarCore:
         return rocids
 
     def getNTbms(self):
-        return self.thisptr._dut.getNTbms()
+        return self.thisptr._dut.getNTbmCores()
     def getNRocs(self):
         return self.thisptr._dut.getNRocs()
     def getTbmType(self):
@@ -609,7 +706,7 @@ cdef class PyPxarCore:
         cdef Event r
         r = self.thisptr.daqGetEvent()
         p = PxEvent()
-        p.fill(r)
+        p.clone(r)
         return p
 
     def daqGetEventBuffer(self):
@@ -618,7 +715,7 @@ cdef class PyPxarCore:
         pixelevents = list()
         for event in r:
             p = PxEvent()
-            p.fill(event)
+            p.clone(event)
             pixelevents.append(p)
         return pixelevents
 

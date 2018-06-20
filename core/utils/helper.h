@@ -152,29 +152,52 @@ namespace pxar {
 
   /** Helper function to recover the ADC sign of analog data words
    */
-  inline int16_t expandSign(uint16_t x) { return (x & 0x0800) ? static_cast<int16_t>(x) - 4096 : static_cast<int16_t>(x); }
+  inline int16_t expandSign(int x) { return (x & 0x0800) ? static_cast<int16_t>(x - 4096) : static_cast<int16_t>(x); }
 
   /** Helper function to return a printed list of an integer vector, used to shield
    *  debug code from being executed if debug level is not sufficient
    */
   template <typename T>
-    std::string listVector(std::vector<T> vec, bool hex = false, bool sign = false) {
+    std::string listVector(std::vector<T> vec, bool hex = false, bool sign = false, bool tabs = false) {
     std::stringstream os;
     if(hex) { os << std::hex; }
     for(typename std::vector<T>::iterator it = vec.begin(); it != vec.end(); ++it) {
       if(sign) { os << expandSign(*it & 0x0fff) << " "; }
       else {
 	if(hex) os << std::setw(4) << std::setfill('0');
-	os << static_cast<int>(*it) << " ";
+	os << static_cast<int>(*it);
+	os << (tabs ? "\t" : " ");
       }
     }
     if(hex) { os << std::dec; }
     return os.str();
   }
 
+  /** Helper function to test if all vector elements are equal
+   */
+  template <typename T>
+    bool equalElements(std::vector<T> vec) {
+    // Empty vectors cannot be tested:
+    if(vec.empty()) return true;
+    
+    T first = vec.front();
+    for(typename std::vector<T>::iterator it = vec.begin(); it != vec.end(); ++it) {
+      if(*it != first) return false;
+    }
+    return true;
+  }
+  
   /** Helper function to output bool variables as TRUE or FALSE text
    */
   inline std::string textBool(bool in) { return (in ? "TRUE" : "FALSE"); }
+  inline std::string textBools(std::vector<bool> vec, bool tabs = false) {
+    std::stringstream os;
+    for(std::vector<bool>::iterator it = vec.begin(); it != vec.end(); ++it) {
+      os << (*it ? "TRUE" : "FALSE");
+      os << (tabs ? "\t" : " ");
+    }
+    return os.str();
+  }
 
   /** Helper function to return a printed list of flags
    */

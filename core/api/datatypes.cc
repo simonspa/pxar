@@ -3,6 +3,7 @@
 #include "log.h"
 #include "exceptions.h"
 #include "constants.h"
+#include "sstream"
 
 namespace pxar {
 
@@ -12,7 +13,7 @@ namespace pxar {
     setValue(static_cast<double>((raw & 0x0f) + ((raw >> 1) & 0xf0)));
     if((raw & 0x10) > 0) {
       LOG(logDEBUGAPI) << "invalid pulse-height fill bit from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      throw DataInvalidPulseheightError("Error decoding pixel raw value");
+      _invalid_pulse_height = true;
     }
 
     // Decode the pixel address
@@ -29,8 +30,8 @@ namespace pxar {
     // Perform range checks:
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {
       LOG(logDEBUGAPI) << "Invalid pixel from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      if(_row == ROC_NUMROWS) throw DataCorruptBufferError("Error decoding pixel raw value");
-      else throw DataInvalidAddressError("Error decoding pixel raw value");
+      if(_row == ROC_NUMROWS) _buffer_corruption = true;
+      else _invalid_address = true;
     }
   }
 
@@ -38,32 +39,45 @@ namespace pxar {
     // Get the pulse height:
     setValue(static_cast<double>((raw & 0x0f) + ((raw >> 1) & 0xf0)));
     if((raw & 0x10) > 0) {
-      LOG(logDEBUGAPI) << "invalid pulse-height fill bit from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      throw DataInvalidPulseheightError("Error decoding pixel raw value");
+      LOG(logDEBUGAPI) << "invalid pulse-height fill bit from raw value of " << std::hex << raw << std::dec << ": " << *this;
+      _invalid_pulse_height = true;
+      _row = 99;
+      _column = 99;
     }
 
     // Perform checks on the fill bits:
     if((raw & 0x1000) > 0 || (raw & 0x100000) > 0) {
-      LOG(logDEBUGAPI) << "invalid address fill bit from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      throw DataInvalidAddressError("Error decoding pixel raw value");
+      LOG(logDEBUGAPI) << "invalid address fill bit from raw value of " << std::hex << raw << std::dec << ": " << *this;
+      _invalid_address = true;
+      _row = 99;
+      _column = 99;
     }
 
     // Decode the pixel address
-    _column = ((raw >> 17) & 0x07) + ((raw >> 18) & 0x38);
-    _row = ((raw >> 9) & 0x07) + ((raw >> 10) & 0x78);
+    _column = uint8_t(((raw >> 17) & 0x07) + ((raw >> 18) & 0x38));
+    _row = uint8_t(((raw >> 9) & 0x07) + ((raw >> 10) & 0x78));
     
     // Perform range checks:
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {
-      LOG(logDEBUGAPI) << "Invalid pixel from raw value of "<< std::hex << raw << std::dec << ": " << *this;
-      if(_row == ROC_NUMROWS) throw DataCorruptBufferError("Error decoding pixel raw value");
-      else throw DataInvalidAddressError("Error decoding pixel raw value");
+      LOG(logDEBUGAPI) << "Invalid pixel from raw value of " << std::hex << raw << std::dec << ": " << *this;
+      if(_row == ROC_NUMROWS) _buffer_corruption = true;
+      else _invalid_address = true;
     }
+  }
+
+  void pixel::throwErrors() {
+    if (_invalid_address) throw DataInvalidAddressError("Error decoding pixel raw value");
+    else if (_invalid_pulse_height) throw DataInvalidPulseheightError("Error decoding pixel raw value");
+    else if (_buffer_corruption) throw DataCorruptBufferError("Error decoding pixel raw value");
   }
 
   uint8_t pixel::translateLevel(uint16_t x, int16_t level0, int16_t level1, int16_t levelS) {
     int16_t y = expandSign(x) - level0;
     if (y >= 0) y += levelS; else y -= levelS;
-    return level1 ? y/level1 + 1: 0;
+    uint8_t retVal =  level1 ? y/level1 + 1: 0;
+    if (retVal > 5)
+        retVal =  5;
+    return retVal;
   }
 
   void pixel::decodeAnalog(std::vector<uint16_t> analog, int16_t ultrablack, int16_t black) {
@@ -74,6 +88,7 @@ namespace pxar {
     }
 
     // Calculate the levels:
+    /** Changes by Micha*/
     int16_t level0 = black;
     int16_t level1 = (black - ultrablack)/4;
     int16_t levelS = level1/2;
@@ -94,7 +109,16 @@ namespace pxar {
     _row = 80 - r/2;
     _column = 2*c + (r&1);
 
-    // Perform range checks:
+    /**Output by Micha*/
+    std::stringstream ss;
+    ss << "AnalogLevels: ";
+    ss<<(int)_column<<" "<<(int)_row << "\t";
+    for (unsigned i(0); i<analog.size(); i++)
+        ss << analog[i] << " ";
+    ss << "\t" << c1 <<" "<<c0<<" "<<r2<<" "<<r1<<" "<< r0;
+    LOG(logDEBUGAPI)<<ss.str() << " ";
+
+    /** Perform range checks:*/
     if(_row >= ROC_NUMROWS || _column >= ROC_NUMCOLS) {
       LOG(logDEBUGAPI) << "Invalid pixel from levels "<< listVector(analog) << ": " << *this;
       throw DataInvalidAddressError("Error decoding pixel address");
@@ -116,7 +140,7 @@ namespace pxar {
     raw |= ((dcol)/6 << 21);
     raw |= (((dcol%6)) << 18);
 
-    LOG(logDEBUGPIPES) << "Pix  " << static_cast<int>(_column) << "|" 
+    LOG(logDEBUGPIPES) << "Pix  " << static_cast<int>(_column) << "|"
 		       << static_cast<int>(_row) << " = "
 		       << dcol << "/" << r << " = "
 		       << dcol/6 << " " << dcol%6 << " "
@@ -143,30 +167,178 @@ namespace pxar {
     return (raw & 0x00ffffff);
   }
 
+  /** Overloaded ostream operator for simple printing of Event data
+   */
+  std::ostream & operator<<(std::ostream &out, Event& evt) {
+    // FIXME fix printout of multiple headers/trailers
+    out << "====== " << std::hex << listVector(evt.getHeaders(),true) << std::dec << " ====== ";
+    for (std::vector<pixel>::iterator it = evt.pixels.begin(); it != evt.pixels.end(); ++it)
+      out << (*it) << " ";
+    out << "====== " << std::hex << listVector(evt.getTrailers(),true) << std::dec << " ====== ";
+    return out;
+  }
+
+  std::vector<uint8_t> Event::triggerCounts() {
+    std::vector<uint8_t> counts;
+    for(size_t i = 0; i < this->header.size(); i++) {
+      counts.push_back(this->triggerCount(i));
+    }
+    return counts;
+  }
+
+  std::vector<uint8_t> Event::dataIDs() {
+    std::vector<uint8_t> counts;
+    for(size_t i = 0; i < this->header.size(); i++) {
+      counts.push_back(this->dataID(i));
+    }
+    return counts;
+  }
+
+  std::vector<uint8_t> Event::dataValues() {
+    std::vector<uint8_t> counts;
+    for(size_t i = 0; i < this->header.size(); i++) {
+      counts.push_back(this->dataValue(i));
+    }
+    return counts;
+  }
+
+  std::vector<bool> Event::haveTokenPass() {
+    std::vector<bool> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->hasTokenPass(i));
+    }
+    return counts;
+  }
+
+  std::vector<bool> Event::haveNoTokenPass() {
+    std::vector<bool> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->hasNoTokenPass(i));
+    }
+    return counts;
+  }
+
+  std::vector<bool> Event::haveResetTBM() {
+    std::vector<bool> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->hasResetTBM(i));
+    }
+    return counts;
+  }
+
+  std::vector<bool> Event::haveResetROC() {
+    std::vector<bool> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->hasResetROC(i));
+    }
+    return counts;
+  }
+
+  std::vector<bool> Event::haveSyncError() {
+    std::vector<bool> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->hasSyncError(i));
+    }
+    return counts;
+  }
+
+  std::vector<bool> Event::haveSyncTrigger() {
+    std::vector<bool> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->hasSyncTrigger(i));
+    }
+    return counts;
+  }
+
+  std::vector<bool> Event::haveClearTriggerCount() {
+    std::vector<bool> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->hasClearTriggerCount(i));
+    }
+    return counts;
+  }
+
+  std::vector<bool> Event::haveCalTrigger() {
+    std::vector<bool> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->hasCalTrigger(i));
+    }
+    return counts;
+  }
+
+  std::vector<bool> Event::stacksFull() {
+    std::vector<bool> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->stackFull(i));
+    }
+    return counts;
+  }
+
+  std::vector<bool> Event::haveAutoReset() {
+    std::vector<bool> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->hasAutoReset(i));
+    }
+    return counts;
+  }
+
+  std::vector<bool> Event::havePkamReset() {
+    std::vector<bool> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->hasPkamReset(i));
+    }
+    return counts;
+  }
+
+  std::vector<uint8_t> Event::stackCounts() {
+    std::vector<uint8_t> counts;
+    for(size_t i = 0; i < this->trailer.size(); i++) {
+      counts.push_back(this->stackCount(i));
+    }
+    return counts;
+  }
+  
   void Event::printHeader() {
-    LOG(logINFO) << "Header content: 0x" << std::hex << header << std::dec;
-    LOG(logINFO) << "\t Event ID \t" << static_cast<int>(this->triggerCount());
-    LOG(logINFO) << "\t Data ID " << static_cast<int>(this->dataID()) 
-		       << " Value " << static_cast<int>(this->dataValue());
+    LOG(logINFO) << "Header contents: \t" << listVector(getHeaders(),true,false,true);
+    LOG(logINFO) << "\t Event ID \t" << listVector(this->triggerCounts(),false,false,true);
+    LOG(logINFO) << "\t Data ID \t" << listVector(this->dataIDs(),false,false,true);
+    LOG(logINFO) << "\t      Values \t" << listVector(this->dataValues(),false,false,true);
   }
 
   void Event::printTrailer() {
-    LOG(logINFO) << "Trailer content: 0x" << std::hex << trailer << std::dec;
-    LOG(logINFO) << "\t Token Pass \t" << textBool(this->hasTokenPass());
-    LOG(logINFO) << "\t Reset TBM \t" << textBool(this->hasResetTBM());
-    LOG(logINFO) << "\t Reset ROC \t" << textBool(this->hasResetROC());
-    LOG(logINFO) << "\t Sync Err \t" << textBool(this->hasSyncError());
-    LOG(logINFO) << "\t Sync Trigger \t" << textBool(this->hasSyncTrigger());
-    LOG(logINFO) << "\t ClearTrig Cnt \t" << textBool(this->hasClearTriggerCount());
-    LOG(logINFO) << "\t Cal Trigger \t" << textBool(this->hasCalTrigger());
-    LOG(logINFO) << "\t Stack Full \t" << textBool(this->stackFull());
+    LOG(logINFO) << "Trailer content: \t" << listVector(getTrailers(),true,false,true);
+    LOG(logINFO) << "\t Token Pass \t" << textBools(this->haveTokenPass(),true);
+    LOG(logINFO) << "\t Reset TBM \t" << textBools(this->haveResetTBM(),true);
+    LOG(logINFO) << "\t Reset ROC \t" << textBools(this->haveResetROC(),true);
+    LOG(logINFO) << "\t Sync Err \t" << textBools(this->haveSyncError(),true);
+    LOG(logINFO) << "\t Sync Trigger \t" << textBools(this->haveSyncTrigger(),true);
+    LOG(logINFO) << "\t ClearTrig Cnt \t" << textBools(this->haveClearTriggerCount(),true);
+    LOG(logINFO) << "\t Cal Trigger \t" << textBools(this->haveCalTrigger(),true);
+    LOG(logINFO) << "\t Stack Full \t" << textBools(this->stacksFull(),true);
 
-    LOG(logINFO) << "\t Auto Reset \t" << textBool(this->hasAutoReset());
-    LOG(logINFO) << "\t PKAM Reset \t" << textBool(this->hasPkamReset());
-    LOG(logINFO) << "\t Stack Count \t" << static_cast<int>(this->stackCount());
+    LOG(logINFO) << "\t Auto Reset \t" << textBools(this->haveAutoReset(),true);
+    LOG(logINFO) << "\t PKAM Reset \t" << textBools(this->havePkamReset(),true);
+    LOG(logINFO) << "\t Stack Count \t" << listVector(this->stackCounts(),false,false,true);
   }
 
-  void statistics::dump() {
+    void Event::clearPixelErrors() {
+      incomplete_data.clear();
+      missing_roc_headers.clear();
+      roc_readback.clear();
+      eventid_mismatch.clear();
+      no_data.clear();
+    }
+
+    void Event::resizePixelErrors(int16_t roc) {
+
+      if (missing_roc_headers.size() <= uint16_t(roc)) {
+        roc_readback.resize(uint16_t(roc + 1), false);
+        missing_roc_headers.resize(uint16_t(roc + 1), false);
+        incomplete_data.resize(uint16_t(roc + 1), false);
+      }
+    }
+
+    void statistics::dump() {
     // Print out the full statistics:
     LOG(logINFO) << "Decoding statistics:";
     LOG(logINFO) << "  General information:";
@@ -184,6 +356,7 @@ namespace pxar {
     LOG(logINFO) << "\t frame (failed synchr.):   " << this->errors_event_frame();
     LOG(logINFO) << "\t idle data (no TBM trl):   " << this->errors_event_idledata();
     LOG(logINFO) << "\t no data (only TBM hdr):   " << this->errors_event_nodata();
+    LOG(logINFO) << "\t PKAM:                     " << this->errors_event_pkam();
     LOG(logINFO) << "  TBM errors: \t\t           " << this->errors_tbm();
     LOG(logINFO) << "\t flawed TBM headers:       " << this->errors_tbm_header();
     LOG(logINFO) << "\t flawed TBM trailers:      " << this->errors_tbm_trailer();
@@ -226,7 +399,41 @@ namespace pxar {
     m_errors_pixel_buffer_corrupt = 0;
   }
 
-  tbmConfig::tbmConfig(uint8_t tbmtype) : dacs(), type(tbmtype), hubid(31), core(0xE0), tokenchains(), enable(true) {
+    std::string statistics::getString() {
+      std::stringstream ss;
+      ss << "Decoding statistics:" << '\n';
+      ss << "  General information:" << '\n';
+      ss << "\t 16bit words read:         " << this->info_words_read() << '\n';
+      ss << "\t valid events total:       " << this->info_events_total() << '\n';
+      ss << "\t empty events:             " << this->info_events_empty() << '\n';
+      ss << "\t valid events with pixels: " << this->info_events_valid() << '\n';
+      ss << "\t valid pixel hits:         " << this->info_pixels_valid() << '\n';
+      ss << "  Event errors: \t           " << this->errors_event() << '\n';
+      ss << "\t start marker:             " << this->errors_event_start() << '\n';
+      ss << "\t stop marker:              " << this->errors_event_stop() << '\n';
+      ss << "\t overflow:                 " << this->errors_event_overflow() << '\n';
+      ss << "\t invalid 5bit words:       " << this->errors_event_invalid_words() << '\n';
+      ss << "\t invalid XOR eye diagram:  " << this->errors_event_invalid_xor() << '\n';
+      ss << "\t frame (failed synchr.):   " << this->errors_event_frame() << '\n';
+      ss << "\t idle data (no TBM trl):   " << this->errors_event_idledata() << '\n';
+      ss << "\t no data (only TBM hdr):   " << this->errors_event_nodata() << '\n';
+      ss << "\t PKAM:                     " << this->errors_event_pkam() << '\n';
+      ss << "  TBM errors: \t\t           " << this->errors_tbm() << '\n';
+      ss << "\t flawed TBM headers:       " << this->errors_tbm_header() << '\n';
+      ss << "\t flawed TBM trailers:      " << this->errors_tbm_trailer() << '\n';
+      ss << "\t event ID mismatches:      " << this->errors_tbm_eventid_mismatch() << '\n';
+      ss << "  ROC errors: \t\t           " << this->errors_roc() << '\n';
+      ss << "\t missing ROC header(s):    " << this->errors_roc_missing() << '\n';
+      ss << "\t misplaced readback start: " << this->errors_roc_readback() << '\n';
+      ss << "  Pixel decoding errors:\t   " << this->errors_pixel() << '\n';
+      ss << "\t pixel data incomplete:    " << this->errors_pixel_incomplete() << '\n';
+      ss << "\t pixel address:            " << this->errors_pixel_address() << '\n';
+      ss << "\t pulse height fill bit:    " << this->errors_pixel_pulseheight() << '\n';
+      ss << "\t buffer corruption:        " << this->errors_pixel_buffer_corrupt() << '\n';
+      return ss.str();
+    }
+
+    tbmCoreConfig::tbmCoreConfig(uint8_t tbmtype) : dacs(), type(tbmtype), hubid(31), core(0xE0), tokenchains(), enable(true) {
 
     if(tbmtype == 0x0) {
       LOG(logCRITICAL) << "Invalid TBM type \"" << tbmtype << "\"";
@@ -235,7 +442,7 @@ namespace pxar {
     
     // Standard setup for token chain lengths:
     // Four ROCs per stream for dual-400MHz, eight ROCs for single-400MHz readout:
-    if(type >= TBM_09) { for(size_t i = 0; i < 2; i++) tokenchains.push_back(4); }
+    if(type >= TBM_09) { for(size_t i = 0; i < 2; i++) tokenchains.push_back(2); }
     else if(type >= TBM_08) { tokenchains.push_back(8); }
   }
 

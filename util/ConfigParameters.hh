@@ -103,6 +103,7 @@ public:
   std::vector<pxar::pixelConfig> getRocPixelConfig(int i);
   bool customI2cAddresses() {return fI2cAddresses.size() > 0;}
   std::vector<uint8_t> getI2cAddresses() {return fI2cAddresses;}
+  uint8_t getDecodingOffset() { return fOffsetDecoding; }
 
   bool setTbParameter(std::string, uint8_t, bool appendIfNotFound = false);
   bool setTbPowerSettings(std::string, double);
@@ -147,7 +148,6 @@ public:
 
   std::vector<uint8_t> getHubIds() {return fHubIds;}
   uint8_t getHubId() {return fHubIds.front();}
-
   static bool bothAreSpaces(char lhs, char rhs);
   void replaceAll(std::string& str, const std::string& from, const std::string& to);
   void cleanupString(std::string& str);
@@ -186,6 +186,7 @@ private:
   std::string fTBName;
   bool fHvOn, fTbmEnable, fTbmEmulator, fKeithleyRemote, fGuiMode;
   std::string fProbeA1,fProbeA2, fProbeD1, fProbeD2;
+  uint8_t fOffsetDecoding;
 
   std::string fTBParametersFileName;
   std::string fTrimVcalSuffix;

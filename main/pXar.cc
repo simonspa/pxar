@@ -195,6 +195,8 @@ int main(int argc, char *argv[]){
     api->SignalProbe("d1", configParameters->getProbe("d1"));
     api->SignalProbe("d2", configParameters->getProbe("d2"));
 
+    api->setDecodingOffset(configParameters->getDecodingOffset());
+
     LOG(logINFO) << "DUT info: ";
     api->_dut->info();
   }
@@ -303,6 +305,11 @@ int main(int argc, char *argv[]){
       }
       if (!input.compare("savetbm")) {
 	a.writeTbmParameterFiles();
+	continue;
+      }
+
+      if (!input.compare("poff")) {
+	api->Poff();
 	continue;
       }
 
