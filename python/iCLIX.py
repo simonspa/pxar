@@ -32,6 +32,11 @@ class CLIX:
         self.Trim = trim
         self.Verbosity = verbosity
 
+        # dicts
+        self.DacDict = PyRegisterDictionary()
+        self.ProbeDict = PyProbeDictionary()
+        self.TBDelays = self.api.getTestboardDelays()
+
         self.window = None
         self.Plots = []
         self.ProgressBar = None
