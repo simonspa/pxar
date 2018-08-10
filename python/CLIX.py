@@ -28,6 +28,7 @@ if gui_available:
 
 import cmd  # for command interface and parsing
 import os  # for file system cmds
+from os.path import join
 import sys
 from time import time, sleep, strftime
 from collections import OrderedDict
@@ -406,6 +407,7 @@ class PxarCoreCmd(cmd.Cmd):
             vals[fit.Chi2()] = scale / 100.
         xmin = vals[min(vals.keys())]
         print xmin
+        return xmin
 
     def trim_ver(self, vec_trim, ntrig, start=0, loops=40):
         for vcal in range(256):
@@ -1939,7 +1941,7 @@ class PxarCoreCmd(cmd.Cmd):
     @arity(0, 0, [])
     def do_readMaskFile(self):
         """ do_readMaskFile: reads in the defaultMaskFile and masks accordingly"""
-        maskfile = self.dir + 'defaultMaskFile.dat'
+        maskfile = join(self.dir, 'defaultMaskFile.dat')
         f = open(maskfile)
         mask = []
         for l in f.readlines():
@@ -2763,8 +2765,9 @@ class PxarCoreCmd(cmd.Cmd):
         self.api.daqStart()
         data_low = self.scan_vcal(0, ntrig)
         data_high = self.scan_vcal(4, ntrig)
+        fac = self.find_factor(data_low, data_high)
         gr1 = Plotter.create_graph(data_low.keys(), data_low.values(), 'gr1', xtit='vcal', ytit='adc')
-        gr2 = Plotter.create_graph(data_high.keys(), data_high.values(), 'gr2', xtit='vcal', ytit='adc')
+        gr2 = Plotter.create_graph([key * fac for key in data_high.iterkeys()] , data_high.values(), 'gr2', xtit='vcal', ytit='adc')
         gr1.SetLineColor(3)
         gr1.SetMarkerColor(3)
         mg = TMultiGraph()
