@@ -195,6 +195,12 @@ int main(int argc, char *argv[]){
     api->SignalProbe("d1", configParameters->getProbe("d1"));
     api->SignalProbe("d2", configParameters->getProbe("d2"));
 
+    LOG(logINFO) << "Setting analogue decoding offset to " << int(configParameters->getDecodingOffset());
+    api->setDecodingOffset(configParameters->getDecodingOffset());
+
+    LOG(logINFO) << "Switching to external clock";
+    api->setExternalClock(1);
+
     LOG(logINFO) << "DUT info: ";
     api->_dut->info();
   }
@@ -303,6 +309,11 @@ int main(int argc, char *argv[]){
       }
       if (!input.compare("savetbm")) {
 	a.writeTbmParameterFiles();
+	continue;
+      }
+
+      if (!input.compare("poff")) {
+	api->Poff();
 	continue;
       }
 

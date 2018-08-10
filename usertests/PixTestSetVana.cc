@@ -130,7 +130,13 @@ void PixTestSetVana::doTest()
 
   const double extra = 0.1; // [mA] besser zu viel als zu wenig 
   const double eps = 0.25; // [mA] convergence
-  const double slope = 6; // 255 DACs / 40 mA
+  std::string roctype = fApi->_dut->getRocType();
+  double slope;
+  DeviceDictionary * _devices = DeviceDictionary::getInstance();
+   if (_devices->isAnalogROC(roctype))
+	   slope = .5;
+   else
+	   slope = 6; // 255 DACs / 40 mA
 
   for( uint32_t roc = 0; roc < nRocs; ++roc ) {
 

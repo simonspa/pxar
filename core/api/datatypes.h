@@ -34,7 +34,7 @@ namespace pxar {
 
     /** Default constructor for pixel objects, defaulting all member variables to zero
      */
-  pixel() : _roc_id(0), _column(0), _row(0), _mean(0), _variance(0) {}
+  pixel() : _roc_id(0), _column(0), _row(0), _mean(0), _variance(0), _buffer_corruption(false), _invalid_address(false), _invalid_pulse_height(false) {}
 
     /** Constructor for pixel objects with address and value initialization.
      */
@@ -42,7 +42,8 @@ namespace pxar {
 
     /** Constructor for pixel objects with rawdata pixel address & value and ROC id initialization.
      */
-  pixel(uint32_t rawdata, uint8_t rocid, bool invertAddress = false, bool linearAddress = false) : _roc_id(rocid) {
+  pixel(uint32_t rawdata, uint8_t rocid, bool invertAddress=false, bool linearAddress=false) : _roc_id(rocid), _buffer_corruption(false), _invalid_address(false),
+                                                                                                                  _invalid_pulse_height(false) {
       if(linearAddress) { decodeLinear(rawdata); }
       else { decodeRaw(rawdata,invertAddress); }
     }
@@ -103,6 +104,18 @@ namespace pxar {
      */
     uint32_t encodeLinear();
 
+    /** method to throw the errors after decoding
+     */
+    void throwErrors();
+
+    /** Getter and setter methods for the decoding errors */
+    bool bufferCorruption() { return _buffer_corruption; }
+    bool invalidAddress() { return _invalid_address; }
+    bool invalidPulseHeight() { return _invalid_pulse_height; }
+    void setBufferCorruption(bool value) { _buffer_corruption = value; }
+    void setInvalidAddress(bool value) { _invalid_address = value; }
+    void setInvalidPulseHeight(bool value) { _invalid_pulse_height = value; }
+
     /** Overloaded comparison operator
      */
     bool operator == (const pixel& px) {
@@ -146,6 +159,10 @@ namespace pxar {
      *  variance
      */
     uint16_t _variance;
+
+    /** decoding errors
+   */
+    bool _buffer_corruption, _invalid_address, _invalid_pulse_height;
 
     /** Decoding function for PSI46 dig raw ROC data. Parameter "invert"
      *  allows decoding of PSI46dig data which has an inverted pixel
@@ -202,121 +219,173 @@ namespace pxar {
    */
   class DLLEXPORT Event {
   public:
-    Event() : header(0), trailer(0), pixels() {}
+  Event() : pixels(), roc_readback(), missing_roc_headers(), incomplete_data(), eventid_mismatch(), no_data(), header(), trailer() {}
+  Event(const Event &evt) {
+    pixels = evt.pixels;
+    header = evt.header;
+    trailer = evt.trailer;
+    incomplete_data = evt.incomplete_data;
+    missing_roc_headers = evt.missing_roc_headers;
+    roc_readback = evt.roc_readback;
+    eventid_mismatch = evt.eventid_mismatch;
+    no_data = evt.no_data;
+  }
 
     /** Helper function to clear the event content
      */
-    void Clear() { header = 0; trailer = 0; pixels.clear();}
+    void Clear() { header.clear(); trailer.clear(); pixels.clear();}
 
     /** TBM Header Information: returns the 8 bit event counter of the TBM
      */
-    uint8_t triggerCount() { return ((header >> 8) & 0xff); };
+    uint8_t triggerCount(uint8_t core = 0) { return ((getHeader(core) >> 8) & 0xff); };
+    std::vector<uint8_t> triggerCounts();
 
     /** TBM Emulator Header: returns the phase of the trigger relative to the clock.
      *  These are the "data" bits stored by the SoftTBM and is equivalent to
      *  Event::dataValue()
      */
-    uint8_t triggerPhase() { return dataValue(); };
-
+    uint8_t triggerPhase(uint8_t core = 0) { return dataValue(core); };
+    std::vector<uint8_t> triggerPhases() { return dataValues(); };
+    
     /** TBM Header Information: returns the Data ID bits
      */
-    uint8_t dataID()       { return ((header & 0x00c0) >> 6); };
-
+    uint8_t dataID(uint8_t core = 0)       { return ((getHeader(core) & 0x00c0) >> 6); };
+    std::vector<uint8_t> dataIDs();
+ 
     /** TBM Header Information: returns the value for the data bits
      */
-    uint8_t dataValue()    { return (header & 0x003f); };
-
+    uint8_t dataValue(uint8_t core = 0)    { return (getHeader(core) & 0x003f); };
+    std::vector<uint8_t> dataValues();
+ 
     /** TBM Trailer Information: reports if no token out has been received
      *  returns true if the token was not passed successfully
      */
-    bool hasNoTokenPass() { return ((trailer & 0x8000) != 0); };
-
+    bool hasNoTokenPass(uint8_t core = 0) { return ((getTrailer(core) & 0x8000) != 0); };
+    std::vector<bool> haveNoTokenPass();
+ 
     /** TBM Trailer Information: reports if no token out has been received
      *  returns true if the token out has been rceived correctly
      */
-    bool hasTokenPass() { return !hasNoTokenPass(); };
-
+    bool hasTokenPass(uint8_t core = 0) { return !hasNoTokenPass(core); };
+    std::vector<bool> haveTokenPass();
+ 
     /** TBM Trailer Information: reports if a TBM reset has been sent
      */
-    bool hasResetTBM()    { return ((trailer & 0x4000) != 0); };
-
+    bool hasResetTBM(uint8_t core = 0)    { return ((getTrailer(core) & 0x4000) != 0); };
+    std::vector<bool> haveResetTBM();
+ 
     /** TBM Trailer Information: reports if a ROC reset has been sent
      */
-    bool hasResetROC()    { return ((trailer & 0x2000) != 0); };
+    bool hasResetROC(uint8_t core = 0)    { return ((getTrailer(core) & 0x2000) != 0); };
+    std::vector<bool> haveResetROC();
 
     /** TBM Trailer Information: reports if a sync error occured
      */
-    bool hasSyncError()   { return ((trailer & 0x1000) != 0); };
+    bool hasSyncError(uint8_t core = 0)   { return ((getTrailer(core) & 0x1000) != 0); };
+    std::vector<bool> haveSyncError();
 
     /** TBM Trailer Information: reports if event contains a sync trigger
      */
-    bool hasSyncTrigger() { return ((trailer & 0x0800) != 0); };
-
+    bool hasSyncTrigger(uint8_t core = 0) { return ((getTrailer(core) & 0x0800) != 0); };
+    std::vector<bool> haveSyncTrigger();
+ 
     /** TBM Trailer Information: reports if the trigger count has been reset
      */
-    bool hasClearTriggerCount() { return ((trailer & 0x0400) != 0); };
-
+    bool hasClearTriggerCount(uint8_t core = 0) { return ((getTrailer(core) & 0x0400) != 0); };
+    std::vector<bool> haveClearTriggerCount();
+ 
     /** TBM Trailer Information: reports if the event had a calibrate signal
      */
-    bool hasCalTrigger()  { return ((trailer & 0x0200) != 0); };
-
+    bool hasCalTrigger(uint8_t core = 0)  { return ((getTrailer(core) & 0x0200) != 0); };
+    std::vector<bool> haveCalTrigger();
+ 
     /** TBM Trailer Information: reports if the TBM stack is full
      */
-    bool stackFull()      { return ((trailer & 0x0100) != 0); };
-
+    bool stackFull(uint8_t core = 0)      { return ((getTrailer(core) & 0x0100) != 0); };
+    std::vector<bool> stacksFull();
+ 
     /** TBM Trailer Information: reports if a auto reset has been sent
      */
-    bool hasAutoReset() { return ((trailer & 0x0080) != 0); };
-
+    bool hasAutoReset(uint8_t core = 0) { return ((getTrailer(core) & 0x0080) != 0); };
+    std::vector<bool> haveAutoReset();
+ 
     /** TBM Trailer Information: reports if a PKAM counter reset has been sent
      */
-    bool hasPkamReset() { return ((trailer & 0x0040) != 0); };
-
+    bool hasPkamReset(uint8_t core = 0) { return ((getTrailer(core) & 0x0040) != 0); };
+    std::vector<bool> havePkamReset();
+ 
     /** TBM Trailer Information: reports the current 6 bit trigger stack count
      */
-    uint8_t stackCount() { return (trailer & 0x003f); };
-
-    /** TBM Header
+    uint8_t stackCount(uint8_t core = 0) { return (getTrailer(core) & 0x003f); };
+    std::vector<uint8_t> stackCounts();
+    
+    /** add new TBM Header
      */
-    uint16_t header;
+    void addHeader(uint16_t data) { header.push_back(data); }
+
+    /** get TBM Header
+     */
+    uint16_t getHeader(uint8_t core = 0) { if(core < header.size()) return header.at(core); else return 0; };
+    std::vector<uint16_t> getHeaders() { return header; };
 
     /** Helper function to print the TBM Header
      */
     void printHeader();
 
-    /** TBM Trailer
+    /** add new TBM Trailer
      */
-    uint16_t trailer;
+    void addTrailer(uint16_t data) { trailer.push_back(data); };
+    // FIXME DOUBLE FIXME
+    // Paul: "Fieser Hack!"
+    void flipTrailers() {
+      trailer.push_back(trailer.front());
+      trailer.erase(trailer.begin(), trailer.begin() + 1);
+    }
+
+    /** get TBM Trailer
+     */
+    uint16_t getTrailer(uint8_t core = 0) { if(core < trailer.size()) return trailer.at(core); else return 0; };
+    std::vector<uint16_t> getTrailers() { return trailer; };
 
     /** Helper function to print the TBM Trailer
      */
     void printTrailer();
 
+    void clearPixelErrors();
+    void resizePixelErrors(int16_t);
+
     /** Vector of successfully decoded pxar::pixel objects
      */
     std::vector<pixel> pixels;
+    std::vector<bool> roc_readback, missing_roc_headers, incomplete_data, eventid_mismatch, no_data;
 
   private:
+
+    /** TBM Headers
+     */
+    std::vector<uint16_t> header;
+
+    /** TBM Trailers
+     */
+    std::vector<uint16_t> trailer;
 
     /** Overloaded sum operator for adding up data from different events
      */
     friend Event& operator+=(Event &lhs, const Event &rhs) {
-      // FIXME this currently only transports pixels, no header information:
       lhs.pixels.insert(lhs.pixels.end(), rhs.pixels.begin(), rhs.pixels.end());
-      lhs.header = rhs.header;
-      lhs.trailer = rhs.trailer;
+      lhs.header.insert(lhs.header.end(), rhs.header.begin(), rhs.header.end());
+      lhs.trailer.insert(lhs.trailer.end(), rhs.trailer.begin(), rhs.trailer.end());
+      lhs.missing_roc_headers.insert(lhs.missing_roc_headers.end(), rhs.missing_roc_headers.begin(), rhs.missing_roc_headers.end());
+      lhs.roc_readback.insert(lhs.roc_readback.end(), rhs.roc_readback.begin(), rhs.roc_readback.end());
+      lhs.incomplete_data.insert(lhs.incomplete_data.end(), rhs.incomplete_data.begin(), rhs.incomplete_data.end());
+      lhs.eventid_mismatch.insert(lhs.eventid_mismatch.end(), rhs.eventid_mismatch.begin(), rhs.eventid_mismatch.end());
+      lhs.no_data.insert(lhs.no_data.end(), rhs.no_data.begin(), rhs.no_data.end());
       return lhs;
     };
 
     /** Overloaded ostream operator for simple printing of Event data
      */
-    friend std::ostream & operator<<(std::ostream &out, Event& evt) {
-      out << "====== " << std::hex << static_cast<uint16_t>(evt.header) << std::dec << " ====== ";
-      for (std::vector<pixel>::iterator it = evt.pixels.begin(); it != evt.pixels.end(); ++it)
-	out << (*it) << " ";
-      out << "====== " << std::hex << static_cast<uint16_t>(evt.trailer) << std::dec << " ====== ";
-      return out;
-    }
+    friend std::ostream & operator<<(std::ostream &out, Event& evt);
   };
 
 
@@ -430,9 +499,9 @@ namespace pxar {
    *
    *  Contains a register map for the device register settings, a type flag and an enable switch
    */
-  class DLLEXPORT tbmConfig {
+  class DLLEXPORT tbmCoreConfig {
   public:
-    tbmConfig(uint8_t tbmtype);
+    tbmCoreConfig(uint8_t tbmtype);
     std::map< uint8_t,uint8_t > dacs;
     uint8_t type;
     uint8_t hubid;
@@ -471,6 +540,7 @@ namespace pxar {
       m_errors_event_frame(0),
       m_errors_event_idledata(0),
       m_errors_event_nodata(0),
+      m_errors_event_pkam(0),
       m_errors_tbm_header(0),
       m_errors_tbm_trailer(0),
       m_errors_tbm_eventid_mismatch(0),
@@ -482,6 +552,7 @@ namespace pxar {
       m_errors_pixel_buffer_corrupt(0)
 	{};
     // Print all statistics to stdout:
+    std::string getString();
     void dump();
     friend statistics& operator+=(statistics &lhs, const statistics &rhs) {
       // Informational bits:
@@ -499,6 +570,7 @@ namespace pxar {
       lhs.m_errors_event_frame += rhs.m_errors_event_frame;
       lhs.m_errors_event_idledata += rhs.m_errors_event_idledata;
       lhs.m_errors_event_nodata += rhs.m_errors_event_nodata;
+      lhs.m_errors_event_pkam += rhs.m_errors_event_pkam;
 
       // TBM errors:
       lhs.m_errors_tbm_header += rhs.m_errors_tbm_header;
@@ -560,6 +632,7 @@ namespace pxar {
     uint32_t errors_event_frame() { return m_errors_event_frame; }
     uint32_t errors_event_idledata() { return m_errors_event_idledata; }
     uint32_t errors_event_nodata() { return m_errors_event_nodata; }
+    uint32_t errors_event_pkam() { return m_errors_event_pkam; }
 
     uint32_t errors_tbm_header() { return m_errors_tbm_header; }
     uint32_t errors_tbm_eventid_mismatch() { return m_errors_tbm_eventid_mismatch; }
@@ -599,6 +672,8 @@ namespace pxar {
     uint32_t m_errors_event_idledata;
     // Total number of DESER400 no-data error (only TBM header received):
     uint32_t m_errors_event_nodata;
+    // PKAM events
+    uint32_t m_errors_event_pkam;
 
     // Total number of events with flawed TBM header:
     uint32_t m_errors_tbm_header;

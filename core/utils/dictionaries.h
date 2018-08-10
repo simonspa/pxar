@@ -297,6 +297,10 @@ namespace pxar {
       }
       return "";
     }
+    // returns true if the roc is analog, todo: check if entry exist
+    inline bool isAnalogROC(std::string name){
+    	return (getDevCode(name) > 0 && getDevCode(name) < ROC_PSI46DIG);
+    }
 
   private:
     DeviceDictionary() {
@@ -327,8 +331,7 @@ namespace pxar {
       _devices["tbm08c"]        = TBM_08C;
       _devices["tbm09"]         = TBM_09;
       _devices["tbm09c"]        = TBM_09C;
-      _devices["tbm09d"]        = TBM_10;
-      _devices["tbm10"]        = TBM_10;
+      _devices["tbm10c"]        = TBM_10C;
     }
 
     std::map<std::string, uint8_t> _devices;

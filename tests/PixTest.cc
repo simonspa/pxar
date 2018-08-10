@@ -1004,7 +1004,7 @@ void PixTest::restoreDacs(bool verbose) {
 // ----------------------------------------------------------------------
 void PixTest::cacheTBMDacs(bool verbose) {
   fDacTBMCache.clear();
-  for (size_t itbm=0; itbm<fApi->_dut->getNTbms(); itbm++) {
+  for (size_t itbm=0; itbm< fApi->_dut->getNTbmCores(); itbm++) {
     fDacTBMCache.push_back(fApi->_dut->getTbmDACs(itbm));
     if (verbose) {
       LOG(logINFO) << "Printing current DAC settings for TBM " << itbm << ":";
@@ -1017,7 +1017,7 @@ void PixTest::cacheTBMDacs(bool verbose) {
 
 // ----------------------------------------------------------------------
 void PixTest::restoreTBMDacs(bool verbose) {
-  for (size_t itbm=0; itbm<fApi->_dut->getNTbms(); itbm++) {
+  for (size_t itbm=0; itbm< fApi->_dut->getNTbmCores(); itbm++) {
     if (verbose) { LOG(logINFO) << "Printing current DAC settings for TBM " << itbm << ":"; }
     for ( vector<pair<string,uint8_t> >::iterator itbmdac = fDacTBMCache[itbm].begin(); itbmdac != fDacTBMCache[itbm].end(); ++itbmdac) {
       fApi->setTbmReg(itbmdac->first, itbmdac->second, itbm);
@@ -2438,12 +2438,12 @@ int PixTest::tbmSet(string name, uint8_t cores, int value, uint8_t valueMask){
                   << " has bits outside mask ("<<hex<< (int) valueMask << ")";
   }
 
-  uint8_t coreMask = 3;
-  if (cores==0){coreMask=1;}  else if(cores==1){ coreMask=2;}
+  uint8_t coreMask = 15;
+  if (cores==0){coreMask=5;}  else if(cores==1){ coreMask=10;}
 
   int err=1;
   //out << "tbmset" << name << " " <<  (int) coreMask << " " << value << "  " << bitset<8>(valueMask) << "\n";
-  for(size_t core=0; core<2; core++){
+  for(size_t core=0; core<fApi->_dut->getNEnabledTbms(); core++){
     if ( ((coreMask >> core) & 1) == 1 ){
       vector< pair<string,uint8_t> > regs = fApi->_dut->getTbmDACs(core);
       if (regs.size()==0) {
@@ -2511,11 +2511,11 @@ bool PixTest::checkReadBackBits(uint16_t period) {
   vector<vector<uint16_t> > ReadBackBits;
 
   vector<uint8_t> rocids = fApi->_dut->getRocI2Caddr();
+  size_t nTBMs = fApi->_dut->getNTbmCores();
   vector<uint8_t> ROCList;
-  size_t nTBMs = fApi->_dut->getNTbms();
   int nTokenChains = 0;
-  vector<tbmConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
-  for(vector<tbmConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
+  std::vector<tbmCoreConfig> enabledTBMs = fApi->_dut->getEnabledTbms();
+  for(std::vector<tbmCoreConfig>::iterator enabledTBM = enabledTBMs.begin(); enabledTBM != enabledTBMs.end(); enabledTBM++) nTokenChains += enabledTBM->tokenchains.size();
 
   for (size_t itbm=0; itbm < nTBMs; itbm++) {
     if ((GetTBMSetting("base0", itbm) & 64) != 64) {

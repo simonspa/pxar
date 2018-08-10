@@ -32,7 +32,7 @@ class PxarGui( ROOT.TGMainFrame ):
         self.Resize( self.GetDefaultSize() )
         #self.SetWMPosition(1000,1000)
         self.MapWindow()
-        self.histos = [] 
+        self.histos = []
         self.pos = 0
         if(self.img):
             self.img.Draw()
@@ -50,11 +50,12 @@ class PxarGui( ROOT.TGMainFrame ):
         elif histo_type == ROOT.THStack:
             self.histos[self.pos].Draw('NOSTACK')
         elif histo_type == ROOT.TGraph:
-            self.histos[self.pos].Draw('AL*')
+#            self.histos[self.pos].Draw('AL*')
+            self.histos[self.pos].Draw('AP')
         else:
             self.histos[self.pos].Draw()
         ROOT.gPad.Update()
-                
+
     def draw_previous(self):
         '''Foward one position'''
         self.pos -= 1
@@ -78,7 +79,7 @@ class PxarGui( ROOT.TGMainFrame ):
         if not self.histos:
             return
         self.Canvas.SaveAs(self.histos[self.pos].GetTitle() + '.pdf')
-                
+
     def update(self):
         '''Always go to last position'''
         self.pos = len(self.histos)-1

@@ -126,7 +126,7 @@ PixParTab::PixParTab(PixGui *p, ConfigParameters *cfg, string tabname) {
   TGCompositeFrame *bGroup = new TGCompositeFrame(vFrame, 60, 20, kHorizontalFrame |kSunkenFrame);
   vFrame->AddFrame(bGroup, new TGLayoutHints(kLHintsCenterX|kLHintsCenterY, fBorderL, fBorderR, fBorderT, fBorderB));
   vector<vector<pair<string, uint8_t> > > cmap;
-  for (unsigned int i = 0; i < fGui->getApi()->_dut->getNTbms(); ++i) {
+  for (unsigned int i = 0; i < fGui->getApi()->_dut->getNTbmCores(); ++i) {
     tcb = new TGCheckButton(bGroup, Form("%d", i), i);
     tcb->Connect("Clicked()", "PixParTab", this, "selectTbm()");
     bGroup->AddFrame(tcb, new TGLayoutHints(kLHintsLeft, fBorderL, fBorderR, fBorderT, 0));
@@ -161,7 +161,7 @@ PixParTab::PixParTab(PixGui *p, ConfigParameters *cfg, string tabname) {
       }
     }
 
-    for (unsigned int itbm = 0; itbm < fGui->getApi()->_dut->getNTbms(); ++itbm) {
+    for (unsigned int itbm = 0; itbm < fGui->getApi()->_dut->getNTbmCores(); ++itbm) {
       map<string, uint8_t>  parids;
       amap = cmap[itbm];
 
@@ -656,7 +656,7 @@ void PixParTab::updateParameters() {
   for (vector<pair<string, uint8_t> >::iterator itbparameters = tbparameters.begin(); itbparameters != tbparameters.end(); ++itbparameters)
     ((TGTextEntry*)(fTbTextEntries[itbparameters->first]))->SetText(Form("%d", int(itbparameters->second)));
 
-  for (unsigned int itbm = 0; itbm < fGui->getApi()->_dut->getNTbms(); ++itbm) {
+  for (unsigned int itbm = 0; itbm < fGui->getApi()->_dut->getNTbmCores(); ++itbm) {
     vector<pair<string, uint8_t> > tbmparameters = fGui->getApi()->_dut->getTbmDACs(itbm);
     for (vector<pair<string, uint8_t> >::iterator itbmparameters = tbmparameters.begin(); itbmparameters != tbmparameters.end(); ++itbmparameters) {
       std::bitset<8> bits(itbmparameters->second);
@@ -836,7 +836,7 @@ void PixParTab::saveTbParameters() {
 // ----------------------------------------------------------------------
 void PixParTab::saveTbmParameters() {
   LOG(logDEBUG) << "save Tbm parameters";
-  for (unsigned int itbm = 0; itbm < fGui->getApi()->_dut->getNTbms(); itbm += 2) {
+  for (unsigned int itbm = 0; itbm < fGui->getApi()->_dut->getNTbmCores(); itbm += 2) {
     fConfigParameters->writeTbmParameterFile(itbm/2,
 					     fGui->getApi()->_dut->getTbmDACs(itbm),
 					     fGui->getApi()->_dut->getTbmChainLengths(itbm),
@@ -906,7 +906,7 @@ void PixParTab::updateSelection() {
   fGui->updateSelectedRocs(id2idx);
 
   vector<int> selectedTbms = getSelectedTbms();
-  for (unsigned int i = 0; i < fGui->getApi()->_dut->getNTbms(); ++i) {
+  for (unsigned int i = 0; i < fGui->getApi()->_dut->getNTbmCores(); ++i) {
     fGui->getApi()->_dut->setTBMEnable(i, false);
   }
   for (unsigned i = 0; i < selectedTbms.size(); ++i) {

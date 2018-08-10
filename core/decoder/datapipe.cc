@@ -1,8 +1,6 @@
 #include "datapipe.h"
 #include "helper.h"
 #include "log.h"
-#include "constants.h"
-#include "exceptions.h"
 
 namespace pxar {
 
@@ -183,6 +181,38 @@ namespace pxar {
     return &roc_Event;
   }
 
+  void dtbEventDecoder::ProcessTBMHeader(uint16_t h1, uint16_t h2) {
+    // Check the alignment markers to be correct:
+    if((h1 & 0xe000) != 0xa000 || (h2 & 0xe000) != 0x8000)
+      { decodingStats.m_errors_tbm_header++; }
+    // Store the two header words:
+    roc_Event.addHeader(((h1 & 0x00ff) << 8) + (h2 & 0x00ff));
+
+    LOG(logDEBUGPIPES) << "TBM " << static_cast<int>(GetChannel()) << " Header:";
+    IFLOG(logDEBUGPIPES) { roc_Event.printHeader(); }
+  }
+
+  void dtbEventDecoder::ProcessTBMTrailer(uint16_t t1, uint16_t t2) {
+    // Check the alignment markers to be correct:
+    if((t1 & 0xe000) != 0xe000 || (t2 & 0xe000) != 0xc000)
+      { decodingStats.m_errors_tbm_trailer++; }
+    
+    // Check possible DESER400 error flags in the TBM trailer:
+    if((t1 & 0x1000) == 0x1000 || (t2 & 0x1000) == 0x1000) {
+      // Currently the same error bits are stored in both trailer words, so only evaluating one of them.
+      evalDeser400Errors(t1);
+    }
+
+    // No Error flag is set by the DESER400, just decode the TBM header as usual:
+    else {
+      // Store the two trailer words:
+      roc_Event.addTrailer(((t1 & 0x00ff) << 8) + (t2 & 0x00ff));
+      
+      LOG(logDEBUGPIPES) << "TBM " << static_cast<int>(GetChannel()) << " Trailer:";
+      IFLOG(logDEBUGPIPES) roc_Event.printTrailer();
+    }
+  }
+  
   void dtbEventDecoder::ProcessTBM(rawEvent * sample) {
     LOG(logDEBUGPIPES) << "Processing TBM header and trailer...";
 
@@ -195,38 +225,10 @@ namespace pxar {
     unsigned int size = sample->GetSize();
 
     // TBM Header:
-
-    // Check the alignment markers to be correct:
-    if((sample->data.at(0) & 0xe000) != 0xa000
-       || (sample->data.at(1) & 0xe000) != 0x8000) { decodingStats.m_errors_tbm_header++; }
-    // Store the two header words:
-    roc_Event.header = ((sample->data.at(0) & 0x00ff) << 8) + (sample->data.at(1) & 0x00ff);
-
-    LOG(logDEBUGPIPES) << "TBM " << static_cast<int>(GetChannel()) << " Header:";
-    IFLOG(logDEBUGPIPES) { roc_Event.printHeader(); }
-
+    ProcessTBMHeader(sample->data.at(0),sample->data.at(1));
 
     // TBM Trailer:
-    // Check the alignment markers to be correct:
-    if((sample->data.at(size-2) & 0xe000) != 0xe000
-       || (sample->data.at(size-1) & 0xe000) != 0xc000) { decodingStats.m_errors_tbm_trailer++; }
-    
-    // Check possible DESER400 error flags in the TBM trailer:
-    if((sample->data.at(size-2) & 0x1000) == 0x1000
-       || (sample->data.at(size-1) & 0x1000) == 0x1000) {
-      // Currently the same error bits are stored in both trailer words, so only evaluating one of them.
-      evalDeser400Errors(sample->data.at(size-2));
-    }
-
-    // No Error flag is set by the DESER400, just decode the TBM header as usual:
-    else {
-      // Store the two trailer words:
-      roc_Event.trailer = ((sample->data.at(size-2) & 0x00ff) << 8) 
-	+ (sample->data.at(size-1) & 0x00ff);
-      
-      LOG(logDEBUGPIPES) << "TBM " << static_cast<int>(GetChannel()) << " Trailer:";
-      IFLOG(logDEBUGPIPES) roc_Event.printTrailer();
-    }
+    ProcessTBMTrailer(sample->data.at(size-2),sample->data.at(size-1));
     
     // Check for correct TBM event ID:
     CheckEventID();
@@ -245,7 +247,7 @@ namespace pxar {
     // Check if ROC has inverted pixel address (ROC_PSI46DIG):
     bool invertedAddress = ( GetDeviceType() == ROC_PSI46DIG ? true : false );
     // Check if ROC is a Layer1 chip with different address encoding:
-    bool linearAddress = ( GetDeviceType() == ROC_PROC600 ? true : false );
+    bool linearAddress = ( GetDeviceType() >= ROC_PROC600 ? true : false );
 
     // Loop over the full data:
     for(std::vector<uint16_t>::iterator word = sample->data.begin(); word != sample->data.end(); word++) {
@@ -253,70 +255,83 @@ namespace pxar {
       // Check if we have a ROC header:
       if(((*word) & 0xe000) == 0x4000) {
 
-	// Count ROC Headers up:
-	roc_n++;
+        // Count ROC Headers up:
+        roc_n++;
 
-	// Maybe store the XOR sum:
-	if((GetFlags() & FLAG_ENABLE_XORSUM_LOGGING) != 0) { xorsum.push_back(((*word) & 0x0ff0) >> 4); }
-	  
-	// Check for DESER400 failure:
-	if(((*word) & 0x0ff0) == 0x0ff0) {
-	  LOG(logCRITICAL) << "Channel " << static_cast<int>(GetChannel())
-			   << " ROC " << static_cast<int>(roc_n)
-			   << " header reports DESER400 failure!";
-	  decodingStats.m_errors_event_invalid_xor++;
-	  throw DataDecodingError("Invalid XOR eye diagram encountered.");
-	}
+        // Maybe store the XOR sum:
+        if((GetFlags() & FLAG_ENABLE_XORSUM_LOGGING) != 0) { xorsum.push_back(((*word) & 0x0ff0) >> 4); }
+      
+        // Check for DESER400 failure:
+        if(((*word) & 0x0ff0) == 0x0ff0) {
+          LOG(logCRITICAL) << "Channel " << static_cast<int>(GetChannel())
+                   << " ROC " << static_cast<int>(roc_n)
+                   << " header reports DESER400 failure!";
+          decodingStats.m_errors_event_invalid_xor++;
+          throw DataDecodingError("Invalid XOR eye diagram encountered.");
+        }
 
-	// Decode the readback bits in the ROC header:
-	if(GetDeviceType() >= ROC_PSI46DIGV2) { evalReadback(static_cast<uint8_t>(roc_n),(*word)); }
+        // Decode the readback bits in the ROC header:
+        if(GetDeviceType() >= ROC_PSI46DIGV2) { evalReadback(static_cast<uint8_t>(roc_n),(*word)); }
+      }
+      // FIXME for linearized channels read from EUDAQ, check for interleaved TBM headers and trailers:
+      else if(((*word) & 0xe000) == 0xa000) {
+        uint16_t tmp = *word;
+        ProcessTBMHeader(tmp,*(++word));
+      }
+      else if(((*word) & 0xe000) == 0xe000) {
+        uint16_t tmp = *word;
+        ProcessTBMTrailer(tmp,*(++word));
       }
       // We have a pixel hit:
       else if(((*word) & 0xe000) <= 0x2000) {
 
-	// Only one word left or unexpected alignment marker:
-	if(sample->data.end() - word < 2 || ((*word) & 0x8000)) {
-	  decodingStats.m_errors_pixel_incomplete++;
-	  break;
-	}
-	
-	// FIXME optional check:
-	// (*word) >> 13 == 0
-	// (*(word+1) >> 13 == 1
+        // Only one word left or unexpected alignment marker:
+        if(sample->data.end() - word < 2 || ((*word) & 0x8000)) {
+          decodingStats.m_errors_pixel_incomplete++;
+          break;
+        }
 
-	uint32_t raw = (((*word) & 0x0fff) << 12) + ((*(++word)) & 0x0fff);
-	try {
-	  // Check if this is just fill bits of the TBM09 data stream 
-	  // accounting for the other channel:
-	  if(GetEnvelopeType() >= TBM_09 && (raw&0xffffff) == 0xffffff) {
-	    LOG(logDEBUGPIPES) << "Empty hit detected (TBM09 data streams). Skipping.";
-	    continue;
-	  }
+        // FIXME optional check:
+        // (*word) >> 13 == 0
+        // (*(word+1) >> 13 == 1
 
-	  // Get the correct ROC id: Channel number x ROC offset (= token chain length)
-	  // TBM08x: channel 0: 0-7, channel 1: 8-15
-	  // TBM09x: channel 0: 0-3, channel 1: 4-7, channel 2: 8-11, channel 3: 12-15
-	  pixel pix(raw,static_cast<uint8_t>(roc_n + GetTokenChainOffset()),invertedAddress,linearAddress);
-	  roc_Event.pixels.push_back(pix);
-	  decodingStats.m_info_pixels_valid++;
-	}
-	catch(DataInvalidAddressError /*&e*/){
-	  // decoding of raw address lead to invalid address
-	  decodingStats.m_errors_pixel_address++;
-	}
-	catch(DataInvalidPulseheightError /*&e*/){
-	  // decoding of pulse height featured non-zero fill bit
-	  decodingStats.m_errors_pixel_pulseheight++;
-	}
-	catch(DataCorruptBufferError /*&e*/){
-	  // decoding returned row 80 - corrupt data buffer
-	  decodingStats.m_errors_pixel_buffer_corrupt++;
-	}
+        uint32_t raw = (((*word) & 0x0fff) << 12) + ((*(++word)) & 0x0fff);
+        try {
+          // Check if this is just fill bits of the TBM09 data stream
+          // accounting for the other channel:
+          if(GetEnvelopeType() >= TBM_09 && (raw&0xffffff) == 0xffffff) {
+            LOG(logDEBUGPIPES) << "Empty hit detected (TBM09 data streams). Skipping.";
+            continue;
+          }
+
+          // Get the correct ROC id: Channel number x ROC offset (= token chain length)
+          // TBM08x: channel 0: 0-7, channel 1: 8-15
+          // TBM09x: channel 0: 0-3, channel 1: 4-7, channel 2: 8-11, channel 3: 12-15
+          pixel pix(raw,static_cast<uint8_t>(roc_n + GetTokenChainOffset()), invertedAddress, linearAddress);
+          pix.throwErrors();
+          roc_Event.pixels.push_back(pix);
+          decodingStats.m_info_pixels_valid++;
+        }
+        catch(DataInvalidAddressError /*&e*/){
+          // decoding of raw address lead to invalid address
+          decodingStats.m_errors_pixel_address++;
+        }
+        catch(DataInvalidPulseheightError /*&e*/){
+          // decoding of pulse height featured non-zero fill bit
+          decodingStats.m_errors_pixel_pulseheight++;
+        }
+        catch(DataCorruptBufferError /*&e*/){
+          // decoding returned row 80 - corrupt data buffer
+          decodingStats.m_errors_pixel_buffer_corrupt++;
+        }
       }
     }
 
+    // FIXME: woohoo, this is soooo evil:
+    roc_Event.flipTrailers();
+    
     // Check event validity (empty, missing ROCs...):
-    CheckEventValidity(roc_n);
+    CheckEventValidity(roc_n, sample);
   }
 
   void dtbEventDecoder::DecodeADC(rawEvent * sample) {
@@ -334,61 +349,57 @@ namespace pxar {
 
       // Not enough data for anything, stop here - and assume it was half a pixel hit:
       if((sample->data.end() - word < 2)) { 
-	decodingStats.m_errors_pixel_incomplete++;
-	break;
+	      decodingStats.m_errors_pixel_incomplete++;
+	      break;
       }
+
 
       // Check if we have another ROC header (UB and B levels):
       // Here we have to assume the first two words are a ROC header because we rely on
       // its Ultrablack and Black level as initial values for auto-calibration:
 
-      if(roc_n < 0 || 
-	 // Ultrablack level:
-	 ((ultrablack-levelS < expandSign((*word) & 0x0fff) && ultrablack+levelS > expandSign((*word) & 0x0fff))
-	  // Black level:
-	  && (black-levelS < expandSign((*(word+1)) & 0x0fff) && black+levelS > expandSign((*(word+1)) & 0x0fff)))) {
+      if (roc_n < 0 || foundHeader(roc_n, *word & 0x0fff, *(word + 1) & 0x0fff)) {
+            roc_n++;
+            // Save the lastDAC value:
+            evalLastDAC(roc_n, (*(word+2)) & 0x0fff);
 
-	roc_n++;
-	// Save the lastDAC value:
-	evalLastDAC(roc_n, (*(word+2)) & 0x0fff);
+            // Iterate to improve ultrablack and black measurement:
+            AverageAnalogLevel((*word) & 0x0fff, (*(word+1)) & 0x0fff, roc_n);
 
-	// Iterate to improve ultrablack and black measurement:
-	AverageAnalogLevel((*word) & 0x0fff, (*(word+1)) & 0x0fff);
-
-	LOG(logDEBUGPIPES) << "ROC Header: "
-			   << expandSign((*word) & 0x0fff) << " (avg. " << ultrablack << ") (UB) "
-			   << expandSign((*(word+1)) & 0x0fff) << " (avg. " << black << ") (B) "
-			   << expandSign((*(word+2)) & 0x0fff) << " (lastDAC) ";
-	// Advance iterator:
-	word +=  2;
+            LOG(logDEBUGPIPES)  << "ROC Header: "
+                                << expandSign((*word) & 0x0fff) << " (avg. " << ultraBlack.at(roc_n + 1) << ") (UB) "
+                                << expandSign((*(word+1)) & 0x0fff) << " (avg. " << black.at(roc_n + 1) << ") (B) "
+                                << expandSign((*(word+2)) & 0x0fff) << " (lastDAC) ";
+            // Advance iterator:
+            word +=  2;
       }
       // We have a pixel hit:
       else {
-	// Not enough data for a new pixel hit (six words):
-	if(sample->data.end() - word < 6) {
-	  decodingStats.m_errors_pixel_incomplete++;
-	  break;
-	}
+        // Not enough data for a new pixel hit (six words):
+        if(sample->data.end() - word < 6) {
+          decodingStats.m_errors_pixel_incomplete++;
+          break;
+        }
 
-	std::vector<uint16_t> data;
-	data.push_back((*word) & 0x0fff);
-	for(size_t i = 0; i < 5; i++) { data.push_back((*(++word)) & 0x0fff); }
- 
-	try{
-	  LOG(logDEBUGPIPES) << "Trying to decode pixel: " << listVector(data,false,true);
-	  pixel pix(data,roc_n,ultrablack,black);
-	  roc_Event.pixels.push_back(pix);
-	  decodingStats.m_info_pixels_valid++;
-	}
-	catch(DataDecodingError /*&e*/){
-	  // decoding of raw address lead to invalid address
-	  decodingStats.m_errors_pixel_address++;
-	}
+        std::vector<uint16_t> data;
+        data.push_back((*word) & 0x0fff);
+        for(size_t i = 0; i < 5; i++) { data.push_back((*(++word)) & 0x0fff); }
+
+        try{
+            LOG(logDEBUGPIPES) << "Trying to decode pixel: " << listVector(data, false, true);
+            pixel pix(data,roc_n, int16_t(ultraBlack.at(roc_n)), int16_t(black.at(roc_n)));
+            roc_Event.pixels.push_back(pix);
+            decodingStats.m_info_pixels_valid++;
+        }
+        catch(DataDecodingError /*&e*/){
+            // decoding of raw address lead to invalid address
+            decodingStats.m_errors_pixel_address++;
+        }
       }
     }
 
     // Check event validity (empty, missing ROCs...):
-    CheckEventValidity(roc_n);
+    CheckEventValidity(roc_n, sample);
   }
 
   void dtbEventDecoder::DecodeDeser160(rawEvent * sample) {
@@ -412,43 +423,44 @@ namespace pxar {
 
       // Check if we have a ROC header:
       if(((*word) & 0x0ffc) == 0x07f8) {
-	roc_n++;
+        roc_n++;
 
-	// Decode the readback bits in the ROC header:
-	if(GetDeviceType() >= ROC_PSI46DIGV2) { evalReadback(roc_n,(*word) & 0x0fff); }
+        // Decode the readback bits in the ROC header:
+        if(GetDeviceType() >= ROC_PSI46DIGV2) { evalReadback(roc_n,(*word) & 0x0fff); }
       }
       // We might have a pixel:
       // Require that we found at least one ROC header and have two or more words left:
       else if(roc_n >= 0) {
-	// It's not a ROC header but the last word:
-	if(sample->data.end() - word < 2) {
-	  decodingStats.m_errors_pixel_incomplete++;
-	  continue;
-	}
+        // It's not a ROC header but the last word:
+        if(sample->data.end() - word < 2) {
+          decodingStats.m_errors_pixel_incomplete++;
+          continue;
+        }
 
-	uint32_t raw = (((*word) & 0x0fff) << 12) + ((*(++word)) & 0x0fff);
-	try {
-	  pixel pix(raw,roc_n,invertedAddress,linearAddress);
-	  roc_Event.pixels.push_back(pix);
-	  decodingStats.m_info_pixels_valid++;
-	}
-	catch(DataInvalidAddressError /*&e*/) {
-	  // decoding of raw address lead to invalid address
-	  decodingStats.m_errors_pixel_address++;
-	}
-	catch(DataInvalidPulseheightError /*&e*/) {
-	  // decoding of pulse height featured non-zero fill bit
-	  decodingStats.m_errors_pixel_pulseheight++;
-	}
-	catch(DataCorruptBufferError /*&e*/) {
-	  // decoding returned row 80 - corrupt data buffer
-	  decodingStats.m_errors_pixel_buffer_corrupt++;
-	}
+        uint32_t raw = (((*word) & 0x0fff) << 12) + ((*(++word)) & 0x0fff);
+        try {
+          pixel pix(raw,roc_n,invertedAddress,linearAddress);
+          pix.throwErrors();
+          roc_Event.pixels.push_back(pix);
+          decodingStats.m_info_pixels_valid++;
+        }
+        catch(DataInvalidAddressError /*&e*/) {
+          // decoding of raw address lead to invalid address
+          decodingStats.m_errors_pixel_address++;
+        }
+        catch(DataInvalidPulseheightError /*&e*/) {
+          // decoding of pulse height featured non-zero fill bit
+          decodingStats.m_errors_pixel_pulseheight++;
+        }
+        catch(DataCorruptBufferError /*&e*/) {
+          // decoding returned row 80 - corrupt data buffer
+          decodingStats.m_errors_pixel_buffer_corrupt++;
+        }
       }
     }
 
     // Check event validity (empty, missing ROCs...):
-    CheckEventValidity(roc_n);
+    CheckEventValidity(roc_n, sample);
   }
 
   void dtbEventDecoder::CheckEventID() {
@@ -465,7 +477,7 @@ namespace pxar {
     // Check if the event ID cross-check is disabled:
     if((GetFlags() & FLAG_DISABLE_EVENTID_CHECK) == 0) {
       // Check if TBM event ID matches with expectation:
-      if(roc_Event.triggerCount() != (eventID%256)) {
+      if(roc_Event.triggerCount() != (eventID%256) and GetEnvelopeType() != TBM_EMU) {
 	LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel()) << " Event ID mismatch:  local ID (" << static_cast<int>(eventID)
 		      << ") !=  TBM ID (" << static_cast<int>(roc_Event.triggerCount()) << ")";
 	decodingStats.m_errors_tbm_eventid_mismatch++;
@@ -475,10 +487,10 @@ namespace pxar {
     }
     
     // Increment event counter:
-    eventID = (eventID%256) + 1;
+    eventID = (int16_t) (eventID % 256 + 1);
   }
 
-  void dtbEventDecoder::CheckEventValidity(int16_t roc_n) {
+  void dtbEventDecoder::CheckEventValidity(int16_t roc_n, rawEvent * sample) {
 
     // Check that we found all expected ROC headers:
     // If a PKAM has been detected, the NoTokenPass bis is set and the content should be discarded:
@@ -486,34 +498,60 @@ namespace pxar {
       LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel())
 		    << " detected a PKAM reset, event cleared.";
 
-      // This breaks the readback for the missing roc, let's ignore this readback cycle for all ROCs:
-      std::fill(readback_dirty.begin(), readback_dirty.end(), true);
-      // Clearing event content:
-      roc_Event.Clear();
+        decodingStats.m_errors_event_pkam++;
+        // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
+        std::fill(readback_dirty.begin(), readback_dirty.end(), true);
+        // Clearing event content:
+        roc_Event.Clear();
     }
     // In case of a NoTokenPass flag, no ROC headers are expected
     else if(roc_Event.hasNoTokenPass() && (roc_n+1 > 0)) {
       LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel())
-		    << " has NoTokenPass but " << static_cast<int>(roc_n+1) 
+		    << " has NoTokenPass but " << roc_n+1
 		    << " ROCs were found";
       decodingStats.m_errors_roc_missing++;
-      // This breaks the readback for the missing roc, let's ignore this readback cycle for all ROCs:
+      // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
       std::fill(readback_dirty.begin(), readback_dirty.end(), true);
       // Clearing event content:
       roc_Event.Clear();
     }
     // If the number of ROCs does not correspond to what we expect clear the event and return
     else if(roc_Event.hasTokenPass() && (roc_n+1 != GetTokenChainLength())) {
-      LOG(logERROR) << "Channel " <<  static_cast<int>(GetChannel()) << " Number of ROCs (" << static_cast<int>(roc_n+1)
-		    << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
-      decodingStats.m_errors_roc_missing++;
-      // This breaks the readback for the missing roc, let's ignore this readback cycle for all ROCs:
-      std::fill(readback_dirty.begin(), readback_dirty.end(), true);
-      // Clearing event content:
-      roc_Event.Clear();
+      // if the argument sample was used!
+      if (sample != (rawEvent *) 1) {
+        if (!sample){
+          LOG(logWARNING) << "CheckEventValidity: rawEvent pointer sample is Zero - returning";
+          decodingStats.m_errors_roc_missing++;
+          // Clearing event content:
+          roc_Event.Clear();
+          return;
+        }
+        if(sample->GetSize() == 300){
+          LOG(logWARNING) << "ADC timeout exceeded! Event has more than 300 words!";
+        }
+        else {
+          LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
+                        << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
+          decodingStats.m_errors_roc_missing++;
+          // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
+          std::fill(readback_dirty.begin(), readback_dirty.end(), true);
+          // Clearing event content:
+          roc_Event.Clear();
+          LOG(logWARNING) << "DATA: " << listVector(sample->data, true);
+        }
+      }
+      else {
+        LOG(logERROR) << "Channel " << static_cast<int>(GetChannel()) << " Number of ROCs (" << roc_n + 1
+                      << ") != Token Chain Length (" << static_cast<int>(GetTokenChainLength()) << ")";
+        decodingStats.m_errors_roc_missing++;
+        // This breaks the read back for the missing roc, let's ignore this read back cycle for all ROCs:
+        std::fill(readback_dirty.begin(), readback_dirty.end(), true);
+        // Clearing event content:
+        roc_Event.Clear();
+      }
     }
     // Count empty events
-    else if(roc_Event.pixels.empty()) { 
+    else if(roc_Event.pixels.empty()) {
       decodingStats.m_info_events_empty++;
       LOG(logDEBUGPIPES) << "Event is empty.";
     }
@@ -524,22 +562,28 @@ namespace pxar {
     }
   }
 
-  void dtbEventDecoder::AverageAnalogLevel(int16_t word1, int16_t word2) {
+  void dtbEventDecoder::AverageAnalogLevel(int16_t word1, int16_t word2, int16_t roc_n) {
 
     // Take the mean for a window of 1000 samples, initial measurement included
-    if(slidingWindow < 1000) {
-      slidingWindow++;
-      sumUB += expandSign(word1 & 0x0fff);
-      ultrablack = static_cast<float>(sumUB)/slidingWindow;
-      sumB += expandSign(word2 & 0x0fff);
-      black = static_cast<float>(sumB)/slidingWindow;
+    if(slidingWindow.at(roc_n) < 1000) {
+      slidingWindow.at(roc_n)++;
+      ultraBlack.at(roc_n) += (expandSign(word1 & 0x0fff) - ultraBlack.at(roc_n)) / slidingWindow.at(roc_n);
+      black.at(roc_n) += (expandSign(word2 & 0x0fff) + offsetB - black.at(roc_n)) / slidingWindow.at(roc_n);
     }
     // Sliding window:
     else {
-      ultrablack = static_cast<float>(999)/1000*ultrablack + static_cast<float>(1)/1000*expandSign(word1 & 0x0fff);
-      black = static_cast<float>(999)/1000*black + static_cast<float>(1)/1000*expandSign(word2 & 0x0fff);
+      ultraBlack.at(roc_n) = 999. / 1000 * ultraBlack.at(roc_n) + 1. / 1000 * expandSign(word1 & 0x0fff);
+      black.at(roc_n) = 999. / 1000 * black.at(roc_n) + 1. / 1000 * (expandSign(word2 & 0x0fff) + offsetB);
     }
-    levelS = (black - ultrablack)/8;
+    levelS.at(roc_n) = static_cast<int16_t>((int(black.at(roc_n)) - int(ultraBlack.at(roc_n))) / 8);
+  }
+
+  bool dtbEventDecoder::foundHeader(int16_t roc_n, int16_t word1, int16_t word2){
+    if (not slidingWindow.at(roc_n + 1))
+      return (roc_n + 1 == 0) ? true : (expandSign(word1) < ultraBlack.at(0) + 2 * levelS.at(0));
+    bool foundUB = (ultraBlack.at(roc_n + 1) - levelS.at(roc_n + 1) * 2 < expandSign(word1) && ultraBlack.at(roc_n + 1) + levelS.at(roc_n + 1) * 2 > expandSign(word1));
+    bool foundB = (black.at(roc_n + 1) - levelS.at(roc_n + 1) < offsetB + expandSign(word2) && black.at(roc_n + 1) + levelS.at(roc_n + 1) > offsetB + expandSign(word2));
+    return foundB and foundUB;
   }
 
   void dtbEventDecoder::evalDeser400Errors(uint16_t data) {
@@ -547,12 +591,12 @@ namespace pxar {
     // Evaluate the four error bits of the TBM trailer word:
     if((data & 0x0100) != 0x0000) {
       decodingStats.m_errors_event_nodata++;
-      LOG(logWARNING) << "Detected DESER400 trailer error bits: \"NO DATA\"";
+      //LOG(logWARNING) << "Detected DESER400 trailer error bits: \"NO DATA\"";
       throw DataDeserializerError("No data");
     }
     if((data & 0x0200) != 0x0000) {
       LOG(logWARNING) << "Detected DESER400 trailer error bits: \"IDLE DATA\"";
-      decodingStats.m_errors_event_idledata++;
+      //decodingStats.m_errors_event_idledata++;
       throw DataDeserializerError("Idle data");
     }
     if((data & 0x0400) != 0x0000) {
@@ -582,7 +626,7 @@ namespace pxar {
 
   void dtbEventDecoder::evalReadback(uint8_t roc, uint16_t val) {
     // Obey disable flag:
-    if((GetFlags() & FLAG_DISABLE_READBACK_COLLECTION) != 0) { return; }
+    if((GetFlags() & FLAG_DISABLE_READBACK_COLLECTION) != 0 or GetEnvelopeType() == TBM_EMU) { return; }
 
     // Check if we have seen this ROC already:
     if(shiftReg.size() <= roc) shiftReg.resize(roc+1,0);
@@ -628,7 +672,7 @@ namespace pxar {
     }
   }
 
-  statistics dtbEventDecoder::getStatistics() { 
+  statistics dtbEventDecoder::getStatistics() {
     // Automatically clear the statistics after it was read out:
     statistics tmp = decodingStats;
     decodingStats.clear();

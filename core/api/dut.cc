@@ -20,7 +20,7 @@ void dut::info() {
     LOG(logINFO) << std::setw(2) << tbm.size() << " TBM Cores " << getTbmType() << " (" << getNEnabledTbms() 
 		 << " ON)";
 
-    for(std::vector<tbmConfig>::iterator tbmIt = tbm.begin(); tbmIt != tbm.end(); tbmIt++) {
+    for(std::vector<tbmCoreConfig>::iterator tbmIt = tbm.begin(); tbmIt != tbm.end(); tbmIt++) {
       LOG(logINFO) << "\tTBM Core " 
 		   << ((tbmIt-tbm.begin())%2 == 0 ? "alpha" : "beta " )
 		   << " (" << static_cast<int>(tbmIt - tbm.begin()) << "): " 
@@ -110,13 +110,13 @@ size_t dut::getNEnabledTbms() {
   if (!status()) return 0;
   // loop over result, count enabled TBMs
   size_t count = 0;
-  for (std::vector<tbmConfig>::iterator it = tbm.begin(); it != tbm.end(); ++it){
+  for (std::vector<tbmCoreConfig>::iterator it = tbm.begin(); it != tbm.end(); ++it){
     if (it->enable) count++;
   }
   return count;
 }
 
-size_t dut::getNTbms() {
+size_t dut::getNTbmCores() {
   return tbm.size();
 }
 
@@ -270,11 +270,11 @@ std::vector< uint8_t > dut::getRocI2Caddr() {
   return result;
 }
 
-std::vector< tbmConfig > dut::getEnabledTbms() {
-  std::vector< tbmConfig > result;
+std::vector<tbmCoreConfig> dut::getEnabledTbms() {
+  std::vector<tbmCoreConfig> result;
   if (!_initialized) return result;
   // search for TBMs that have enable set
-  for (std::vector<tbmConfig>::iterator it = tbm.begin(); it != tbm.end(); ++it){
+  for (std::vector<tbmCoreConfig>::iterator it = tbm.begin(); it != tbm.end(); ++it){
     if (it->enable) result.push_back(*it);
   }
   return result;

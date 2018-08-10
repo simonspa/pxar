@@ -576,7 +576,7 @@ void PixTestReadback::CalibrateVd(){
   double Vd;
   double Vd_mod;
 
-  int nTbms = fApi->_dut->getNTbms();
+  int nTbms = fApi->_dut->getNTbmCores();
 
   double R_vd, DeltaGND;
   //if this is a module, take into account voltage drops
@@ -729,7 +729,7 @@ void PixTestReadback::readbackVbg(){
   vector<uint8_t> readback;
 
   double VdMin;
-  int nTbms = fApi->_dut->getNTbms();
+  int nTbms = fApi->_dut->getNTbmCores();
   //on a module, vd=2.8 
   if(nTbms>0){
     VdMin=2.8;
@@ -870,7 +870,7 @@ void PixTestReadback::CalibrateVa(){
   double Va_mod;
   int count=0;
 
-  int nTbms = fApi->_dut->getNTbms();
+  int nTbms = fApi->_dut->getNTbmCores();
 
   double R_va, DeltaGND;
   if(nTbms>0){
@@ -1319,7 +1319,7 @@ void PixTestReadback::PreparePG(){
   uint16_t ClkDelays = Period; // subtracting trigger token delay.
 
   //for ROCs: subtract "resetroc"
-  int nTbms = fApi->_dut->getNTbms();
+  int nTbms = fApi->_dut->getNTbmCores();
   vector<pair<string, uint8_t> > pgtmp = fPixSetup->getConfigParameters()->getTbPgSettings();
   
   //for debugging: showing the pattern to be generated
