@@ -7,13 +7,12 @@
 from ROOT import TCanvas, TCutG, gStyle, TColor, TH2F, TF2
 from argparse import ArgumentParser
 from numpy import zeros, array
-from os.path import basename, dirname, realpath, split
-from os.path import join as joinpath
+from os.path import basename, dirname, realpath, split, join
 from sys import argv, path
 from progressbar import Bar, ETA, FileTransferSpeed, Percentage, ProgressBar
 from time import time
 from TreeWriter import TreeWriter
-lib_dir = joinpath(split(dirname(realpath(__file__)))[0], 'lib')
+lib_dir = join(split(dirname(realpath(__file__)))[0], 'lib')
 path.insert(1, lib_dir)
 try:
     from id3003 import id3003_xray_generator
