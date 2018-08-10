@@ -1811,113 +1811,77 @@ class PxarCoreCmd(cmd.Cmd):
         """do_wbcScan [minimal WBC] [number of events] [maximal WBC]: \n
         sets wbc from minWBC until it finds the wbc which has more than 90% filled events or it reaches maxWBC \n
         (default [90] [100] [130])"""
-        
-        print 'Turning on HV! YES I DID IT :D'
+
+        # prepararations
+        print 'Turning on HV!'
         self.api.HVon()
-        self.api.daqTriggerSource("extern")
-        rocs = self.api.getNEnabledRocs()
-        wbc_scan = []
-        wbc_values = []
-        roc_hits = []
-        best_wbc = None
-        trigger_phase = []
-        for i in range(10):
-            trigger_phase.append(0)
-        print "wbc \tyield"
+        print 'Setting trigger source to "extern"'
+        self.api.daqTriggerSource('extern')
+        self.api.daqStart()
+
+        trigger_phases = zeros(10)
+        yields = OrderedDict([(roc, {wbc: 0 for wbc in xrange(min_wbc, max_wbc)}) for roc in xrange(self.api.getNEnabledRocs())])
+        set_dacs = {roc: False for roc in yields}
+        print '\nROC EVENT YIELDS:\n  wbc\t{r}'.format(r='\t'.join(('roc' + str(yld)).rjust(6) for yld in yields.keys()))
 
         # loop over wbc
-        for wbc in range(min_wbc, max_wbc):
-            self.api.setDAC("wbc", wbc)
-            self.api.daqStart()
-            wbc_values.append(wbc)
-            hits = 0
-            triggers = 0
-            roc_hits.append([])
-            for i in range(rocs):
-                roc_hits[wbc - min_wbc].append(0)
+        for wbc in xrange(min_wbc, max_wbc):
+            self.clear_buffer()
+            self.api.setDAC('wbc', wbc)
 
             # loop until you find nTriggers
-            while triggers < max_triggers:
+            n_triggers = 0
+            while n_triggers < max_triggers:
                 try:
                     data = self.api.daqGetEvent()
-                    if len(data.pixels) > 0:
-                        hits += 1
-                    found_roc = []
-                    for i in range(rocs):
-                        found_roc.append(False)
-                    for i in range(len(data.pixels)):
-                        roc = data.pixels[i].roc
-                        if not found_roc[roc]:
-                            roc_hits[wbc - min_wbc][roc] += 1
-                            found_roc[roc] = True
-                    triggers += 1
+                    trigger_phases[data.triggerPhases[0]] += 1
+                    for roc in set([pix.roc for pix in data.pixels]):
+                        yields[roc][wbc] += 1. * 100. / max_triggers
+                    n_triggers += 1
                 except RuntimeError:
                     pass
-
-            hit_yield = 100 * hits / max_triggers
-            wbc_scan.append(hit_yield)
-            print '{0:03d}'.format(wbc), "\t", '{0:3.0f}%'.format(hit_yield)
+            y_strings = ['{y:5.1f}%'.format(y=yld) for yld in [yields[roc][wbc] for roc in yields.iterkeys()]]
+            print '  {w:03d}\t{y}'.format(w=wbc, y='\t'.join(y_strings))
 
             # stopping criterion
-            if wbc > 3 + min_wbc:
-                if wbc_scan[-4] > 50:
-                    best_wbc = wbc - 3
-                    print "Set DAC wbc to", wbc - 3
-                    self.api.setDAC("wbc", wbc - 3)
+            best_wbc = max_wbc
+            if wbc > min_wbc + 3:
+                for roc, ylds in yields.iteritems():
+                    if any(yld > 10 for yld in ylds.values()[:wbc - min_wbc - 2]):
+                        best_wbc = ylds.keys()[ylds.values().index(max(ylds.values()))]
+                        print 'set wbc of roc {i} to {v}'.format(i=roc, v=best_wbc)
+                        self.api.setDAC('wbc', best_wbc, roc)
+                        set_dacs[roc] = True
+                if all(set_dacs.itervalues()):
+                    print 'found all wbcs'
+
+                    for roc, dic in yields.iteritems():
+                        keys = dic.keys()
+                        for key in keys:
+                            if key >= best_wbc + 4:
+                                yields[roc].pop(key)
                     break
-
-            # Clear the buffer:
-            try:
-                self.api.daqGetEventBuffer()
-            except RuntimeError:
-                pass
-
-        stop = 0
-        while stop < 1000:
-            bla = self.converted_raw_event()
-            if len(bla) > 2:
-                for i in range(10):
-                    if bla[1] == i:
-                        trigger_phase[i] += 1
-                stop += 1
-
         self.api.daqStop()
 
-        if best_wbc == None:
-            last_wbc = 0
-            for i in range(len(wbc_scan)):
-                if wbc_scan[i] < last_wbc and last_wbc > 10:
-                    best_wbc = wbc_values[i - 1]
-                    break
-                last_wbc = wbc_scan[i]
-            if best_wbc != None:
-                print "Set DAC wbc to", best_wbc
-                self.api.setDAC("wbc", best_wbc)
-
-        # roc statistics
-        print "\nROC STATISTICS:"
-        print 'wbc\t',
-        for i in range(rocs):
-            print 'roc' + str(i) + '\t',
-        print
-        for i in range(-4, 4):
-            print best_wbc + i, '\t',
-            for j in range(rocs):
-                print "{0:2.1f}".format(roc_hits[best_wbc - min_wbc + i][j] / float(max_triggers) * 100), '\t',
-            print
-
         # triggerphase
-        print '\nTRIGGER PHASE:'
-        for i in range(len(trigger_phase)):
-            if trigger_phase[i]:
-                print i, '\t', trigger_phase[i] / 20 * '|', "{0:2.1f}%".format(trigger_phase[i] / float(10))
 
+        print '\nTRIGGER PHASE:'
+        for i, trigger_phase in enumerate(trigger_phases):
+            if trigger_phase:
+                percentage = trigger_phase * 100 / sum(trigger_phases)
+                print '{i}\t{d} {v:2.1f}%'.format(i=i, d=int(round(percentage)) * '|', v=percentage)
 
         # plot wbc_scan
-        self.window = TCanvas('c', 'c', 1000, 1000)
-        plot = Plotter.create_tgraph(wbc_scan, "wbc scan", "wbc", "evt/trig [%]", min_wbc)
-        self.Plots.append(plot)
-        plot.Draw('ap')
+        mg = TMultiGraph('mg_wbc', 'WBC Scans for all ROCs')
+        colors = range(1, len(yields) + 1)
+        l = Plotter.create_legend(nentries=len(yields), x1=.7)
+        for i, (roc, dic) in enumerate(yields.iteritems()):
+            gr = Plotter.create_graph(x=dic.keys(), y=dic.values(), tit='wbcs for roc {r}'.format(r=roc), xtit='wbc', ytit='yield [%]', color=colors[i])
+            l.AddEntry(gr, 'roc{r}'.format(r=roc), 'lp')
+            mg.Add(gr, 'lp')
+        self.Plotter.plot_histo(mg, draw_opt='a', l=l)
+        mg.GetXaxis().SetTitle('WBC')
+        mg.GetYaxis().SetTitle('Yield [%]')
 
     def complete_wbcScan(self):
         # return help for the cmd
