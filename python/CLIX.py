@@ -627,10 +627,12 @@ class PxarCoreCmd(cmd.Cmd):
                 self.api.maskPixel(i, j, 0)
         print '--> masking frame of {n} pixels'.format(n=pix)
 
-    def setPG(self, cal=True, res=True):
+    def setPG(self, cal=True, res=True, delay=None):
         """ Sets up the trigger pattern generator for ROC testing """
         pgcal = self.getDAC('wbc') + (6 if 'dig' in self.api.getRocType() else 5)
         pg_setup = []
+        if delay is not None:
+            pg_setup.append(('DELAY', delay))
         if res:
             pg_setup.append(('PG_RESR', 25))
         if cal:
