@@ -646,6 +646,12 @@ class PxarCoreCmd(cmd.Cmd):
         except RuntimeError, err:
             print err
 
+    def clear_buffer(self):
+        try:
+            self.api.daqGetEventBuffer()
+        except RuntimeError:
+            pass
+
     # endregion
 
     # ==============================================
