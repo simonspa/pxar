@@ -5,6 +5,7 @@ Helper classes and functions useful when interfacing the pxar API with Python.
 from PyPxarCore import Pixel, PixelConfig, PyPxarCore, PyRegisterDictionary, PyProbeDictionary, Statistics
 from functools import wraps # used in parameter verification decorator ("arity")
 import os # for file system cmds
+from os.path import join
 import sys
 import shlex
 from collections import OrderedDict
@@ -291,9 +292,9 @@ def PxarStartup(directory, verbosity, trim=None):
         print "Error: no or invalid configuration directory specified!"
         sys.exit(404)
 
-    config = PxarConfigFile('%sconfigParameters.dat'%(os.path.join(directory,"")))
-    tbparameters = PxarParametersFile('%s%s'%(os.path.join(directory,""),config.get("tbParameters")))
-    masks = PxarMaskFile('%s%s'%(os.path.join(directory,""),config.get("maskFile")))
+    config = PxarConfigFile(join(directory, 'configParameters.dat'))
+    tbparameters = PxarParametersFile(join(directory, config.get('tbParameters')))
+    masks = PxarMaskFile(join(directory, config.get('maskfile')))
     
     # Power settings:
     power_settings = {
@@ -373,9 +374,7 @@ def PxarStartup(directory, verbosity, trim=None):
        # Start an API instance from the core pxar library
     api = PyPxarCore(usbId=config.get("testboardName"),logLevel=verbosity)
     print api.getVersion()
-    if not api.initTestboard(pg_setup = pg_setup,
-    power_settings = power_settings,
-    sig_delays = tbparameters.getAll()):
+    if not api.initTestboard(pg_setup = pg_setup, power_settings = power_settings, sig_delays = tbparameters.getAll()):
         print "WARNING: could not init DTB -- possible firmware mismatch."
         print "Please check if a new FW version is available"
         exit()

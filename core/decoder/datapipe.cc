@@ -423,39 +423,39 @@ namespace pxar {
 
       // Check if we have a ROC header:
       if(((*word) & 0x0ffc) == 0x07f8) {
-	roc_n++;
+        roc_n++;
 
-	// Decode the readback bits in the ROC header:
-	if(GetDeviceType() >= ROC_PSI46DIGV2) { evalReadback(roc_n,(*word) & 0x0fff); }
+        // Decode the readback bits in the ROC header:
+        if(GetDeviceType() >= ROC_PSI46DIGV2) { evalReadback(roc_n,(*word) & 0x0fff); }
       }
       // We might have a pixel:
       // Require that we found at least one ROC header and have two or more words left:
       else if(roc_n >= 0) {
-	// It's not a ROC header but the last word:
-	if(sample->data.end() - word < 2) {
-	  decodingStats.m_errors_pixel_incomplete++;
-	  continue;
-	}
+        // It's not a ROC header but the last word:
+        if(sample->data.end() - word < 2) {
+          decodingStats.m_errors_pixel_incomplete++;
+          continue;
+        }
 
-	uint32_t raw = (((*word) & 0x0fff) << 12) + ((*(++word)) & 0x0fff);
-	try {
-	  pixel pix(raw,roc_n,invertedAddress,linearAddress);
-    pix.throwErrors();
-	  roc_Event.pixels.push_back(pix);
-	  decodingStats.m_info_pixels_valid++;
-	}
-	catch(DataInvalidAddressError /*&e*/) {
-	  // decoding of raw address lead to invalid address
-	  decodingStats.m_errors_pixel_address++;
-	}
-	catch(DataInvalidPulseheightError /*&e*/) {
-	  // decoding of pulse height featured non-zero fill bit
-	  decodingStats.m_errors_pixel_pulseheight++;
-	}
-	catch(DataCorruptBufferError /*&e*/) {
-	  // decoding returned row 80 - corrupt data buffer
-	  decodingStats.m_errors_pixel_buffer_corrupt++;
-	}
+        uint32_t raw = (((*word) & 0x0fff) << 12) + ((*(++word)) & 0x0fff);
+        try {
+          pixel pix(raw,roc_n,invertedAddress,linearAddress);
+          pix.throwErrors();
+          roc_Event.pixels.push_back(pix);
+          decodingStats.m_info_pixels_valid++;
+        }
+        catch(DataInvalidAddressError /*&e*/) {
+          // decoding of raw address lead to invalid address
+          decodingStats.m_errors_pixel_address++;
+        }
+        catch(DataInvalidPulseheightError /*&e*/) {
+          // decoding of pulse height featured non-zero fill bit
+          decodingStats.m_errors_pixel_pulseheight++;
+        }
+        catch(DataCorruptBufferError /*&e*/) {
+          // decoding returned row 80 - corrupt data buffer
+          decodingStats.m_errors_pixel_buffer_corrupt++;
+        }
       }
     }
 
