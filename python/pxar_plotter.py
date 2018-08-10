@@ -1,10 +1,36 @@
 #!/usr/bin/env python2
 
-from ROOT import TH1F, TGraph, TH2F
+from ROOT import TH1F, TGraph, TH2F, TCanvas, TLegend
 import array
 
 
 class Plotter(object):
+
+    def __init__(self):
+        self.Plots = []
+
+
+    def plot_histo(self, h, draw_opt='', lm=None, rm=None, l=None):
+        c = TCanvas('c{n}'.format(n=h.GetName()), 'c', 1000, 1000)
+        lm = c.GetLeftMargin() if lm is None else lm
+        rm = c.GetRightMargin() if rm is None else rm
+        c.SetMargin(lm, rm, .1, .1)
+        h.Draw(draw_opt)
+        if l is not None:
+            l.Draw()
+        self.Plots.append([h, c, l])
+
+    @staticmethod
+    def create_legend(x1=.65, y2=.88, nentries=2, scale=1, name='l', y1=None, margin=.25, x2=None):
+        x2 = .88 if x2 is None else x2
+        y1 = y2 - nentries * .05 * scale if y1 is None else y1
+        l = TLegend(x1, y1, x2, y2)
+        l.SetName(name)
+        l.SetTextFont(42)
+        l.SetTextSize(0.03 * scale)
+        l.SetMargin(margin)
+        return l
+
     @staticmethod
     def create_th1(data, minimum, maximum, name, x_title, y_title):
         th1 = TH1F(name, name, len(data), minimum, maximum)
@@ -18,16 +44,19 @@ class Plotter(object):
         return th1
 
     @staticmethod
-    def create_graph(x, y, name='gr', tit='', xtit='', ytit='', yoff=1.4):
+    def create_graph(x, y, name='gr', tit='', xtit='', ytit='', yoff=1.4, color=None):
         gr = TGraph(len(x), array.array('d', x), array.array('d', y))
         gr.SetNameTitle(name, tit)
         gr.SetMarkerStyle(20)
-        gr.SetMarkerSize(.5)
+        gr.SetMarkerSize(1)
         xax = gr.GetXaxis()
         xax.SetTitle(xtit)
         yax = gr.GetYaxis()
         yax.SetTitle(ytit)
         yax.SetTitleOffset(yoff)
+        if color is not None:
+            gr.SetMarkerColor(color)
+            gr.SetLineColor(color)
         return gr
 
     @staticmethod
