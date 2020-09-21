@@ -20,6 +20,7 @@ SET(PXAR_FW_VERSION "4.2")
 OPTION(BUILD_tools  "Compile pxar tools? (flash, testpxar...)" OFF)
 OPTION(USE_FTD2XX "Use the proprietary FTDI library instead of the open source version" ON)
 OPTION(BUILD_pxarui "Compile pXar UI, tests and executables (requires ROOT)?" ON)
+OPTION(BUILD_documentation "Build the pxar documentation" ON)
 
 # Build flag for Ethernet interface implementation:
 OPTION(INTERFACE_ETH "Build DTB Ethernet interface?" OFF)
@@ -247,7 +248,9 @@ IF(BUILD_tools)
 ENDIF(BUILD_tools)
 
 # Add targets for Doxygen code reference and LaTeX User manual
-ADD_SUBDIRECTORY(doc)
+IF(BUILD_documentation)
+  ADD_SUBDIRECTORY(doc)
+ENDIF(BUILD_documentation)
 
 #######################################################
 # Print out system information useful for bug reports #
