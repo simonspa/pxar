@@ -30,6 +30,13 @@ that no data decoding is performed online prior to storing the data to disk. Thi
 the decoding methods do not affect the data taken, but the conversion to other event formats can just be re-run on the raw
 and unaltered detector data.
 
+For compatibility with the `EudaqNativeWriter` satellite, the following message tags are set:
+
+* The BOR message tag `eudaq_event` is set to either of `CMSPixelDUT`, `CMSPixelREF`, `CMSPixelTRP`, `CMSPixelQUAD` depending on the `detector` configuration key.
+* The BOR message tag `frames_as_blocks` set to false.
+* The data message tag `trigger_number` is set to the respective message sequence number.
+* The data message tag `flag_trigger` is set to `true`.
+
 ## Building
 
 Building requires:
@@ -67,6 +74,7 @@ The following parameters are read and interpreted by this satellite. Parameters 
 | Parameter  | Description | Type | Default Value |
 |------------|-------------|------|---------------|
 | `pxar_verbosity` | Verbosity setting of the pxarCore library. All verbosity levels and their outputs are described in Section 5.8 of [the pxar manual](https://cds.cern.ch/record/2137512). The following mapping to Constellation log levels is used: `INTERFACE`, `DEBUGPIPES`, `DEBUGRPC` become `TRACE`; `DEBUGHAL`, `DEBUGAPI` and `DEBUG` become `DEBUG`; `INFO` corresponds to `INFO`, `WARNING` to `WARNING`, both `ERROR` and `CRITICAL` become `CRITICAL` and `QUET` is mapped to `STATUS`. | String | `INFO` |
+| `detector` | Type of detector this satellite should operate. Can be either `DUT`, `REF`, `TRP` or `QUAD`, any other string will be interpreted as `DUT`. | String | - |
 | `roctype` | The device type of the ROC to be operated. This will be fed to the function `pxarCore::initDUT(...)`. The list of available devices can be found in Table 2 of [the pxar manual](https://cds.cern.ch/record/2137512) | String | `psi46digv21respin` |
 | `pcbtype` | Type of the carrier printed circuit board (PCB) the ROC is mounted on. Content of this is free and it can be used to keep track of different PCB types, e.g. distinguishing different material budgets. If the PCB type parameter contains the pattern -rot indicating a PCB with the ROC mounted in a π/2 rotated position, columns and rows will automatically be swapped | String | `desytb` |
 | `i2c` | This is an optional parameter for specifying non-standard (non-0) I2 C addresses the devices are listening on. This parameter takes a vector of integers which allows to run more than one ROC attached to a single DTB such as token-chained ROCs in beam telescopes, or full CMS Pixel modules. For this, the I2C address of every ROC has to be specified, e.g. `i2c = 0 1 2 4 5 6` would set up the DUT in a way that six ROCs are programmed (using six DAC and trim bit files) and read out. If no I2C parameter is specified, the I2C address defaults to 0 and the `dacFile` and `trimFile` parameters are assumed to represent the full path and name of the files to be read. If the I2C parameter is specified (even for a single ROC) the file names will be appended with the pattern `_Cx` where `x` is the I2C address from this parameter. This is possible for both single chips and multiple ROCs. | Array of integers | - |

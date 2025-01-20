@@ -114,6 +114,7 @@ void PxarSatellite::initializing(Configuration& config) {
         m_detector = "DUT";
         m_event_type = EVENT_TYPE_DUT;
     }
+    LOG(STATUS) << "Initializing detector " << m_detector << " with event type " << m_event_type;
 
     // declare config vectors
     std::vector<std::pair<std::string, uint8_t>> sig_delays;
@@ -369,6 +370,7 @@ void PxarSatellite::starting(std::string_view /*run_identifier*/) {
 
         // Set tags for the BOR message, make EUDAQ-compatible:
         setBORTag("eudaq_event", m_event_type);
+        setBORTag("frames_as_blocks", false);
 
         // Set the TBM & ROC type for decoding:
         setBORTag("ROCTYPE", m_roctype);
@@ -378,8 +380,7 @@ void PxarSatellite::starting(std::string_view /*run_identifier*/) {
         setBORTag("PLANES", m_nplanes);
 
         // Store all DAC settings in one BORE tag:
-        // FIXME
-        // setBORTag("DACS", m_alldacs);
+        setBORTag("DACS", m_alldacs);
 
         // Set the PCB mount type for correct coordinate transformation:
         setBORTag("PCBTYPE", m_pcbtype);
@@ -487,6 +488,7 @@ void PxarSatellite::stopping() {
             auto data = evt.data;
             data_msg.addFrame(std::move(data));
             data_msg.addTag("trigger_number", seq);
+            data_msg.addTag("flag_trigger", true);
             sendDataMessage(data_msg);
         }
     } catch(pxar::DataNoEvent&) {
