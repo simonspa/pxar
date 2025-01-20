@@ -115,7 +115,6 @@ void PxarSatellite::initializing(Configuration& config) {
     m_event_type = EVENT_TYPE_DUT;
   }
 
-  bool confTrimming(false), confDacs(false);
   // declare config vectors
   std::vector<std::pair<std::string, uint8_t>> sig_delays;
   std::vector<std::pair<std::string, double>> power_settings;
@@ -137,7 +136,7 @@ void PxarSatellite::initializing(Configuration& config) {
   sig_delays.emplace_back("triggerlatency", config.get<uint8_t>("triggerlatency", 86));
   sig_delays.emplace_back("tindelay", config.get<uint8_t>("tindelay", 13));
   sig_delays.emplace_back("toutdelay", config.get<uint8_t>("toutdelay", 8));
-  sig_delays.emplace_back("triggertimeout",config.get<uint8_t>("triggertimeout",3000));
+  sig_delays.emplace_back("triggertimeout",config.get<uint8_t>("triggertimeout", 184));
 
   // Power settings:
   power_settings.emplace_back("va", config.get<double>("va", 1.8));
@@ -598,8 +597,8 @@ PxarSatellite::GetConfDACs(Configuration& config, int16_t i2c, bool tbm) {
   return dacs;
 }
 
-std::vector<int32_t> PxarSatellite::split(const std::string &s, char delim) {
-  std::vector<int32_t> result;
+std::vector<std::size_t> PxarSatellite::split(const std::string &s, char delim) {
+  std::vector<std::size_t> result;
   std::stringstream ss(s);
   std::string item;
   while (std::getline(ss, item, delim)) {
@@ -629,13 +628,12 @@ std::vector<pxar::pixelConfig> PxarSatellite::GetConfMaskBits(Configuration& con
       int roc, col;
       linestream >> dummy >> roc >> col >> rowpattern;
       if (rowpattern.find(":") != std::string::npos) {
-        std::vector<int32_t> row = split(rowpattern, ':');
+        auto row = split(rowpattern, ':');
         for (size_t i = row.front(); i <= row.back(); i++) {
-          maskbits.push_back(pxar::pixelConfig(roc, col, i, 15, true, false));
+          maskbits.emplace_back(roc, col, i, 15, true, false);
         }
       } else {
-        maskbits.push_back(pxar::pixelConfig(roc, col, std::stoi(rowpattern),
-                                             15, true, false));
+        maskbits.emplace_back(roc, col, std::stoi(rowpattern), 15, true, false);
       }
     }
   } else {
