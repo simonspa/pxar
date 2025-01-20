@@ -215,6 +215,10 @@ IF(DEVICES)
   INCLUDE_DIRECTORIES(devices)
 ENDIF(DEVICES)
 
+IF(BUILD_CNSTLN)
+  ADD_SUBDIRECTORY(constellation)
+ENDIF()
+
 # full UI and test suite (requires ROOT)
 IF(BUILD_pxarui)
   # this UI and its libraries depend on ROOT:
