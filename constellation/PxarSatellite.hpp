@@ -28,11 +28,11 @@ class PxarSatellite final : public constellation::satellite::TransmitterSatellit
 public:
     PxarSatellite(std::string_view type, std::string_view name);
 
-    void initializing(constellation::config::Configuration &config) final;
+    void initializing(constellation::config::Configuration& config) final;
     void launching() final;
     void landing() final;
     void starting(std::string_view run_identifier) final;
-    void running(const std::stop_token &stop_token) final;
+    void running(const std::stop_token& stop_token) final;
     void stopping() final;
 
 private:
@@ -45,13 +45,15 @@ private:
     std::string m_roctype, m_tbmtype, m_pcbtype, m_detector, m_event_type, m_alldacs;
 
     // Methods
-    std::vector<std::pair<std::string, uint8_t>> GetConfDACs(constellation::config::Configuration& config, int16_t i2c = -1,
-                                                           bool tbm = false);
+    std::vector<std::pair<std::string, uint8_t>> GetConfDACs(constellation::config::Configuration& config,
+                                                             int16_t i2c = -1,
+                                                             bool tbm = false);
     std::vector<pxar::pixelConfig> GetConfMaskBits(constellation::config::Configuration& config);
-    std::vector<pxar::pixelConfig>
-    GetConfTrimming(constellation::config::Configuration& config, std::vector<pxar::pixelConfig> maskbits, int16_t i2c = -1);
+    std::vector<pxar::pixelConfig> GetConfTrimming(constellation::config::Configuration& config,
+                                                   std::vector<pxar::pixelConfig> maskbits,
+                                                   int16_t i2c = -1);
     std::string prepareFilename(std::string filename, std::string n);
-    std::vector<std::size_t> split(const std::string &s, char delim);
+    std::vector<std::size_t> split(const std::string& s, char delim);
 
     PxarLogger pxar_logger_;
 
