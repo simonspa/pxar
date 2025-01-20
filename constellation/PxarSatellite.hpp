@@ -6,10 +6,23 @@
 #include <string_view>
 
 #include <constellation/core/config/Configuration.hpp>
+#include <constellation/core/log/Level.hpp>
+#include <constellation/core/log/Logger.hpp>
 #include <constellation/core/protocol/CSCP_definitions.hpp>
 #include <constellation/satellite/TransmitterSatellite.hpp>
 
 #include "api.h"
+
+class PxarLogger final : public std::stringbuf {
+public:
+    PxarLogger();
+    ~PxarLogger();
+    int sync() final;
+    static constellation::log::Level getLogLevel(char short_log_format_char);
+
+private:
+    constellation::log::Logger logger_;
+};
 
 class PxarSatellite final : public constellation::satellite::TransmitterSatellite {
 public:
@@ -40,6 +53,7 @@ private:
     std::string prepareFilename(std::string filename, std::string n);
     std::vector<int32_t> split(const std::string &s, char delim);
 
+    PxarLogger pxar_logger_;
 
     // Add one mutex to protect calls to pxarCore:
     std::mutex mutex_;
