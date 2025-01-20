@@ -21,6 +21,7 @@
 #include "helper.h"
 
 using namespace constellation::config;
+using namespace constellation::log;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
@@ -29,6 +30,53 @@ static const std::string EVENT_TYPE_DUT = "CMSPixelDUT";
 static const std::string EVENT_TYPE_REF = "CMSPixelREF";
 static const std::string EVENT_TYPE_TRP = "CMSPixelTRP";
 static const std::string EVENT_TYPE_QUAD = "CMSPixelQUAD";
+
+Level PxarLogger::getLogLevel(std::string_view log_lvl) {
+    Level level {};
+    switch(log_lvl) {
+    case "INTERFACE": level = TRACE; break;
+    case "DEBUGRPC": level = TRACE; break;
+    case "DEBUGPIPES": level = TRACE; break;
+    case "DEBUGHAL": level = TRACE; break;
+    case "DEBUGAPI": level = TRACE; break;
+    case "DEBUG": level = DEBUG; break;
+    case "INFO": level = INFO; break;
+    case "WARNING": level = WARNING; break;
+    case "ERROR": level = CRITICAL; break;
+    case "QUIET": level = STATUS; break;
+    case "CRITICAL": level = CRITICAL; break;
+    default: break;
+    }
+    return level;
+}
+
+PxarLogger::PxarLogger() : logger_("PXAR") {
+    // Create static stream for Peary
+    static std::ostream stream {this};
+    // Add stream to peary
+    caribou::Log::addStream(stream);
+}
+
+PxarLogger::~PxarLogger() {
+    // Delete log streams since logger goes out of scope
+    pxar::Log::clearStreams();
+}
+
+int PxarLogger::sync() {
+    const auto message = this->view();
+    // Get log level from message
+    const auto level = getLogLevel(message.at(1));
+    // Strip log level and final newline from substring
+    const auto message_stripped = message.substr(4, message.size() - 5);
+    // Log stripped message
+    logger_.log(level, std::source_location()) << message_stripped;
+    logger_.flush();
+    // Reset stringbuf by swapping a new one
+    std::stringbuf new_stringbuf {};
+    this->swap(new_stringbuf);
+
+    return 0;
+}
 
 PxarSatellite::PxarSatellite(std::string_view type, std::string_view name)
     : TransmitterSatellite(type, name) {}
