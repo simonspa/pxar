@@ -42,7 +42,8 @@ private:
     unsigned m_channels;
     int m_pattern_delay;
     bool m_trimmingFromConf, m_trigger_is_pg;
-    std::string m_roctype, m_tbmtype, m_pcbtype, m_detector, m_event_type, m_alldacs;
+    std::string m_roctype, m_tbmtype, m_pcbtype, m_detector, m_event_type;
+    std::vector<std::string> m_alldacs;
 
     // Methods
     std::vector<std::pair<std::string, uint8_t>> GetConfDACs(constellation::config::Configuration& config,

@@ -576,7 +576,7 @@ std::vector<std::pair<std::string, uint8_t>> PxarSatellite::GetConfDACs(Configur
             }
 
             dacs.emplace_back(name, value);
-            m_alldacs.append(name + " " + std::to_string(value) + "; ");
+            m_alldacs.push_back(name + " = " + std::to_string(value));
         }
 
         LOG(INFO) << "Successfully read " << dacs.size() << " DACs from file, " << overwritten_dacs
