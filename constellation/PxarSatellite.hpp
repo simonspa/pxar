@@ -18,7 +18,7 @@ public:
     PxarLogger();
     ~PxarLogger();
     int sync() final;
-    static constellation::log::Level getLogLevel(char short_log_format_char);
+    static std::pair<constellation::log::Level, std::size_t> getLogLevel(std::string_view log_lvl);
 
 private:
     constellation::log::Logger logger_;

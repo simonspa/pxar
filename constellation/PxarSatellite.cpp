@@ -19,6 +19,7 @@
 #include "api.h"
 #include "dictionaries.h"
 #include "helper.h"
+#include "logging.h"
 
 using namespace constellation::config;
 using namespace constellation::log;
@@ -31,43 +32,56 @@ static const std::string EVENT_TYPE_REF = "CMSPixelREF";
 static const std::string EVENT_TYPE_TRP = "CMSPixelTRP";
 static const std::string EVENT_TYPE_QUAD = "CMSPixelQUAD";
 
-Level PxarLogger::getLogLevel(std::string_view log_lvl) {
+std::pair<Level, std::size_t> PxarLogger::getLogLevel(std::string_view log_lvl) {
     Level level {};
-    switch(log_lvl) {
-    case "INTERFACE": level = TRACE; break;
-    case "DEBUGRPC": level = TRACE; break;
-    case "DEBUGPIPES": level = TRACE; break;
-    case "DEBUGHAL": level = TRACE; break;
-    case "DEBUGAPI": level = TRACE; break;
-    case "DEBUG": level = DEBUG; break;
-    case "INFO": level = INFO; break;
-    case "WARNING": level = WARNING; break;
-    case "ERROR": level = CRITICAL; break;
-    case "QUIET": level = STATUS; break;
-    case "CRITICAL": level = CRITICAL; break;
-    default: break;
+    std::size_t level_length = 0;
+    if(log_lvl == "FAC") { // interFACe
+      level = TRACE;
+      level_length = 1;
+    } else if(log_lvl == "PIP") { // debugPIPes
+      level = TRACE;
+      level_length = 2;
+    } else if(log_lvl == "RPC") { // debugRPC
+      level = TRACE;
+    } else if(log_lvl == "HAL") { // debugHAL
+      level = TRACE;
+    } else if(log_lvl == "API") { // debugAPI
+      level = TRACE;
+    } else if(log_lvl == "BUG") { // deBUG
+      level = DEBUG;
+    } else if(log_lvl == "NFO") { // iNFO
+      level = INFO;
+    } else if(log_lvl == "ING") { // warnING
+      level = WARNING;
+    } else if(log_lvl == "ROR") { // erROR
+      level = CRITICAL;
+    } else if(log_lvl == "IET") { // quIET
+      level = STATUS;
+    } else if(log_lvl == "CAL") { // critiCAL
+      level = CRITICAL;
     }
-    return level;
+    return {level, level_length};
 }
 
 PxarLogger::PxarLogger() : logger_("PXAR") {
     // Create static stream for Peary
     static std::ostream stream {this};
-    // Add stream to peary
-    caribou::Log::addStream(stream);
+    pxar::SetLogOutput::Stream() = &stream;
 }
 
 PxarLogger::~PxarLogger() {
     // Delete log streams since logger goes out of scope
-    pxar::Log::clearStreams();
+    pxar::SetLogOutput::Stream() = &std::cerr;
 }
 
 int PxarLogger::sync() {
     const auto message = this->view();
     // Get log level from message
-    const auto level = getLogLevel(message.at(1));
+    const auto [level, length] = getLogLevel(std::string_view(message).substr(20, 3));
+    // Length to strip: time & whietspace (15) + log level + color & whitespace:
+    const std::size_t l = 23 + length + 2;
     // Strip log level and final newline from substring
-    const auto message_stripped = message.substr(4, message.size() - 5);
+    const auto message_stripped = message.substr(l, message.size() - l - 1);
     // Log stripped message
     logger_.log(level, std::source_location()) << message_stripped;
     logger_.flush();
@@ -82,6 +96,11 @@ PxarSatellite::PxarSatellite(std::string_view type, std::string_view name)
     : TransmitterSatellite(type, name) {}
 
 void PxarSatellite::initializing(Configuration& config) {
+
+  config.setDefault("pxar_verbosity", "INFO");
+
+  // Set configured log level
+  pxar::Log::ReportingLevel() = pxar::Log::FromString(config.get<std::string>("pxar_verbosity"));
 
   // Read detector type:
   m_detector = transform(config.get<std::string>("detector"), ::toupper);
@@ -194,7 +213,7 @@ void PxarSatellite::initializing(Configuration& config) {
 
     // Get a new pxar instance:
     const auto usbId = config.get<std::string>("usbId", "*");
-    api_ = std::make_unique<pxar::pxarCore>(usbId, "WARNING");
+    api_ = std::make_unique<pxar::pxarCore>(usbId, config.get<std::string>("pxar_verbosity"));
     LOG(INFO) << "Trying to connect to USB id: " << usbId;
 
     // Initialize the testboard:
