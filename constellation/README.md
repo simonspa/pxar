@@ -87,17 +87,14 @@ be appended with the trailing `_C0a/b` pattern for the two cores | String | - |
 | `triggerlatency` | Additional delay for the trigger to match the overall trigger latency including WBC. This setting can be used to match the actual trigger latency from the trigger logic unit (TLU) and cabling to the ROC’s WBC setting and thus allows to run with different WBC settings. | Integer | 86 |
 | `tindelay` | ADC DAQ only (analog PSI46v2 chips): delay for the ADC to start sampling the incoming data after the token in has been sent out. For more information see Section 5.11 of [the pxar manual](https://cds.cern.ch/record/2137512). | Integer | 13 |
 | `toutdelay` | ADC DAQ only (analog PSI46v2 chips): delay for the ADC to stop sampling the incoming data after the token out from the DUT has been received back. For more information see Section 5.11 of [the pxar manual](https://cds.cern.ch/record/2137512). | Integer | 8 |
-| `testpulses` | Boolean parameter which allows to run the DUT with testpulses and the pattern generator instead of external triggers. The trigger source parameter
-has to be set accordingly. In addition, the delays in 40 MHz clock cycles after the different signals contained in the pattern generator setup can be changed using
-the parameters `resetroc`/`calibrate`/`trigger`/`token`. The overall delays between two calls of the pattern generator (so the rough overall trigger frequency) can
-be adjusted using the patternDelay parameter. The testpulses functionality is mainly intended for software development with no actual particle beam present.
-More information on the pattern generator can be found in Section 3.4 of [the pxar manual](https://cds.cern.ch/record/2137512) | Boolean | `false` |
+| `testpulses` | Boolean parameter which allows to run the DUT with testpulses and the pattern generator instead of external triggers. The trigger source parameter has to be set accordingly. In addition, the delays in 40 MHz clock cycles after the different signals contained in the pattern generator setup can be changed using the parameters `resetroc`/`calibrate`/`trigger`/`token`. The overall delays between two calls of the pattern generator (so the rough overall trigger frequency) can be adjusted using the patternDelay parameter. The testpulses functionality is mainly intended for software development with no actual particle beam present. More information on the pattern generator can be found in Section 3.4 of [the pxar manual](https://cds.cern.ch/record/2137512) | Boolean | `false` |
 | `rocresetperiod` | Parameter allowing to send a periodic reset signal to the ROC. The value is given in Milliseconds, a value of 0 turns the periodic reset off. Internally this uses the direct signal trigger mode, switching on this source in addition to the one selected by the trigger source parameter. However, there is no guarantee that the two signals will not coincide, and some triggers might get lost while sending the reset. This leads to a loss of synchronization between the DUT and other detectors in the DAQ. This feature should be used with caution and only when really necessary! | Integer | 0 |
 
 In addition to the above parameters, it is also possible to overwrite DAC parameters. This is useful in cases when several DAC files (e.g. with different threshold settings) have been prepared in the laboratory beforehand, but the WBC is only known at time of the test beam. Instead of changing this parameter in all DAC files which is error prone and cumbersome, the DAC in question can be set as parameter in the EUDAQ configuration file. A list of all possible DAC parameters can be found in Table 5 of [the pxar manual](https://cds.cern.ch/record/2137512). To overwrite a DAC parameter, its name and the desired value have to be specified
 in lower case in the configuration file, e.g.
 
 ```toml
+[satellites.Pxar.CMSPixel]
 wbc = 186
 ```
 
