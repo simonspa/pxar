@@ -45,9 +45,9 @@ std::pair<Level, std::size_t> PxarLogger::getLogLevel(std::string_view log_lvl) 
     } else if(log_lvl == "RPC") { // debugRPC
         level = TRACE;
     } else if(log_lvl == "HAL") { // debugHAL
-        level = TRACE;
+        level = DEBUG;
     } else if(log_lvl == "API") { // debugAPI
-        level = TRACE;
+        level = DEBUG;
     } else if(log_lvl == "BUG") { // deBUG
         level = DEBUG;
     } else if(log_lvl == "NFO") { // iNFO
@@ -195,8 +195,7 @@ void PxarSatellite::initializing(Configuration& config) {
         for(int32_t i2c : i2c_addresses) {
             // Read trim bits from config:
             rocPixels.push_back(GetConfTrimming(config, maskbits, static_cast<int16_t>(i2c)));
-            // Read the DAC file and update the vector with overwrite DAC settings
-            // from config:
+            // Read the DAC file and update the vector with overwrite DAC settings from config:
             rocDACs.push_back(GetConfDACs(config, static_cast<int16_t>(i2c)));
             // Add the I2C address to the vector:
             if(i2c > -1) {
@@ -278,22 +277,17 @@ void PxarSatellite::initializing(Configuration& config) {
         }
 
         // Output the configured signal to the probes:
-        const auto signal_d1 = config.get<std::string>("signalprobe_d1", "off");
-        const auto signal_d2 = config.get<std::string>("signalprobe_d2", "off");
-        const auto signal_a1 = config.get<std::string>("signalprobe_a1", "off");
-        const auto signal_a2 = config.get<std::string>("signalprobe_a2", "off");
-
-        if(api_->SignalProbe("d1", signal_d1) && signal_d1 != "off") {
-            LOG(INFO) << "Setting scope output D1 to \"" << signal_d1 << "\"";
+        if(config.has("signalprove_d1") && api_->SignalProbe("d1", config.get<std::string>("signalprobe_d1"))) {
+            LOG(INFO) << "Setting scope output D1 to \"" << config.get<std::string>("signalprobe_d1") << "\"";
         }
-        if(api_->SignalProbe("d2", signal_d2) && signal_d2 != "off") {
-            LOG(INFO) << "Setting scope output D2 to \"" << signal_d2 << "\"";
+        if(config.has("signalprove_d2") && api_->SignalProbe("d2", config.get<std::string>("signalprobe_d2"))) {
+            LOG(INFO) << "Setting scope output D2 to \"" << config.get<std::string>("signalprobe_d2") << "\"";
         }
-        if(api_->SignalProbe("a1", signal_a1) && signal_a1 != "off") {
-            LOG(INFO) << "Setting scope output A1 to \"" << signal_a1 << "\"";
+        if(config.has("signalprove_a1") && api_->SignalProbe("a1", config.get<std::string>("signalprobe_a1"))) {
+            LOG(INFO) << "Setting scope output A1 to \"" << config.get<std::string>("signalprobe_a1") << "\"";
         }
-        if(api_->SignalProbe("a2", signal_a2) && signal_a2 != "off") {
-            LOG(INFO) << "Setting scope output A2 to \"" << signal_a2 << "\"";
+        if(config.has("signalprove_a2") && api_->SignalProbe("a2", config.get<std::string>("signalprobe_a2"))) {
+            LOG(INFO) << "Setting scope output A2 to \"" << config.get<std::string>("signalprobe_a2") << "\"";
         }
 
         LOG(INFO) << api_->getVersion() << " API set up successfully...";
@@ -518,20 +512,20 @@ std::vector<std::pair<std::string, uint8_t>> PxarSatellite::GetConfDACs(Configur
     std::string filename;
     // Read TBM register file, Core A:
     if(tbm && i2c < 1) {
-        filename = prepareFilename(config.get<std::string>("tbmFile", ""), "0a");
+        filename = prepareFilename(config.get<std::string>("tbmFile"), "0a");
     }
     // Read TBM register file, Core B:
     else if(tbm && i2c >= 1) {
-        filename = prepareFilename(config.get<std::string>("tbmFile", ""), "0b");
+        filename = prepareFilename(config.get<std::string>("tbmFile"), "0b");
     }
     // Read ROC DAC file, no I2C address indicator is given, assuming filename is
     // correct "as is":
     else if(i2c < 0) {
-        filename = config.get<std::string>("dacFile", "");
+        filename = config.get<std::string>("dacFile");
     }
     // Read ROC DAC file, I2C address is given, appending a "_Cx" with x = I2C:
     else {
-        filename = prepareFilename(config.get<std::string>("dacFile", ""), std::to_string(i2c));
+        filename = prepareFilename(config.get<std::string>("dacFile"), std::to_string(i2c));
     }
 
     std::vector<std::pair<std::string, uint8_t>> dacs;
@@ -574,9 +568,8 @@ std::vector<std::pair<std::string, uint8_t>> PxarSatellite::GetConfDACs(Configur
             // Check if this DAC is overwritten by directly specifying it in the
             // config file:
             if(config.has(name)) {
-                std::cout << "Overwriting DAC " << name << " from file: " << value;
+                LOG(STATUS) << "Overwriting DAC " << name << " from file: " << value << " -> " << config.get<int>(name);
                 value = config.get<int>(name);
-                std::cout << " -> " << value << std::endl;
                 overwritten_dacs++;
             }
 
@@ -614,7 +607,7 @@ std::vector<pxar::pixelConfig> PxarSatellite::GetConfMaskBits(Configuration& con
     // Read in the mask bits:
     std::vector<pxar::pixelConfig> maskbits;
 
-    std::string filename = config.get<std::string>("maskFile", "");
+    std::string filename = config.get<std::string>("maskFile");
     if(filename == "") {
         LOG(INFO) << "No mask file specified. Not masking anything.";
         return maskbits;
@@ -653,11 +646,11 @@ std::vector<pxar::pixelConfig> PxarSatellite::GetConfTrimming(Configuration& con
     std::string filename;
     // No I2C address indicator is given, assuming filename is correct "as is":
     if(i2c < 0) {
-        filename = config.get<std::string>("trimFile", "");
+        filename = config.get<std::string>("trimFile");
     }
     // I2C address is given, appending a "_Cx" with x = I2C:
     else {
-        filename = prepareFilename(config.get<std::string>("trimFile", ""), std::to_string(i2c));
+        filename = prepareFilename(config.get<std::string>("trimFile"), std::to_string(i2c));
     }
 
     std::vector<pxar::pixelConfig> pixels;
