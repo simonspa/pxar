@@ -51,7 +51,7 @@ private:
     std::vector<pxar::pixelConfig>
     GetConfTrimming(constellation::config::Configuration& config, std::vector<pxar::pixelConfig> maskbits, int16_t i2c = -1);
     std::string prepareFilename(std::string filename, std::string n);
-    std::vector<int32_t> split(const std::string &s, char delim);
+    std::vector<std::size_t> split(const std::string &s, char delim);
 
     PxarLogger pxar_logger_;
 
