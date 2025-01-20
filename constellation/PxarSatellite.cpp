@@ -102,7 +102,7 @@ void PxarSatellite::initializing(Configuration& config) {
     std::lock_guard<std::mutex> lck(mutex_);
 
     // Check for multiple ROCs using the I2C parameter:
-    std::vector<int32_t> i2c_addresses = config.getArray<int32_t>("i2caddresses", {-1});
+    std::vector<int32_t> i2c_addresses = config.getArray<int32_t>("i2c", {-1});
     LOG(INFO) << "Found " << i2c_addresses.size() << " I2C addresses: " << range_to_string(i2c_addresses);
 
     // Set the type of the TBM and read registers if any:
@@ -154,8 +154,8 @@ void PxarSatellite::initializing(Configuration& config) {
       throw pxar::pxarException("Firmware mismatch");
     }
 
-    std::cout << "TBMDACs: " << tbmDACs.size() << std::endl;
-    std::cout << "ROCDACs: " << rocDACs.size() << std::endl;
+    LOG(INFO) << "TBMDACs: " << tbmDACs.size();
+    LOG(INFO) << "ROCDACs: " << rocDACs.size();
 
     // Initialize the DUT as configured above:
     api_->initDUT(hubid, m_tbmtype, tbmDACs, m_roctype, rocDACs, rocPixels, rocI2C);
