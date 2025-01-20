@@ -57,7 +57,7 @@ hal::hal(std::string name, bool doDaq_MemReset) :
 
       }
     }
-    catch(CRpcError &e) {
+    catch(const CRpcError &e) {
       // Something went wrong:
       e.What();
       LOG(logCRITICAL) << "DTB software version could not be identified, please update!";
@@ -476,7 +476,7 @@ bool hal::FindDTB(std::string &rpcId) {
     _testboard->SelectInterface(dev->first);
     if(_testboard->Open(dev->second, false)) {
       try { LOG(logINFO) << "BID = " << _testboard->GetBoardId(); }
-      catch (CRpcError &e) {
+      catch (const CRpcError &e) {
 	LOG(logERROR) << "Problem: ";
 	e.What();
       }
@@ -1630,18 +1630,18 @@ Event hal::daqEvent() {
       if(ch == 0) { flags = Eventpump.GetFlags(); }
 
       try { current_Event += *Eventpump.Get(); }
-      catch (dsBufferEmpty &) {
+      catch (const dsBufferEmpty &) {
 	// If nothing has been read yet, just throw DataNoevent:
 	if(ch == 0) throw DataNoEvent("No event available");
 
 	// Else the previous channels already got data, so we have to retry:
 	try { current_Event += *Eventpump.Get(); }
-	catch (dsBufferEmpty &) {
+	catch (const dsBufferEmpty &) {
 	  LOG(logCRITICAL) << "Found data in channel" << (ch > 1 ? std::string("s 0-" + (ch-1)) : std::string(" 0")) << " but not in channel " << ch << "!";
 	  throw DataChannelMismatch("No event available in channel " + ch);
 	}
       }
-      catch (dataPipeException &e) { LOG(logERROR) << e.what(); return current_Event; }
+      catch (const dataPipeException &e) { LOG(logERROR) << e.what(); return current_Event; }
     }
   }
 
@@ -1676,13 +1676,13 @@ std::vector<Event> hal::daqAllEvents() {
 
 	// Add all event data from this channel:
 	try { current_Event += *Eventpump.Get(); }
-	catch (dsBufferEmpty &) {
+	catch (const dsBufferEmpty &) {
 	  LOG(logDEBUGHAL) << "Finished readout Channel " << ch << ".";
 	  // Reset the DTB memory to work around buffer issue:
 	  if (_do_Daq_MemReset) _testboard->Daq_MemReset(ch);
 	  done_ch.at(ch) = true;
 	}
-	catch (dataPipeException &e) { LOG(logERROR) << e.what(); return evt; }
+	catch (const dataPipeException &e) { LOG(logERROR) << e.what(); return evt; }
       }
       else { done_ch.at(ch) = true; }
     }
@@ -1722,18 +1722,18 @@ rawEvent hal::daqRawEvent() {
 
       try { current_Event += *rawpump.Get(); }
       // One of the channels did not return anything!
-      catch (dsBufferEmpty &) {
+      catch (const dsBufferEmpty &) {
 	// If nothing has been read yet, just throw DataNoevent:
 	if(ch == 0) throw DataNoEvent("No event available");
 
 	// Else the previous channels already got data, so we have to retry:
 	try { current_Event += *rawpump.Get(); }
-	catch (dsBufferEmpty &) {
+	catch (const dsBufferEmpty &) {
 	  LOG(logCRITICAL) << "Found data in channel" << (ch > 1 ? std::string("s 0-" + (ch-1)) : std::string(" 0")) << " but not in channel " << ch << "!";
 	  throw DataChannelMismatch("No event available in channel " + ch);
 	}
       }
-      catch (dataPipeException &e) { LOG(logERROR) << e.what(); return current_Event; }
+      catch (const dataPipeException &e) { LOG(logERROR) << e.what(); return current_Event; }
     }
   }
 
@@ -1777,13 +1777,13 @@ std::vector<rawEvent> hal::daqAllRawEvents() {
 	m_splitter.at(ch) >> rawpump;
 
 	try { current_Event += *rawpump.Get(); }
-	catch (dsBufferEmpty &) {
+	catch (const dsBufferEmpty &) {
 	  LOG(logDEBUGHAL) << "Finished readout Channel " << ch << ".";
 	  // Reset the DTB memory to work around buffer issue:
 	  if (_do_Daq_MemReset) _testboard->Daq_MemReset(ch);
 	  done_ch.at(ch) = true;
 	}
-	catch (dataPipeException &e) { LOG(logERROR) << e.what(); return raw; }
+	catch (const dataPipeException &e) { LOG(logERROR) << e.what(); return raw; }
       }
       else { done_ch.at(ch) = true; }
     }
@@ -1813,12 +1813,12 @@ std::vector<uint16_t> hal::daqBuffer() {
       dataSink<uint16_t> rawpump;
       m_src.at(ch) >> rawpump;
       try { while(1) { raw.push_back(rawpump.Get()); } }
-      catch (dsBufferEmpty &) {
+      catch (const dsBufferEmpty &) {
 	LOG(logDEBUGHAL) << "Finished readout Channel " << ch << ".";
 	// Reset the DTB memory to work around buffer issue:
 	if (_do_Daq_MemReset) _testboard->Daq_MemReset(ch);
       }
-      catch (dataPipeException &e) { LOG(logERROR) << e.what(); return raw; }
+      catch (const dataPipeException &e) { LOG(logERROR) << e.what(); return raw; }
     }
   }
 
@@ -2102,8 +2102,8 @@ void hal::addCondensedData(std::vector<Event> &data, uint16_t nTriggers, bool ef
 		     << data.size() << " events buffered.";
     LOG(logINFO) << (data.size()*nTriggers) << " events read in total (" << t << "ms).";
   }
-  catch(DataNoEvent) {}
-  catch(DataException &e) {
+  catch(const DataNoEvent&) {}
+  catch(const DataException &e) {
     LOG(logCRITICAL) << "Error in DAQ: " << e.what() << " Aborting test.";
     throw e;
   }

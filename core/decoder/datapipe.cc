@@ -118,7 +118,7 @@ namespace pxar {
 	record.Add(Get());
       } while(1);
     }
-    catch(dsBufferEmpty) {}
+    catch(const dsBufferEmpty&) {}
     return &record;
   }
 
@@ -155,7 +155,7 @@ namespace pxar {
       // Decode DESER160 Data for digital devices without real TBM
       else { DecodeDeser160(sample); }
     }
-    catch(DataDeserializerError /*e*/) {
+    catch(const DataDeserializerError& /*e*/) {
       // Clearing event content:
       roc_Event.Clear();
     }
@@ -313,15 +313,15 @@ namespace pxar {
 	  roc_Event.pixels.push_back(pix);
 	  decodingStats.m_info_pixels_valid++;
 	}
-	catch(DataInvalidAddressError /*&e*/){
+	catch(const DataInvalidAddressError& /*e*/){
 	  // decoding of raw address lead to invalid address
 	  decodingStats.m_errors_pixel_address++;
 	}
-	catch(DataInvalidPulseheightError /*&e*/){
+	catch(const DataInvalidPulseheightError& /*e*/){
 	  // decoding of pulse height featured non-zero fill bit
 	  decodingStats.m_errors_pixel_pulseheight++;
 	}
-	catch(DataCorruptBufferError /*&e*/){
+	catch(const DataCorruptBufferError& /*e*/){
 	  // decoding returned row 80 - corrupt data buffer
 	  decodingStats.m_errors_pixel_buffer_corrupt++;
 	}
@@ -396,7 +396,7 @@ namespace pxar {
 	  roc_Event.pixels.push_back(pix);
 	  decodingStats.m_info_pixels_valid++;
 	}
-	catch(DataDecodingError /*&e*/){
+	catch(const DataDecodingError& /*e*/){
 	  // decoding of raw address lead to invalid address
 	  decodingStats.m_errors_pixel_address++;
 	}
@@ -449,15 +449,15 @@ namespace pxar {
 	  roc_Event.pixels.push_back(pix);
 	  decodingStats.m_info_pixels_valid++;
 	}
-	catch(DataInvalidAddressError /*&e*/) {
+	catch(const DataInvalidAddressError& /*e*/) {
 	  // decoding of raw address lead to invalid address
 	  decodingStats.m_errors_pixel_address++;
 	}
-	catch(DataInvalidPulseheightError /*&e*/) {
+	catch(const DataInvalidPulseheightError& /*e*/) {
 	  // decoding of pulse height featured non-zero fill bit
 	  decodingStats.m_errors_pixel_pulseheight++;
 	}
-	catch(DataCorruptBufferError /*&e*/) {
+	catch(const DataCorruptBufferError& /*e*/) {
 	  // decoding returned row 80 - corrupt data buffer
 	  decodingStats.m_errors_pixel_buffer_corrupt++;
 	}
