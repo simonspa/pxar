@@ -311,9 +311,7 @@ void PxarSatellite::initializing(Configuration& config) {
         }
 
     } catch(pxar::pxarException& e) {
-        throw SatelliteError(std::string("pxarCore Error: ") + e.what());
-    } catch(...) {
-        throw SatelliteError("Unknown exception");
+        throw SatelliteError(std::string("pxar exception: ") + e.what());
     }
 }
 
