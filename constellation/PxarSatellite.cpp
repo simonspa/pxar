@@ -609,11 +609,11 @@ std::vector<pxar::pixelConfig> PxarSatellite::GetConfMaskBits(Configuration& con
     // Read in the mask bits:
     std::vector<pxar::pixelConfig> maskbits;
 
-    std::string filename = config.get<std::string>("maskFile");
-    if(filename == "") {
+    if(!config.has("maskFile")) {
         LOG(INFO) << "No mask file specified. Not masking anything.";
         return maskbits;
     }
+    std::string filename = config.getPath("maskFile");
 
     std::ifstream file(filename);
 
