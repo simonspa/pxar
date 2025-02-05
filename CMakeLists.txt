@@ -11,7 +11,7 @@ PROJECT( pxar )
 # UPDATE THIS BEFORE RELEASING A SOURCE CODE TARBALL!
 SET(PXAR_VERSION "2.8.0")
 SET(PXAR_FW_VERSION "4.2")
-
+SET(CMAKE_CXX_STANDARD 20)
 
 #########################################
 # pxar build options and their defaults #
@@ -216,6 +216,7 @@ IF(DEVICES)
   INCLUDE_DIRECTORIES(devices)
 ENDIF(DEVICES)
 
+OPTION(BUILD_CNSTLN_SATELLITE "Build Constellation Satellite" OFF)
 IF(BUILD_CNSTLN_SATELLITE)
   ADD_SUBDIRECTORY(constellation)
 ENDIF()
