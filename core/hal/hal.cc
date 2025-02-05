@@ -56,7 +56,7 @@ hal::hal(std::string name) :
 
       }
     }
-    catch(const CRpcError &e) {
+    catch(CRpcError &e) {
       // Something went wrong:
       e.What();
       LOG(logCRITICAL) << "DTB software version could not be identified, please update!";
@@ -471,7 +471,7 @@ bool hal::FindDTB(std::string &rpcId) {
     _testboard->SelectInterface(dev->first);
     if(_testboard->Open(dev->second, false)) {
       try { LOG(logINFO) << "BID = " << _testboard->GetBoardId(); }
-      catch (const CRpcError &e) {
+      catch (CRpcError &e) {
 	LOG(logERROR) << "Problem: ";
 	e.What();
       }
