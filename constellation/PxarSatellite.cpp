@@ -93,7 +93,29 @@ int PxarLogger::sync() {
     return 0;
 }
 
-PxarSatellite::PxarSatellite(std::string_view type, std::string_view name) : TransmitterSatellite(type, name) {}
+PxarSatellite::PxarSatellite(std::string_view type, std::string_view name) : TransmitterSatellite(type, name) {
+    register_command("get_current_ana",
+                     "Read analog supply current from DTB in mA.",
+                     {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
+                     std::function<double()>([&]() -> double {
+                         std::lock_guard<std::mutex> lock {mutex_};
+			 return api_->getTBia() * 1000;
+                     }));
+    register_command("get_current_dig",
+                     "Read digital supply current from DTB in mA.",
+                     {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
+                     std::function<double()>([&]() -> double {
+                         std::lock_guard<std::mutex> lock {mutex_};
+			 return api_->getTBid() * 1000;
+                     }));
+    register_command("get_pxar_version",
+                     "Read pxar library version.",
+                     {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
+                     std::function<std::string()>([&]() -> std::string {
+                         std::lock_guard<std::mutex> lock {mutex_};
+			 return api_->getVersion();
+                     }));
+}
 
 void PxarSatellite::initializing(Configuration& config) {
 
