@@ -257,13 +257,13 @@ void PxarSatellite::initializing(Configuration& config) {
         if(api_->getTBid() * 1000 < 15) {
             LOG(WARNING) << "Digital current too low: " << (1000 * api_->getTBid()) << "mA";
         } else {
-            LOG(WARNING) << "Digital current: " << (1000 * api_->getTBid()) << "mA";
+            LOG(STATUS) << "Digital current: " << (1000 * api_->getTBid()) << "mA";
         }
 
         if(api_->getTBia() * 1000 < 15) {
             LOG(WARNING) << "Analog current too low: " << (1000 * api_->getTBia()) << "mA";
         } else {
-            LOG(WARNING) << "Analog current: " << (1000 * api_->getTBia()) << "mA";
+            LOG(STATUS) << "Analog current: " << (1000 * api_->getTBia()) << "mA";
         }
 
         // Switching to external clock if requested and check if DTB returns TRUE
@@ -494,7 +494,8 @@ void PxarSatellite::stopping() {
     }
 
     // Stop the Data Acquisition:
-    api_->daqStop();
+    const auto retval = api_->daqStop();
+    LOG_IF(WARNING, !retval) << "Could not stop DAQ";
 
     try {
         // Read the rest of events from DTB buffer:
@@ -513,6 +514,7 @@ void PxarSatellite::stopping() {
         }
     } catch(pxar::DataNoEvent&) {
         // No event available in derandomize buffers (DTB RAM),
+        LOG(INFO) << "No events left in DTB buffer, ending run.";
     }
 }
 

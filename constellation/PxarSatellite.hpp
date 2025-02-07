@@ -41,7 +41,8 @@ private:
     unsigned m_nplanes;
     unsigned m_channels;
     int m_pattern_delay;
-    bool m_trimmingFromConf, m_trigger_is_pg;
+    bool m_trimmingFromConf;
+    bool m_trigger_is_pg {false};
     std::string m_roctype, m_tbmtype, m_pcbtype, m_detector, m_event_type;
     std::vector<std::string> m_alldacs;
 
