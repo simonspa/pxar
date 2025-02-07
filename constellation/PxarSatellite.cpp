@@ -147,6 +147,9 @@ void PxarSatellite::initializing(Configuration& config) {
 
     config.setDefault("pxar_verbosity", "INFO");
 
+    // Clear DACs list for BOR:
+    m_alldacs.clear();
+
     // Set configured log level
     pxar::Log::ReportingLevel() = pxar::Log::FromString(config.get<std::string>("pxar_verbosity"));
 
