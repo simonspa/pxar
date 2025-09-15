@@ -116,7 +116,7 @@ The following metrics are distributed by this satellite and can be subscribed to
 |--------|-------------|------------|-------------|----------|
 | `EVT_FILLED`  | Total number of filled events, i.e. events with at least one pixel hit | Integer | `LAST_VALUE` | Every 1000 events |
 | `EVT_AVG_TOT` | Total fraction of filled events over the current run | Float | `LAST_VALUE` | Every 1000 events |
-| `EVT_AVG_1K`  | Fraction of filles events over the last 1000 events | Float | `LAST_VALUE` | Every 1000 events |
+| `EVT_AVG_1K`  | Fraction of filled events over the last 1000 events | Float | `LAST_VALUE` | Every 1000 events |
 | `DTB_RAM`     | RAM filling level of the DTB | Integer | `LAST_VALUE` | Every 1000 events |
 | `DTB_IA`      | Analog current in mA drawn by the detector and measured by the DTB | Float | `LAST_VALUE` | Every 1000 events |
 | `DTB_ID`      | Digital current in mA drawn by the detector and measured by the DTB | Float | `LAST_VALUE` | Every 1000 events |
