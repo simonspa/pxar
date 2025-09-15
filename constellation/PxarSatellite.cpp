@@ -12,6 +12,8 @@
 
 #include <constellation/core/config/Configuration.hpp>
 #include <constellation/core/log/log.hpp>
+#include "constellation/core/metrics/Metric.hpp"
+#include "constellation/core/metrics/stat.hpp"
 #include <constellation/core/utils/string.hpp>
 #include <constellation/satellite/TransmitterSatellite.hpp>
 
@@ -24,6 +26,7 @@
 
 using namespace constellation::config;
 using namespace constellation::log;
+using namespace constellation::metrics;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
@@ -115,6 +118,15 @@ PxarSatellite::PxarSatellite(std::string_view type, std::string_view name) : Tra
                          std::lock_guard<std::mutex> lock {mutex_};
 			 return api_->getVersion();
                      }));
+
+    // Register metrics:
+    register_metric("EVT_FILLED", "", MetricType::LAST_VALUE, "Total number of filled events, i.e. events with at least one pixel hit");
+    register_metric("EVT_AVG_TOT", "%", MetricType::LAST_VALUE, "Total fraction of filled events over the current run");
+    register_metric("EVT_AVG_1K", "%", MetricType::LAST_VALUE, "Fraction of filles events over the last 1000 events");
+    register_metric("DTB_RAM", "%", MetricType::LAST_VALUE, "RAM filling level of the DTB");
+    register_metric("DTB_IA", "mA", MetricType::LAST_VALUE, "Analog current drawn by the detector and measured by the DTB");
+    register_metric("DTB_ID", "mA", MetricType::LAST_VALUE, "Digital current drawn by the detector and measured by the DTB");
+    register_metric("ROC_RST", "", MetricType::LAST_VALUE, "Metric emitted every tome a ROC-reset signal is sent to the detector");
 }
 
 void PxarSatellite::initializing(Configuration& config) {
@@ -251,19 +263,23 @@ void PxarSatellite::initializing(Configuration& config) {
         m_nplanes = rocDACs.size();
 
         // Read current:
-        LOG(INFO) << "Analog current: " << api_->getTBia() * 1000 << "mA";
-        LOG(INFO) << "Digital current: " << api_->getTBid() * 1000 << "mA";
+        const auto ia = api_->getTBia() * 1000;
+        const auto id = api_->getTBid() * 1000;
+        STAT("DTB_IA", ia);
+        STAT("DTB_ID", id);
+        LOG(INFO) << "Analog current: " << ia << "mA";
+        LOG(INFO) << "Digital current: " << id << "mA";
 
-        if(api_->getTBid() * 1000 < 15) {
-            LOG(WARNING) << "Digital current too low: " << (1000 * api_->getTBid()) << "mA";
+        if(id < 15) {
+            LOG(WARNING) << "Digital current too low: " << id << "mA";
         } else {
-            LOG(STATUS) << "Digital current: " << (1000 * api_->getTBid()) << "mA";
+            LOG(STATUS) << "Digital current: " << id << "mA";
         }
 
-        if(api_->getTBia() * 1000 < 15) {
-            LOG(WARNING) << "Analog current too low: " << (1000 * api_->getTBia()) << "mA";
+        if(ia < 15) {
+            LOG(WARNING) << "Analog current too low: " << ia << "mA";
         } else {
-            LOG(STATUS) << "Analog current: " << (1000 * api_->getTBia()) << "mA";
+            LOG(STATUS) << "Analog current: " << ia << "mA";
         }
 
         // Switching to external clock if requested and check if DTB returns TRUE
@@ -431,6 +447,7 @@ void PxarSatellite::running(const std::stop_token& stop_token) {
             if(!api_->daqSingleSignal("resetroc")) {
                 LOG(CRITICAL) << "Unable to send ROC reset signal!";
             }
+            STAT("ROC_RST", true);
             m_reset_timer = std::chrono::steady_clock::now();
         }
 
@@ -465,13 +482,23 @@ void PxarSatellite::running(const std::stop_token& stop_token) {
             }
 
             // Print every 1k evt:
-            if(seq % 1000 == 0) {
+            if(seq > 0 && seq % 1000 == 0) {
+                // Measure currents and publish
+                STAT("DTB_IA", api_->getTBia() * 1000);
+                STAT("DTB_ID", api_->getTBid() * 1000);
+
                 uint8_t filllevel = 0;
                 api_->daqStatus(filllevel);
                 LOG(INFO) << "CMSPixel " << m_detector << " EVT " << seq << " / " << ev_filled << " w/ px";
                 LOG(INFO) << "\t Total average:  \t" << (seq > 0 ? std::to_string(100 * ev_filled / seq) : "(inf)") << "%";
                 LOG(INFO) << "\t 1k Trg average: \t" << (100 * ev_runningavg_filled / 1000) << "%";
                 LOG(INFO) << "\t RAM fill level: \t" << static_cast<int>(filllevel) << "%";
+
+                STAT("EVT_FILLED", ev_filled);
+                STAT("EVT_AVG_TOT", 100. * ev_filled / seq);
+                STAT("EVT_AVG_1K", 100. * ev_runningavg_filled / 1000);
+                STAT("DTB_RAM", static_cast<int>(filllevel));
+
                 ev_runningavg_filled = 0;
             }
         } catch(pxar::DataNoEvent&) {
