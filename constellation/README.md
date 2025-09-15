@@ -43,7 +43,7 @@ Building requires:
 
 - CMake
 - `pkg-config`
-- Constellation v0.3 or newer
+- Constellation v0.6 or newer
 
 If Constellation is not installed in a default system directory such as `/usr/local`, the directory needs to be exported in
 order to be found by `pkg-config`:

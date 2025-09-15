@@ -441,13 +441,13 @@ void PxarSatellite::running(const std::stop_token& stop_token) {
             std::lock_guard<std::mutex> lck(mutex_);
             pxar::rawEvent daqEvent = api_->daqGetRawEvent();
 
-            auto data_msg = newDataMessage(1);
-            const auto seq = data_msg.getHeader().getSequenceNumber();
+            auto data_record = newDataRecord(1);
+            const auto seq = data_record.getSequenceNumber();
             auto data = daqEvent.data;
-            data_msg.addFrame(std::move(data));
-            data_msg.addTag("trigger_number", seq);
-            data_msg.addTag("flag_trigger", true);
-            sendDataMessage(data_msg);
+            data_record.addBlock(std::move(data));
+            data_record.addTag("trigger_number", seq);
+            data_record.addTag("flag_trigger", true);
+            sendDataRecord(std::move(data_record));
 
             // Analog: Events with pixel data have more than 4 words for TBM
             // header/trailer and 3 for each ROC header:
@@ -504,13 +504,13 @@ void PxarSatellite::stopping() {
 
         for(const auto& evt : daqEvents) {
 
-            auto data_msg = newDataMessage(1);
-            const auto seq = data_msg.getHeader().getSequenceNumber();
+            auto data_record = newDataRecord(1);
+            const auto seq = data_record.getSequenceNumber();
             auto data = evt.data;
-            data_msg.addFrame(std::move(data));
-            data_msg.addTag("trigger_number", seq);
-            data_msg.addTag("flag_trigger", true);
-            sendDataMessage(data_msg);
+            data_record.addBlock(std::move(data));
+            data_record.addTag("trigger_number", seq);
+            data_record.addTag("flag_trigger", true);
+            sendDataRecord(std::move(data_record));
         }
     } catch(pxar::DataNoEvent&) {
         // No event available in derandomize buffers (DTB RAM),
