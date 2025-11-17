@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CC-BY-4.0
 title: "pxar"
 description: "CMSPixel Phase 1 Detector"
-category: "External"
+category: "Readout Systems"
 language: "C++"
 parent_class: "TransmitterSatellite"
 ---
