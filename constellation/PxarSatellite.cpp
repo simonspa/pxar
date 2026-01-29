@@ -120,13 +120,13 @@ PxarSatellite::PxarSatellite(std::string_view type, std::string_view name) : Tra
                      }));
 
     // Register metrics:
-    register_metric("EVT_FILLED", "", MetricType::LAST_VALUE, "Total number of filled events, i.e. events with at least one pixel hit");
-    register_metric("EVT_AVG_TOT", "%", MetricType::LAST_VALUE, "Total fraction of filled events over the current run");
-    register_metric("EVT_AVG_1K", "%", MetricType::LAST_VALUE, "Fraction of filled events over the last 1000 events");
-    register_metric("DTB_RAM", "%", MetricType::LAST_VALUE, "RAM filling level of the DTB");
-    register_metric("DTB_IA", "mA", MetricType::LAST_VALUE, "Analog current drawn by the detector and measured by the DTB");
-    register_metric("DTB_ID", "mA", MetricType::LAST_VALUE, "Digital current drawn by the detector and measured by the DTB");
-    register_metric("ROC_RST", "", MetricType::LAST_VALUE, "Metric emitted every tome a ROC-reset signal is sent to the detector");
+    register_metric("EVT_FILLED", "", "Total number of filled events, i.e. events with at least one pixel hit");
+    register_metric("EVT_AVG_TOT", "%", "Total fraction of filled events over the current run");
+    register_metric("EVT_AVG_1K", "%", "Fraction of filled events over the last 1000 events");
+    register_metric("DTB_RAM", "%", "RAM filling level of the DTB");
+    register_metric("DTB_IA", "mA", "Analog current drawn by the detector and measured by the DTB");
+    register_metric("DTB_ID", "mA", "Digital current drawn by the detector and measured by the DTB");
+    register_metric("ROC_RST", "", "Metric emitted every tome a ROC-reset signal is sent to the detector");
 }
 
 void PxarSatellite::initializing(Configuration& config) {
