@@ -7,5 +7,5 @@
 using namespace constellation::exec;
 
 int main(int argc, char** argv) {
-    return satellite_main(to_span(argc, argv), "SatelliteTemplate", SatelliteType("Template", "@CMAKE_CURRENT_BINARY_DIR@"));
+    return satellite_main(to_span(argc, argv), "SatellitePxar", SatelliteType("Pxar", "@CMAKE_CURRENT_BINARY_DIR@"));
 }
