@@ -30,6 +30,7 @@ using namespace constellation::metrics;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
+using namespace std::chrono_literals;
 
 static const std::string EVENT_TYPE_DUT = "CMSPixelDUT";
 static const std::string EVENT_TYPE_REF = "CMSPixelREF";
@@ -120,12 +121,25 @@ PxarSatellite::PxarSatellite(std::string_view type, std::string_view name) : Tra
                      }));
 
     // Register metrics:
+    register_metric("EVT", "", "Total number of events in this run");
     register_metric("EVT_FILLED", "", "Total number of filled events, i.e. events with at least one pixel hit");
     register_metric("EVT_AVG_TOT", "%", "Total fraction of filled events over the current run");
     register_metric("EVT_AVG_1K", "%", "Fraction of filled events over the last 1000 events");
     register_metric("DTB_RAM", "%", "RAM filling level of the DTB");
-    register_metric("DTB_IA", "mA", "Analog current drawn by the detector and measured by the DTB");
-    register_metric("DTB_ID", "mA", "Digital current drawn by the detector and measured by the DTB");
+    register_timed_metric("DTB_IA", "mA", "Analog current drawn by the detector and measured by the DTB", 10s, [&]() -> std::optional<double> {
+	if(!api_) {
+	  return std::nullopt;
+	}
+	std::lock_guard<std::mutex> lck(mutex_);
+	return api_->getTBia() * 1000;
+    });
+    register_timed_metric("DTB_ID", "mA", "Digital current drawn by the detector and measured by the DTB", 10s, [&]() -> std::optional<double> {
+	if(!api_) {
+	  return std::nullopt;
+	}
+	std::lock_guard<std::mutex> lck(mutex_);
+	return api_->getTBid() * 1000;
+    });
     register_metric("ROC_RST", "", "Metric emitted every tome a ROC-reset signal is sent to the detector");
 }
 
@@ -482,11 +496,8 @@ void PxarSatellite::running(const std::stop_token& stop_token) {
             }
 
             // Print every 1k evt:
+	    STAT_NTH("EVT", seq, 1000);
             if(seq > 0 && seq % 1000 == 0) {
-                // Measure currents and publish
-                STAT("DTB_IA", api_->getTBia() * 1000);
-                STAT("DTB_ID", api_->getTBid() * 1000);
-
                 uint8_t filllevel = 0;
                 api_->daqStatus(filllevel);
                 LOG(INFO) << "CMSPixel " << m_detector << " EVT " << seq << " / " << ev_filled << " w/ px";
