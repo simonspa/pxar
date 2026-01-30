@@ -423,7 +423,7 @@ void PxarSatellite::starting(std::string_view /*run_identifier*/) {
 
         // Set tags for the BOR message, make EUDAQ-compatible:
         setBORTag("eudaq_event", m_event_type);
-        setBORTag("frames_as_blocks", false);
+        setBORTag("write_as_blocks", false);
 
         // Set the TBM & ROC type for decoding:
         setBORTag("ROCTYPE", m_roctype);
