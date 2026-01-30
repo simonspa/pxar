@@ -398,7 +398,10 @@ void PxarSatellite::starting(std::string_view /*run_identifier*/) {
 
         // Try to read left-over events from buffer:
         std::lock_guard<std::mutex> lck(mutex_);
-        pxar::rawEvent daqEvent = api_->daqGetRawEvent();
+	try {
+	  const auto daqEvent = api_->daqGetRawEventBuffer();
+	} catch(const pxar::pxarException&) {}
+	LOG(INFO) << "Finished clearing DTB RAM from leftover events";
 
         // Start the Data Acquisition:
         api_->daqStart();
