@@ -116,6 +116,7 @@ uint32_t FindAllUSB(struct ftdi_device_list ** devlist){
   }
 
   // ATB
+  /*
   status =  ftdi_usb_find_all(&ftdic, &devlist_atb,vendorID,productID_OLD);
   if( status < 0) {
     return status;
@@ -128,6 +129,7 @@ uint32_t FindAllUSB(struct ftdi_device_list ** devlist){
     (*curdev)->dev = devlist_atb->dev; // put pointer to last devlist entry to first ATB entry
     nDevices+=status; // add number of ATB devices to total number
   }
+  */
   return nDevices;
 }
 

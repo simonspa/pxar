@@ -1,6 +1,6 @@
 ########################################################
 # CMake file for the pXar framework
-CMAKE_MINIMUM_REQUIRED(VERSION 2.4 FATAL_ERROR)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10 FATAL_ERROR)
 IF(COMMAND CMAKE_POLICY)
   CMAKE_POLICY(SET CMP0003 NEW)
 ENDIF(COMMAND CMAKE_POLICY)
@@ -9,9 +9,9 @@ ENDIF(COMMAND CMAKE_POLICY)
 # Project name
 PROJECT( pxar )
 # UPDATE THIS BEFORE RELEASING A SOURCE CODE TARBALL!
-SET(PXAR_VERSION "2.8.0")
+SET(PXAR_VERSION "2.9.1")
 SET(PXAR_FW_VERSION "4.2")
-
+SET(CMAKE_CXX_STANDARD 20)
 
 #########################################
 # pxar build options and their defaults #
@@ -215,6 +215,11 @@ IF(DEVICES)
   SET(DEVICES_LINK_LIBRARY devices)
   INCLUDE_DIRECTORIES(devices)
 ENDIF(DEVICES)
+
+OPTION(BUILD_CNSTLN_SATELLITE "Build Constellation Satellite" OFF)
+IF(BUILD_CNSTLN_SATELLITE)
+  ADD_SUBDIRECTORY(constellation)
+ENDIF()
 
 # full UI and test suite (requires ROOT)
 IF(BUILD_pxarui)
