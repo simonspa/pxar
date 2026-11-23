@@ -3,6 +3,19 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(CNSTLN_SAT REQUIRED ConstellationSatellite)
 pkg_check_modules(CNSTLN_EXEC REQUIRED ConstellationExec)
 
+# Generate VCS version
+set(GENERATED_DIR ${CMAKE_BINARY_DIR}/generated)
+file(MAKE_DIRECTORY ${GENERATED_DIR})
+set(VERSION_HEADER ${GENERATED_DIR}/build_vcs.hpp)
+add_custom_target(generate_version_header ALL
+    COMMAND ${CMAKE_COMMAND}
+        -DSRC_DIR=${CMAKE_SOURCE_DIR}
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/constellation//build_vcs.hpp.in
+        -DOUTPUT_FILE=${VERSION_HEADER}
+        -P ${CMAKE_SOURCE_DIR}/cmake/vcs_version.cmake
+    BYPRODUCTS ${VERSION_HEADER}
+)
+
 # Create shared library for satellite
 add_library(PxarSatellite SHARED "PxarSatellite.cpp" "generator.cpp")
 
@@ -18,6 +31,10 @@ target_link_directories(PxarSatellite PUBLIC ${CNSTLN_SAT_LIBRARY_DIRS})
 target_link_libraries(PxarSatellite PUBLIC ${CNSTLN_SAT_LIBRARIES})
 target_compile_options(PxarSatellite PUBLIC ${CNSTLN_SAT_CFLAGS_OTHER})
 set_target_properties(PxarSatellite PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# Add vcs version to library
+add_dependencies(PxarSatellite generate_version_header)
+target_include_directories(PxarSatellite PRIVATE ${GENERATED_DIR})
 
 # Set library output name to satellite type (used in `Satellite -t`)
 set_target_properties(PxarSatellite PROPERTIES LIBRARY_OUTPUT_NAME "Pxar")
@@ -42,6 +59,10 @@ target_link_directories(SatellitePxar PUBLIC ${CNSTLN_EXEC_LIBRARY_DIRS})
 target_link_libraries(SatellitePxar PUBLIC ${CNSTLN_EXEC_LIBRARIES})
 target_compile_options(SatellitePxar PUBLIC ${CNSTLN_EXEC_CFLAGS_OTHER})
 set_target_properties(SatellitePxar PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# Add vcs version to library
+add_dependencies(SatellitePxar generate_version_header)
+target_include_directories(SatellitePxar PRIVATE ${GENERATED_DIR})
 
 # Get Constellation prefix for library and executable
 set(CNSTLN_SAT_LIB_INSTALL_DIR "${CNSTLN_EXEC_LIBDIR}/ConstellationSatellites")

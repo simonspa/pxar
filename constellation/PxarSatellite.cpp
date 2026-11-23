@@ -97,7 +97,7 @@ int PxarLogger::sync() {
     return 0;
 }
 
-PxarSatellite::PxarSatellite(std::string_view type, std::string_view name) : TransmitterSatellite(type, name) {
+PxarSatellite::PxarSatellite(std::string_view type, std::string_view name, std::string_view version) : TransmitterSatellite(type, name, version) {
     register_command("get_current_ana",
                      "Read analog supply current from DTB in mA.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},

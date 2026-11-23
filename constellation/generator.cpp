@@ -1,3 +1,4 @@
+// Copyright (c) 2026 DESY and the Constellation authors
 // SPDX-License-Identifier: EUPL-1.2 OR CC0-1.0
 
 #include <memory>
@@ -6,6 +7,7 @@
 #include <constellation/build.hpp>
 #include <constellation/satellite/Satellite.hpp>
 
+#include "build_vcs.hpp"
 #include "PxarSatellite.hpp"
 
 #ifdef __clang__
@@ -17,7 +19,7 @@
 extern "C" {
 CNSTLN_DLL_EXPORT
 std::shared_ptr<constellation::satellite::Satellite> generator(std::string_view type, std::string_view name) {
-    return std::make_shared<PxarSatellite>(type, name);
+    return std::make_shared<PxarSatellite>(type, name, VERSION_VCS);
 }
 }
 
